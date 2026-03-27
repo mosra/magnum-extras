@@ -657,16 +657,16 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         /**
          * @brief Bind a function to storage data update
          * @param query         Storage query
-         * @param update        Function to call when data get updated
+         * @param function      Function to call when data get updated
          * @param node          Node to attach to
          * @return New data handle
          *
          * Expects that @p query references a valid storage from this layer and
-         * @p update is not @cpp nullptr @ce. The @p update gets called with
-         * the result of @p query with @ref AbstractUserInterface::update() or
-         * @relativeref{AbstractUserInterface,draw()} whenever either the data
-         * itself or the @p storage is marked as dirty. The data is marked as
-         * dirty initially.
+         * @p function is not @cpp nullptr @ce. The @p function gets called
+         * with the result of @p query with @ref AbstractUserInterface::update()
+         * or @relativeref{AbstractUserInterface,draw()} whenever either the
+         * data itself or the @p storage is marked as dirty. The data is marked
+         * as dirty initially.
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
          * detailed description of all constraints. Calling this function
@@ -679,14 +679,14 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             #else /* Without this, deduction of T won't work */
             typename std::common_type<Containers::Function<void(const T&)>>::type&&
             #endif
-        update, NodeHandle node =
+        function, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return onUpdateInternal(*query._layer, query._storage, query._index, query._updateCall, Utility::move(update), node);
+            return onUpdateInternal(*query._layer, query._storage, query._index, query._call, Utility::move(function), node);
         }
 
         /**
@@ -707,14 +707,14 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             #else /* Without this, deduction of T won't work */
             typename std::common_type<Containers::Function<void(const typename Storage::Type&)>>::type&&
             #endif
-        update, NodeHandle node =
+        function, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return onUpdate<typename Storage::Type>(storage, Utility::move(update), node);
+            return onUpdate<typename Storage::Type>(storage, Utility::move(function), node);
         }
 
         /**
@@ -948,7 +948,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
            it cannot be wrapped in #ifdef CORRADE_NO_ASSERT because it'd cause
            linker errors if the library is built with assertions but the user
            project not and vice versa. */
-        DataHandle onUpdateInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& update, NodeHandle node);
+        DataHandle onUpdateInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& function, NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL StorageHandle storageInternal(const UnsignedInt id) const;
         MAGNUM_UI_LOCAL Containers::Size3D indexInternal(const UnsignedInt id) const;
@@ -1431,17 +1431,17 @@ template<class T> class StorageQuery {
         /*implicit*/ operator T() const;
 
     private:
-        /* So it can access the _updateCall etc without having to expose those
-           via getters */
+        /* So it can access the _call etc without having to expose those via
+           getters */
         friend DataLayer;
 
-        explicit StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&));
+        explicit StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&));
 
         DataLayer* _layer;
         DataLayerStorageHandle _storage;
         /* 0/4 bytes free */
         Containers::Size3D _index;
-        void(*_updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
+        void(*_call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
 };
 
 template<class Storage> Storage DataLayer::storage(const StorageHandle handle) {
@@ -1627,7 +1627,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "expected query to be a non-capturing lambda");
 }
 
-template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&)): _layer{storage._layer}, _storage{storage._handle}, _index{index}, _updateCall{updateCall} {
+template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&)): _layer{storage._layer}, _storage{storage._handle}, _index{index}, _call{call} {
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
         "Ui::StorageQuery: invalid handle" << storageHandle(_layer->handle(), _storage), );
     #ifndef CORRADE_NO_ASSERT
@@ -1638,7 +1638,7 @@ template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, 
 }
 
 template<class T> StorageQuery<T>::operator T() const {
-    /* We're abusing the _updateCall function, which *passes* the storage value
+    /* We're abusing the _call function, which *passes* the storage value
        elsewhere instead of returning it, to copy the passed value outside and
        return it. To support non-copyable types it's an union which is
        placement-new'd into, the assumption is that the storage wouldn't return
@@ -1652,7 +1652,7 @@ template<class T> StorageQuery<T>::operator T() const {
     Containers::Function<void(const T&)> update{[&out](const T& value) {
         new(&out.value) T{value};
     }};
-    _updateCall(AbstractStorage{*_layer, _storage}, _index, update);
+    _call(AbstractStorage{*_layer, _storage}, _index, update);
     return out.value;
 }
 #endif

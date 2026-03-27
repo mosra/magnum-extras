@@ -2373,8 +2373,8 @@ void DataLayerTest::createInvalid() {
         "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer\n"
         "Ui::DataLayer::onUpdate(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x1, 0x1})\n"
 
-        "Ui::DataLayer::onUpdate(): update is null\n"
-        "Ui::DataLayer::onUpdate(): update is null\n",
+        "Ui::DataLayer::onUpdate(): function is null\n"
+        "Ui::DataLayer::onUpdate(): function is null\n",
         TestSuite::Compare::String);
 }
 

@@ -249,8 +249,8 @@ struct Data {
         64-bit values and this field only used for the storage ID */
     UnsignedLong storageIdDirtyLinearizedIndex;
 
-    Containers::FunctionData update;
-    void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
+    Containers::FunctionData function;
+    void(*call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
 };
 
 }
@@ -615,7 +615,7 @@ Containers::StridedArrayView1D<const UnsignedShort> DataLayer::storageGeneration
 std::size_t DataLayer::usedAllocatedCount() const {
     std::size_t count = 0;
     for(const Data& data: _state->data)
-        if(data.update.isAllocated())
+        if(data.function.isAllocated())
             ++count;
 
     return count;
@@ -662,7 +662,7 @@ DataHandle DataLayer::onUpdateInternal(const DataLayer&
     #ifndef CORRADE_NO_ASSERT
     layer
     #endif
-    , const DataLayerStorageHandle storage, const Containers::Size3D& index, void(*const updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& update, const NodeHandle node)
+    , const DataLayerStorageHandle storage, const Containers::Size3D& index, void(*const call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& function, const NodeHandle node)
 {
     State& state = *_state;
     CORRADE_ASSERT(&layer == this,
@@ -671,8 +671,8 @@ DataHandle DataLayer::onUpdateInternal(const DataLayer&
        what one gets from AbstractStorage::handle() as well */
     CORRADE_ASSERT(isHandleValid(storage),
         "Ui::DataLayer::onUpdate(): invalid handle" << storageHandle(handle(), storage), {});
-    CORRADE_ASSERT(update,
-        "Ui::DataLayer::onUpdate(): update is null", {});
+    CORRADE_ASSERT(function,
+        "Ui::DataLayer::onUpdate(): function is null", {});
     /** @todo the index being within storage size is tested by the StorageQuery
         constructor already so it currently doesn't make sense to check it
         again here, however it'll become important if/once storages can change
@@ -699,8 +699,8 @@ DataHandle DataLayer::onUpdateInternal(const DataLayer&
        of the data.storageIdLinearizedIndex member for further reasoning. */
     data.storageIdDirtyLinearizedIndex = storageId|DataIsDirty|linearizeIndex(storageData.used.size, index);
 
-    data.update = Utility::move(update);
-    data.updateCall = updateCall;
+    data.function = Utility::move(function);
+    data.call = call;
 
     /* Make sure the update function is called for the new data */
     setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
@@ -724,7 +724,7 @@ void DataLayer::removeInternal(const UnsignedInt id) {
 
     /* Set the function to an empty instance to call any captured state
        destructors */
-    data.update = {};
+    data.function = {};
 
     /* Decrement storage reference count */
     const UnsignedInt storageId = extractStorageId(data.storageIdDirtyLinearizedIndex);
@@ -741,13 +741,13 @@ void DataLayer::removeInternal(const UnsignedInt id) {
 bool DataLayer::isAllocated(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::DataLayer::isAllocated(): invalid handle" << handle, {});
-    return _state->data[dataHandleId(handle)].update.isAllocated();
+    return _state->data[dataHandleId(handle)].function.isAllocated();
 }
 
 bool DataLayer::isAllocated(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::DataLayer::isAllocated(): invalid handle" << handle, {});
-    return _state->data[layerDataHandleId(handle)].update.isAllocated();
+    return _state->data[layerDataHandleId(handle)].function.isAllocated();
 }
 
 bool DataLayer::isDirty(const DataHandle handle) const {
@@ -911,8 +911,8 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
        associated with storages that are dirty */
     State& state = *_state;
     for(Data& data: state.data) {
-        /* Data with null onUpdate functions are removed, skip those */
-        if(!data.update)
+        /* Data with null functions are removed, skip those */
+        if(!data.function)
             continue;
 
         /* If neither the data nor the storage is dirty, skip */
@@ -927,10 +927,10 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
             case it'd be created with it being null and so it calls into
             _layer->storageData() from AbstractStorage::data(), but the
             temporary instance here could get it directly and skip that call */
-        data.updateCall(
+        data.call(
             AbstractStorage{*this, dataLayerStorageHandle(storageId, storage.used.generation)},
             delinearizeIndex(storage.used.size, data.storageIdDirtyLinearizedIndex),
-            data.update);
+            data.function);
 
         /* Update got called, reset the data dirty bit if it's set */
         data.storageIdDirtyLinearizedIndex &= ~DataIsDirty;
