@@ -568,7 +568,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @brief Storage reference count
          *
          * Expects that @p handle is valid. Initially @cpp 0 @ce, is
-         * incremented after every @ref create() call referencing given
+         * incremented after every @ref onUpdate() call referencing given
          * @p handle and decremented after every @ref remove() of data
          * referencing given @p handle, or when a node the data is attached to
          * is removed along with all attachments. Can be at most
@@ -655,7 +655,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         std::size_t usedAllocatedCount() const;
 
         /**
-         * @brief Create a data binding
+         * @brief Bind a function to storage data update
          * @param query         Storage query
          * @param update        Function to call when data get updated
          * @param node          Node to attach to
@@ -673,7 +673,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * causes @ref LayerState::NeedsCommonDataUpdate to be set.
          * @see @ref isStorageDirty(), @ref storageSize()
          */
-        template<class T> DataHandle create(const StorageQuery<T>& query,
+        template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
             #ifdef DOXYGEN_GENERATING_OUTPUT
             Containers::Function<void(const T&)>&&
             #else /* Without this, deduction of T won't work */
@@ -686,22 +686,22 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return createInternal(*query._layer, query._storage, query._index, query._updateCall, Utility::move(update), node);
+            return onUpdateInternal(*query._layer, query._storage, query._index, query._updateCall, Utility::move(update), node);
         }
 
         /**
-         * @brief Create a data binding for storage's implicit type
+         * @brief Bind a function to storage's implicit data update
          *
          * Assuming the @p storage has a `Type` @cpp typedef @ce which denotes
          * what @ref StorageQuery type the storage is implicitly convertible
-         * to, delegates to @ref create(const StorageQuery<T>&, Containers::Function<void(const T&)>&&, NodeHandle)
+         * to, delegates to @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(const T&)>&&, NodeHandle)
          * with given type. See its documentation for more information.
          */
         template<class Storage
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , typename std::enable_if<std::is_base_of<AbstractStorage, Storage>::value, int>::type = 0
             #endif
-        > DataHandle create(const Storage& storage,
+        > DataHandle onUpdate(const Storage& storage,
             #ifdef DOXYGEN_GENERATING_OUTPUT
             Containers::Function<void(const typename Storage::Type&)>&&
             #else /* Without this, deduction of T won't work */
@@ -714,7 +714,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return create<typename Storage::Type>(storage, Utility::move(update), node);
+            return onUpdate<typename Storage::Type>(storage, Utility::move(update), node);
         }
 
         /**
@@ -944,11 +944,11 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         AbstractStorage storageInternal(DataLayerStorageHandle handle);
 
         /* The layer argument is just for the assert, but since it has to be an
-           exported symbol to be used from the templated create() functions, it
-           cannot be wrapped in #ifdef CORRADE_NO_ASSERT because it'd cause
+           exported symbol to be used from the templated onUpdate() functions,
+           it cannot be wrapped in #ifdef CORRADE_NO_ASSERT because it'd cause
            linker errors if the library is built with assertions but the user
            project not and vice versa. */
-        DataHandle createInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& update, NodeHandle node);
+        DataHandle onUpdateInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& update, NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL StorageHandle storageInternal(const UnsignedInt id) const;
         MAGNUM_UI_LOCAL Containers::Size3D indexInternal(const UnsignedInt id) const;
@@ -1285,7 +1285,7 @@ class MAGNUM_UI_EXPORT AbstractStorage {
 @m_since_latest_{extras}
 
 Returned from @ref AbstractStorage implementations, meant to be passed to
-@ref DataLayer::create() along with an update function.
+@ref DataLayer::onUpdate() along with an update function.
 */
 template<class T> class StorageQuery {
     public:

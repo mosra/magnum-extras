@@ -658,7 +658,7 @@ inline UnsignedInt extractStorageId(const UnsignedLong storageIdDirtyLinearizedI
 
 }
 
-DataHandle DataLayer::createInternal(const DataLayer&
+DataHandle DataLayer::onUpdateInternal(const DataLayer&
     #ifndef CORRADE_NO_ASSERT
     layer
     #endif
@@ -666,13 +666,13 @@ DataHandle DataLayer::createInternal(const DataLayer&
 {
     State& state = *_state;
     CORRADE_ASSERT(&layer == this,
-        "Ui::DataLayer::create(): storage doesn't belong to this layer", {});
+        "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer", {});
     /* Be helpful and print the whole handle including the layer, as that's
        what one gets from AbstractStorage::handle() as well */
     CORRADE_ASSERT(isHandleValid(storage),
-        "Ui::DataLayer::create(): invalid handle" << storageHandle(handle(), storage), {});
+        "Ui::DataLayer::onUpdate(): invalid handle" << storageHandle(handle(), storage), {});
     CORRADE_ASSERT(update,
-        "Ui::DataLayer::create(): update is null", {});
+        "Ui::DataLayer::onUpdate(): update is null", {});
     /** @todo the index being within storage size is tested by the StorageQuery
         constructor already so it currently doesn't make sense to check it
         again here, however it'll become important if/once storages can change

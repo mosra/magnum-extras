@@ -422,7 +422,7 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
             /** @todo clean this up once I can use C++14 named captures */
             const NodeHandle contentsNode = _contentsNode;
             UserInterface& ui = this->ui();
-            ui.dataLayer().create(storage.contentsOffset(), [&ui, contentsNode](const Float& offset) {
+            ui.dataLayer().onUpdate(storage.contentsOffset(), [&ui, contentsNode](const Float& offset) {
                 /** @todo this gets called even for the very first update()
                     because that's what the DataLayer implicitly does for all
                     newly created data bindings, it's however unnecessary as
@@ -495,7 +495,7 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
             /** @todo clean this up once I can use C++14 named captures */
             const NodeHandle contentsNode = _contentsNode;
             UserInterface& ui = this->ui();
-            ui.dataLayer().create(storage.contentsOffset(), [&ui, contentsNode](const Float& offset) {
+            ui.dataLayer().onUpdate(storage.contentsOffset(), [&ui, contentsNode](const Float& offset) {
                 /** @todo this gets called even for the very first update(),
                     same as with the X case above */
                 ui.setNodeOffsetY(contentsNode, offset);
