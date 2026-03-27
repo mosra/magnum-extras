@@ -943,11 +943,11 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         AbstractStorage storageInternal(StorageHandle handle);
         AbstractStorage storageInternal(DataLayerStorageHandle handle);
 
-        /* The layer argument in these four is just for the assert, but since
-           it has to be an exported symbol to be used from the templated
-           create() functions, it cannot be wrapped in #ifdef CORRADE_NO_ASSERT
-           because it'd cause linker errors if the library is built with
-           assertions but the user project not and vice versa. */
+        /* The layer argument is just for the assert, but since it has to be an
+           exported symbol to be used from the templated create() functions, it
+           cannot be wrapped in #ifdef CORRADE_NO_ASSERT because it'd cause
+           linker errors if the library is built with assertions but the user
+           project not and vice versa. */
         DataHandle createInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& update, NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL StorageHandle storageInternal(const UnsignedInt id) const;

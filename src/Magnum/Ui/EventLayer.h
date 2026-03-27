@@ -987,7 +987,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /* Updates usedScopedConnectionCount */
         friend EventConnection;
 
-        /* Used internally from all templated create() overloads below */
         MAGNUM_UI_LOCAL DataHandle create(NodeHandle node, Implementation::EventType eventType, Containers::FunctionData&& function, void(*call)());
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
