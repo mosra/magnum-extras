@@ -346,6 +346,9 @@ DataLayerStorageHandle DataLayer::createStorage(const Containers::Size3D& size, 
     State& state = *_state;
     /* This function can only publicly be called from an AbstractStorage
        constructor, point there from the assert message to avoid confusion */
+    /** @todo remove this restriction once storages can be resized (i.e., then
+        it's valid to create an empty storage and gradually fill it, for
+        example) */
     CORRADE_ASSERT(size[0] && size[1] && size[2],
         "Ui::AbstractStorage: expected non-zero size but got" << size, {});
     #ifndef CORRADE_TARGET_32BIT
