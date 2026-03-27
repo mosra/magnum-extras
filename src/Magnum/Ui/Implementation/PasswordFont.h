@@ -82,6 +82,9 @@ class PasswordFont: public Text::AbstractFont {
 
         Properties doOpenData(Containers::ArrayView<const char>, Float size) override {
             CORRADE_INTERNAL_ASSERT(size == _fontProperties.size);
+            #ifdef CORRADE_NO_ASSERT
+            static_cast<void>(size);
+            #endif
             _opened = true;
             return _fontProperties;
         }
