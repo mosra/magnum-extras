@@ -128,6 +128,7 @@ set(MagnumUi_HEADERS
     SnapLayout.h
     SnapLayout.hpp
     SnapLayouter.h
+    Storage.h
     TextLayer.h
     TextLayerAnimator.h
     TextProperties.h
