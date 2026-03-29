@@ -97,6 +97,10 @@ class DebugLayerGL;
 class EventConnection;
 class EventLayer;
 
+class DecimalFormatter;
+class HexadecimalFormatter;
+class FloatFormatter;
+
 class LayoutLayer;
 
 class LineLayer;
