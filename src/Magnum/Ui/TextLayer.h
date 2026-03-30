@@ -33,7 +33,7 @@
 
 #include <initializer_list>
 #include <Corrade/Containers/StringView.h> /* for templated create() overloads */
-#include <Corrade/PluginManager/Manager.h>
+#include <Corrade/PluginManager/PluginManager.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Text/Text.h>
 
