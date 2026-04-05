@@ -105,8 +105,8 @@ constexpr StorageFlag StorageFlagAllocated = StorageFlag(1 << (sizeof(StorageFla
 constexpr StorageFlag StorageFlagDirty = StorageFlag(1 << (sizeof(StorageFlag)*8 - 2));
 constexpr StorageFlags StorageFlagMask = ~(StorageFlagAllocated|StorageFlagDirty);
 
-union Storage {
-    explicit Storage() noexcept: used{} {}
+union StorageData {
+    explicit StorageData() noexcept: used{} {}
 
     /* There is *deliberately* no move constructor and destructor for managing
        the deleter for allocated storage because:
@@ -170,7 +170,7 @@ union Storage {
                see the static_assert below. Making it four pointers large
                allows to store a pointer + Stride3D for generic strided views
                without an allocation on both 32-bit and 64-bit platforms.
-               However, on 32-bit platforms four pointers makes the Storage
+               However, on 32-bit platforms four pointers makes the StorageData
                36 bytes large, which doesn't align, so make it five pointers
                there instead. */
             /** @todo this could be even 16-byte aligned now, do that once the
@@ -207,20 +207,20 @@ union Storage {
     } free;
 };
 
-static_assert(sizeof(Storage::Used::Data::inPlace) == Implementation::DataLayerStorageMaxInPlaceSize,
+static_assert(sizeof(StorageData::Used::Data::inPlace) == Implementation::DataLayerStorageMaxInPlaceSize,
     "outdated Implementation::DataLayerStorageMaxInPlaceSize constant");
-static_assert(sizeof(Storage) % 8 == 0 && offsetof(Storage::Used::Data, inPlace) % 8 == 0,
-    "Storage in-place storage not 8-byte aligned");
+static_assert(sizeof(StorageData) % 8 == 0 && offsetof(StorageData::Used::Data, inPlace) % 8 == 0,
+    "StorageData in-place storage not 8-byte aligned");
 
 #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
-static_assert(std::is_trivially_copyable<Storage>::value,
-    "Storage not trivially copyable");
+static_assert(std::is_trivially_copyable<StorageData>::value,
+    "StorageData not trivially copyable");
 #endif
 static_assert(
-    offsetof(Storage::Used, generation) == offsetof(Storage::Free, generation) &&
-    offsetof(Storage::Used, flags) == offsetof(Storage::Free, flags) &&
-    offsetof(Storage::Used, size) == offsetof(Storage::Free, size),
-    "Storage::Used and Free layout not compatible");
+    offsetof(StorageData::Used, generation) == offsetof(StorageData::Free, generation) &&
+    offsetof(StorageData::Used, flags) == offsetof(StorageData::Free, flags) &&
+    offsetof(StorageData::Used, size) == offsetof(StorageData::Free, size),
+    "StorageData::Used and Free layout not compatible");
 
 enum: UnsignedLong {
     /* For Data::storageIdDirtyLinearizedIndex */
@@ -258,11 +258,11 @@ struct Data {
 struct DataLayer::State {
     ~State();
 
-    Containers::Array<Storage> storages;
-    /* Indices in the storage array. The Storage then has a free.next member
-       containing the next free index. New storage gets taken from the front,
-       removed is put at the end. A value of ~UnsignedInt{} means there's no
-       (first/next/last) free storage. */
+    Containers::Array<StorageData> storages;
+    /* Indices in the storage array. The StorageData then has a free.next
+       member containing the next free index. New storage gets taken from the
+       front, removed is put at the end. A value of ~UnsignedInt{} means
+       there's no (first/next/last) free storage. */
     UnsignedInt firstFreeStorage = ~UnsignedInt{};
     UnsignedInt lastFreeStorage = ~UnsignedInt{};
 
@@ -271,9 +271,9 @@ struct DataLayer::State {
 
 DataLayer::State::~State() {
     /* Call deleters for remaining allocated storages. Allocated storages that
-       are already removed have the Allocated flag cleared. See the Storage
+       are already removed have the Allocated flag cleared. See the StorageData
        struct definition for why it doesn't have a destructor on its own. */
-    for(const Storage& storage: storages)
+    for(const StorageData& storage: storages)
         if(storage.used.flags >= StorageFlagAllocated)
             storage.used.data.allocated.deleter(storage.used.data.allocated.data, storage.used.data.allocated.dataSize);
 }
@@ -307,7 +307,7 @@ std::size_t DataLayer::storageUsedCount() const {
 
 std::size_t DataLayer::storageUsedAllocatedCount() const {
     std::size_t count = 0;
-    for(const Storage& storage: _state->storages)
+    for(const StorageData& storage: _state->storages)
         /* The Allocated flag gets reset on removal to make it easier for
            ~State() to know which deleters to call, so we don't need to do
            anything extra here to check only non-removed items */
@@ -328,7 +328,7 @@ bool DataLayer::isHandleValid(const DataLayerStorageHandle handle) const {
     const UnsignedInt index = dataLayerStorageHandleId(handle);
     if(index >= state.storages.size())
         return false;
-    const Storage& storage = state.storages[index];
+    const StorageData& storage = state.storages[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
        set) are expected to be expired and thus with `size` being all zero.
        The size is asserted to be non-zero when creating the storage, so we
@@ -359,7 +359,7 @@ DataLayerStorageHandle DataLayer::createStorage(const Containers::Size3D& size, 
 
     /* Find the first free storage if there is, update the free index to point
        to the next one (or none) */
-    Storage* storage;
+    StorageData* storage;
     if(state.firstFreeStorage != ~UnsignedInt{}) {
         storage = &state.storages[state.firstFreeStorage];
 
@@ -405,7 +405,7 @@ void* DataLayer::createStorageAllocated(const DataLayerStorageHandle handle, voi
     CORRADE_ASSERT(deleter,
         "Ui::AbstractStorage::createAllocated(): deleter is null", {});
 
-    Storage* const storage = &_state->storages[dataLayerStorageHandleId(handle)];
+    StorageData* const storage = &_state->storages[dataLayerStorageHandleId(handle)];
     storage->used.flags |= StorageFlagAllocated;
     storage->used.data.allocated.data = data;
     storage->used.data.allocated.dataSize = dataSize;
@@ -422,7 +422,7 @@ auto DataLayer::createStorageInPlace(const DataLayerStorageHandle handle) -> cha
        In other words, this function does nothing at all besides returning the
        view, so if the storage doesn't need to initialize the memory, it
        doesn't need to call this function. */
-    Storage* const storage = &_state->storages[dataLayerStorageHandleId(handle)];
+    StorageData* const storage = &_state->storages[dataLayerStorageHandleId(handle)];
     CORRADE_INTERNAL_DEBUG_ASSERT(!(storage->used.flags & StorageFlagAllocated));
     return storage->used.data.inPlace;
 }
@@ -432,7 +432,7 @@ void* DataLayer::storageData(const DataLayerStorageHandle handle) {
        the assert message to avoid confusion */
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::AbstractStorage::data(): invalid handle" << handle, {});
-    Storage& storage = _state->storages[dataLayerStorageHandleId(handle)];
+    StorageData& storage = _state->storages[dataLayerStorageHandleId(handle)];
     return storage.used.flags >= StorageFlagAllocated ?
         storage.used.data.allocated.data :
         storage.used.data.inPlace;
@@ -464,7 +464,7 @@ void DataLayer::removeStorage(const DataLayerStorageHandle handle) {
 
 void DataLayer::removeStorageInternal(const UnsignedInt id) {
     State& state = *_state;
-    Storage& storage = state.storages[id];
+    StorageData& storage = state.storages[id];
     /* This should have been ensured by removeStorage() already, which has the
        check there in order to print the full handles. Removal of
        no-longer-referenced reference-counted storages from doPreUpdate() also
@@ -478,7 +478,7 @@ void DataLayer::removeStorageInternal(const UnsignedInt id) {
     ++storage.used.generation &= (1 << Implementation::DataLayerStorageHandleGenerationBits) - 1;
     storage.used.size = {};
 
-    /* If the storage is allocated, call the deleter. See the Storage
+    /* If the storage is allocated, call the deleter. See the StorageData
        struct definition for why it doesn't have a destructor on its own. */
     if(storage.used.flags >= StorageFlagAllocated)
         storage.used.data.allocated.deleter(storage.used.data.allocated.data, storage.used.data.allocated.dataSize);
@@ -546,7 +546,7 @@ void DataLayer::setStorageDirty(const DataLayerStorageHandle handle) {
 }
 
 void DataLayer::setStorageDirtyInternal(const UnsignedInt id) {
-    Storage& storage = _state->storages[id];
+    StorageData& storage = _state->storages[id];
     storage.used.flags |= StorageFlagDirty;
 
     /* Trigger layer update only if the storage is actually used */
@@ -608,8 +608,8 @@ AbstractStorage DataLayer::storageInternal(const DataLayerStorageHandle handle) 
 
 Containers::StridedArrayView1D<const UnsignedShort> DataLayer::storageGenerations() const {
     return stridedArrayView(_state->storages)
-        .slice(&Storage::used)
-        .slice(&Storage::Used::generation);
+        .slice(&StorageData::used)
+        .slice(&StorageData::Used::generation);
 }
 
 std::size_t DataLayer::usedAllocatedCount() const {
@@ -680,7 +680,7 @@ DataHandle DataLayer::onUpdateInternal(const DataLayer&
         reaches DataLayer::create() */
 
     const UnsignedInt storageId = dataLayerStorageHandleId(storage);
-    Storage& storageData = state.storages[storageId];
+    StorageData& storageData = state.storages[storageId];
 
     /* Increase storage reference count */
     ++storageData.used.referenceCount;
@@ -728,7 +728,7 @@ void DataLayer::removeInternal(const UnsignedInt id) {
 
     /* Decrement storage reference count */
     const UnsignedInt storageId = extractStorageId(data.storageIdDirtyLinearizedIndex);
-    Storage& storage = state.storages[storageId];
+    StorageData& storage = state.storages[storageId];
     CORRADE_INTERNAL_DEBUG_ASSERT(storage.used.referenceCount > 0);
     --storage.used.referenceCount;
 
@@ -917,7 +917,7 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
 
         /* If neither the data nor the storage is dirty, skip */
         const UnsignedInt storageId = extractStorageId(data.storageIdDirtyLinearizedIndex);
-        const Storage& storage = state.storages[storageId];
+        const StorageData& storage = state.storages[storageId];
         if(!(data.storageIdDirtyLinearizedIndex & DataIsDirty) &&
            !(storage.used.flags >= StorageFlagDirty))
             continue;
@@ -938,7 +938,7 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
 
     /* Once all data are updated, reset the storage dirty bits as well */
     for(std::size_t i = 0; i != state.storages.size(); ++i) {
-        Storage& storage = state.storages[i];
+        StorageData& storage = state.storages[i];
         /* This can be safely done even on removed storages, as the flags field
            is preserved (but cleared, so this is a no-op). */
         storage.used.flags &= ~StorageFlagDirty;
