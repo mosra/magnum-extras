@@ -26,10 +26,13 @@
 
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
+#include <Corrade/TestSuite/Compare/String.h>
 
 #include "Magnum/Ui/Anchor.h"
+#include "Magnum/Ui/Formatter.h"
 #include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/Label.h"
+#include "Magnum/Ui/Storage.h"
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/Test/WidgetTester.hpp"
 
@@ -53,6 +56,12 @@ struct LabelTest: WidgetTester {
     void constructTextTextProperties();
     void constructTextTextPropertiesNonOwned();
     void constructTextTextPropertiesStateless();
+    template<class T> void constructStorageQuery();
+    template<class T> void constructStorageQueryNonOwned();
+    template<class T> void constructStorageQueryStateless();
+    template<class T, class Formatter> void constructStorageQueryFormatter();
+    template<class T, class Formatter> void constructStorageQueryFormatterNonOwned();
+    template<class T, class Formatter> void constructStorageQueryFormatterStateless();
     void constructNoCreate();
 
     void setStyle();
@@ -69,6 +78,8 @@ struct LabelTest: WidgetTester {
     void setTextFromEmpty();
     void setTextEmpty();
     void setTextEmptyFromIcon();
+
+    void setIconTextInvalid();
 };
 
 const struct {
@@ -110,6 +121,60 @@ LabelTest::LabelTest() {
         &LabelTest::constructTextTextProperties,
         &LabelTest::constructTextTextPropertiesNonOwned,
         &LabelTest::constructTextTextPropertiesStateless,
+        &LabelTest::constructStorageQuery<Int>,
+        &LabelTest::constructStorageQuery<UnsignedInt>,
+        &LabelTest::constructStorageQuery<Long>,
+        &LabelTest::constructStorageQuery<UnsignedLong>,
+        &LabelTest::constructStorageQuery<Float>,
+        &LabelTest::constructStorageQuery<Double>,
+        &LabelTest::constructStorageQuery<Containers::StringView>,
+        &LabelTest::constructStorageQuery<Icon>,
+        &LabelTest::constructStorageQueryNonOwned<Int>,
+        &LabelTest::constructStorageQueryNonOwned<UnsignedInt>,
+        &LabelTest::constructStorageQueryNonOwned<Long>,
+        &LabelTest::constructStorageQueryNonOwned<UnsignedLong>,
+        &LabelTest::constructStorageQueryNonOwned<Float>,
+        &LabelTest::constructStorageQueryNonOwned<Double>,
+        &LabelTest::constructStorageQueryNonOwned<Containers::StringView>,
+        &LabelTest::constructStorageQueryNonOwned<Icon>,
+        &LabelTest::constructStorageQueryStateless<Int>,
+        &LabelTest::constructStorageQueryStateless<UnsignedInt>,
+        &LabelTest::constructStorageQueryStateless<Long>,
+        &LabelTest::constructStorageQueryStateless<UnsignedLong>,
+        &LabelTest::constructStorageQueryStateless<Float>,
+        &LabelTest::constructStorageQueryStateless<Double>,
+        &LabelTest::constructStorageQueryStateless<Containers::StringView>,
+        &LabelTest::constructStorageQueryStateless<Icon>,
+        &LabelTest::constructStorageQueryFormatter<Int, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatter<UnsignedInt, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatter<Long, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatter<UnsignedLong, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatter<Int, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatter<UnsignedInt, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatter<Long, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatter<UnsignedLong, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatter<Float, FloatFormatter>,
+        &LabelTest::constructStorageQueryFormatter<Double, FloatFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<Int, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<UnsignedInt, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<Long, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<UnsignedLong, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<Int, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<UnsignedInt, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<Long, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<UnsignedLong, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<Float, FloatFormatter>,
+        &LabelTest::constructStorageQueryFormatterNonOwned<Double, FloatFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<Int, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<UnsignedInt, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<Long, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<UnsignedLong, DecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<Int, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<UnsignedInt, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<Long, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<UnsignedLong, HexadecimalFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<Float, FloatFormatter>,
+        &LabelTest::constructStorageQueryFormatterStateless<Double, FloatFormatter>,
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
 
@@ -134,7 +199,9 @@ LabelTest::LabelTest() {
         &LabelTest::setTextFromIcon,
         &LabelTest::setTextFromEmpty,
         &LabelTest::setTextEmpty,
-        &LabelTest::setTextEmptyFromIcon
+        &LabelTest::setTextEmptyFromIcon,
+
+        &LabelTest::setIconTextInvalid
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
 }
@@ -155,6 +222,8 @@ void LabelTest::constructEmpty() {
     CORRADE_VERIFY(label1.isOwned());
     CORRADE_VERIFY(label2.isOwned());
 
+    CORRADE_VERIFY(!label1.hasDataBinding());
+    CORRADE_VERIFY(!label2.hasDataBinding());
     CORRADE_COMPARE(label1.style(), LabelStyle::Success);
     CORRADE_COMPARE(label2.style(), LabelStyle::Success);
     CORRADE_COMPARE(label1.icon(), Icon::None);
@@ -163,6 +232,8 @@ void LabelTest::constructEmpty() {
     CORRADE_COMPARE(label2.data(), DataHandle::Null);
     CORRADE_VERIFY(ui.isHandleValid(label1.layoutData()));
     CORRADE_VERIFY(ui.isHandleValid(label2.layoutData()));
+    CORRADE_COMPARE(label1.dataBindingData(), DataHandle::Null);
+    CORRADE_COMPARE(label2.dataBindingData(), DataHandle::Null);
 }
 
 void LabelTest::constructEmptyStateless() {
@@ -182,6 +253,7 @@ void LabelTest::constructEmptyStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.dataLayer().usedCount(), 0);
 }
 
 void LabelTest::constructIcon() {
@@ -190,11 +262,13 @@ void LabelTest::constructIcon() {
     CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
     CORRADE_VERIFY(label.isOwned());
 
+    CORRADE_VERIFY(!label.hasDataBinding());
     CORRADE_COMPARE(label.style(), LabelStyle::Warning);
     CORRADE_COMPARE(label.icon(), Icon::Yes);
 
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
+    CORRADE_COMPARE(label.dataBindingData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
 }
 
@@ -225,6 +299,7 @@ void LabelTest::constructIconStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.dataLayer().usedCount(), 0);
 }
 
 void LabelTest::constructText() {
@@ -234,11 +309,13 @@ void LabelTest::constructText() {
     CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
     CORRADE_VERIFY(label.isOwned());
 
+    CORRADE_VERIFY(!label.hasDataBinding());
     CORRADE_COMPARE(label.style(), LabelStyle::Danger);
     CORRADE_COMPARE(label.icon(), Icon::None);
 
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
+    CORRADE_COMPARE(label.dataBindingData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6);
 }
 
@@ -271,6 +348,7 @@ void LabelTest::constructTextStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.dataLayer().usedCount(), 0);
 }
 
 void LabelTest::constructTextTextProperties() {
@@ -282,11 +360,13 @@ void LabelTest::constructTextTextProperties() {
     CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
     CORRADE_VERIFY(label.isOwned());
 
+    CORRADE_VERIFY(!label.hasDataBinding());
     CORRADE_COMPARE(label.style(), LabelStyle::Info);
     CORRADE_COMPARE(label.icon(), Icon::None);
 
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
+    CORRADE_COMPARE(label.dataBindingData(), DataHandle::Null);
     /* Multiplied by 6 because of the Braille script */
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
 }
@@ -323,13 +403,227 @@ void LabelTest::constructTextTextPropertiesStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.dataLayer().usedCount(), 0);
+}
+
+template<class T> struct StorageQueryTraits {
+    static const char* name() { return Math::TypeTraits<T>::name(); }
+    static T value() { return 133742; }
+    static const char* expected() { return "133742"; }
+};
+template<> struct StorageQueryTraits<Containers::StringView> {
+    static const char* name() { return "Containers::StringView"; }
+    static Containers::StringView value() { return "hello?"; }
+    static const char* expected() { return "hello?"; }
+};
+template<> struct StorageQueryTraits<Icon> {
+    static const char* name() { return "Icon"; }
+    static Icon value() { return Icon::No; }
+    static const char* expected() { return nullptr; }
+};
+template<class> struct FormatterTraits;
+template<> struct FormatterTraits<DecimalFormatter> {
+    static const char* name() { return "DecimalFormatter"; }
+    static const char* expected() { return "+133742"; }
+};
+template<> struct FormatterTraits<HexadecimalFormatter> {
+    static const char* name() { return "HexadecimalFormatter"; }
+    static const char* expected() { return "+20a6e"; }
+};
+template<> struct FormatterTraits<FloatFormatter> {
+    static const char* name() { return "FloatFormatter"; }
+    static const char* expected() { return "+133742"; }
+};
+
+template<class T> void LabelTest::constructStorageQuery() {
+    setTestCaseTemplateName(StorageQueryTraits<T>::name());
+
+    /* Once the label is gone, the storage gets removed as well */
+    T value = StorageQueryTraits<T>::value();
+    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+
+    Label label{Anchor{root, {}, {32, 16}}, storage, LabelStyle::Danger};
+    CORRADE_COMPARE(ui.nodeParent(label), root);
+    CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(label.isOwned());
+
+    CORRADE_VERIFY(label.hasDataBinding());
+    CORRADE_COMPARE(label.style(), LabelStyle::Danger);
+    CORRADE_COMPARE(label.icon(), Icon::None);
+
+    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
+    CORRADE_VERIFY(ui.isHandleValid(label.dataBindingData()));
+    /* Initially there's nothing set. In case of an icon, there's a single
+       empty glyph. */
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()),
+        StorageQueryTraits<T>::expected() ? 0 : 1);
+    /* The data binding should be attached to the label so it cleans up
+       properly */
+    CORRADE_COMPARE(ui.dataLayer().node(label.dataBindingData()), label.node());
+
+    /* Mark the text data as editable so we can subsequently query the contents
+       set by the DataLayer */
+    ui.textLayer().setText(label.data(), "nothing here!", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(ui.textLayer().text(label.data()), "nothing here!");
+
+    /* The contents are set during the first update. In case of an icon,
+       there's no text, just a single glyph set instead. */
+    ui.update();
+    if(const char* expected = StorageQueryTraits<T>::expected())
+        CORRADE_COMPARE(ui.textLayer().text(label.data()), expected);
+    else
+        CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+    /* The icon getter on the instance isn't / cannot be updated by the data
+       binding */
+    CORRADE_COMPARE(label.icon(), Icon::None);
+}
+
+template<class T> void LabelTest::constructStorageQueryNonOwned() {
+    setTestCaseTemplateName(StorageQueryTraits<T>::name());
+
+    /* Like *NonOwned() tests above, just verifying that the arguments are all
+       propagated */
+
+    T value = StorageQueryTraits<T>::value();
+    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+
+    Label label{NonOwned, Anchor{root, {}, {32, 16}}, storage, LabelStyle::Danger};
+    CORRADE_COMPARE(ui.nodeParent(label), root);
+    CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(!label.isOwned());
+
+    CORRADE_COMPARE(label.style(), LabelStyle::Danger);
+
+    /* The contents are set during the first update */
+    ui.update();
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), StorageQueryTraits<T>::expected() ?
+        Containers::StringView{StorageQueryTraits<T>::expected()}.size() : 1);
+}
+
+template<class T> void LabelTest::constructStorageQueryStateless() {
+    setTestCaseTemplateName(StorageQueryTraits<T>::name());
+
+    T value = StorageQueryTraits<T>::value();
+    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+
+    NodeHandle node = label(Anchor{root, {}, {32, 16}}, storage, LabelStyle::Success);
+    CORRADE_COMPARE(ui.nodeParent(node), root);
+    CORRADE_COMPARE(ui.nodeOffset(node), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned label, if it doesn't then this
+       would remove everything */
+    ui.clean();
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.dataLayer().usedCount(), 1);
+}
+
+template<class T, class Formatter> void LabelTest::constructStorageQueryFormatter() {
+    setTestCaseTemplateName({StorageQueryTraits<T>::name(), FormatterTraits<Formatter>::name()});
+
+    /* Like constructStorageQuery(), just additionally passing an explicit
+       formatter argument */
+
+    /* Once the label is gone, the storage gets removed as well */
+    T value = StorageQueryTraits<T>::value();
+    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+
+    Label label{Anchor{root, {}, {32, 16}}, storage,
+        Formatter{Formatter::Flag::ExplicitPlus},
+        LabelStyle::Warning};
+    CORRADE_COMPARE(ui.nodeParent(label), root);
+    CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(label.isOwned());
+
+    CORRADE_VERIFY(label.hasDataBinding());
+    CORRADE_COMPARE(label.style(), LabelStyle::Warning);
+    CORRADE_COMPARE(label.icon(), Icon::None);
+
+    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
+    CORRADE_VERIFY(ui.isHandleValid(label.dataBindingData()));
+    /* Initially there's nothing set */
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 0);
+    /* The data binding should be attached to the label so it cleans up
+       properly */
+    CORRADE_COMPARE(ui.dataLayer().node(label.dataBindingData()), label.node());
+
+    /* Mark the text data as editable so we can subsequently query the contents
+    set by the DataLayer */
+    ui.textLayer().setText(label.data(), "nothing here!", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(ui.textLayer().text(label.data()), "nothing here!");
+
+    /* The contents are set during the first update. In case of an icon,
+       there's no text, just a single glyph set instead. */
+    ui.update();
+    CORRADE_COMPARE(ui.textLayer().text(label.data()), FormatterTraits<Formatter>::expected());
+}
+
+template<class T, class Formatter> void LabelTest::constructStorageQueryFormatterNonOwned() {
+    setTestCaseTemplateName({StorageQueryTraits<T>::name(), FormatterTraits<Formatter>::name()});
+
+    /* Like *NonOwned() tests above, just verifying that the arguments are all
+       propagated */
+
+    T value = StorageQueryTraits<T>::value();
+    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+
+    Label label{NonOwned, Anchor{root, {}, {32, 16}}, storage,
+        Formatter{Formatter::Flag::ExplicitPlus},
+        LabelStyle::Warning};
+    CORRADE_COMPARE(ui.nodeParent(label), root);
+    CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(!label.isOwned());
+
+    CORRADE_COMPARE(label.style(), LabelStyle::Warning);
+
+    /* The contents are set during the first update */
+    ui.update();
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), Containers::StringView{FormatterTraits<Formatter>::expected()}.size());
+}
+
+template<class T, class Formatter> void LabelTest::constructStorageQueryFormatterStateless() {
+    setTestCaseTemplateName({StorageQueryTraits<T>::name(), FormatterTraits<Formatter>::name()});
+
+    T value = StorageQueryTraits<T>::value();
+    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+
+    NodeHandle node = label(Anchor{root, {}, {32, 16}}, storage,
+        Formatter{Formatter::Flag::ExplicitPlus},
+        LabelStyle::Dim);
+    CORRADE_COMPARE(ui.nodeParent(node), root);
+    CORRADE_COMPARE(ui.nodeOffset(node), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned label, if it doesn't then this
+       would remove everything */
+    ui.clean();
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.dataLayer().usedCount(), 1);
 }
 
 void LabelTest::constructNoCreate() {
     Label label{NoCreate};
+    CORRADE_VERIFY(!label.hasDataBinding());
     CORRADE_COMPARE(label.node(), NodeHandle::Null);
     CORRADE_COMPARE(label.data(), DataHandle::Null);
     CORRADE_COMPARE(label.layoutData(), DataHandle::Null);
+    CORRADE_COMPARE(label.dataBindingData(), DataHandle::Null);
 }
 
 void LabelTest::setStyle() {
@@ -496,6 +790,28 @@ void LabelTest::setTextEmptyFromIcon() {
     CORRADE_COMPARE(label.icon(), Icon::None);
     CORRADE_COMPARE(label.data(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
+}
+
+void LabelTest::setIconTextInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    Int value = 3711;
+    Storage<Int> storage{ui, value, StorageFlag::ReferenceCounted};
+    Label label{Anchor{root, {}, {}}, storage};
+    CORRADE_VERIFY(label.hasDataBinding());
+
+    /* Setting a style is allowed with a data binding present */
+    label.setStyle(LabelStyle::Danger);
+    CORRADE_COMPARE(label.style(), LabelStyle::Danger);
+
+    Containers::String out;
+    Error redirectError{&out};
+    label.setIcon({});
+    label.setText({});
+    CORRADE_COMPARE_AS(out,
+        "Ui::Label::setIcon(): can't be called with a data binding present\n"
+        "Ui::Label::setText(): can't be called with a data binding present\n",
+        TestSuite::Compare::String);
 }
 
 }}}}

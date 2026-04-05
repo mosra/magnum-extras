@@ -26,6 +26,7 @@
 
 #include <Corrade/Utility/Format.h>
 
+#include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/Theme.h"
@@ -89,6 +90,38 @@ const struct {
             label.setText(counter % 3 ? "Bye" : "Hello!");
             return label.node();
         }},
+    {"data binding, stateless",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            /* Cannot use Ui::Storage as it'd cause a dangling reference to
+               lambda-local data */
+            struct Storage: AbstractStorage {
+                explicit Storage(UserInterface& ui, Int counter): AbstractStorage{ui, StorageFlag::ReferenceCounted} {
+                    *createInPlace<const char*>() = counter % 3 ? "Bye" : "Hello!";
+                }
+                operator StorageQuery<Containers::StringView>() const {
+                    return {*this, [](const Storage& storage) {
+                        return Containers::StringView{*storage.data<const char*>()};
+                    }};
+                }
+            } storage{ui, counter};
+            return label(Anchor{ui, {}, {52, 36}}, storage, LabelStyle(style)).node();
+        }},
+    {"data binding",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            /* Cannot use Ui::Storage as it'd cause a dangling reference to
+               lambda-local data */
+            struct Storage: AbstractStorage {
+                explicit Storage(UserInterface& ui, Int counter): AbstractStorage{ui, StorageFlag::ReferenceCounted} {
+                    *createInPlace<const char*>() = counter % 3 ? "Bye" : "Hello!";
+                }
+                operator StorageQuery<Containers::StringView>() const {
+                    return {*this, [](const Storage& storage) {
+                        return Containers::StringView{*storage.data<const char*>()};
+                    }};
+                }
+            } storage{ui, counter};
+            return Label{NonOwned, Anchor{ui, {}, {52, 36}}, storage, LabelStyle(style)}.node();
+        }},
 };
 
 const struct {
@@ -132,6 +165,38 @@ const struct {
             label.setStyle(LabelStyle(style));
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
             return label.node();
+        }},
+    {"data binding, stateless",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            /* Cannot use Ui::Storage as it'd cause a dangling reference to
+               lambda-local data */
+            struct Storage: AbstractStorage {
+                explicit Storage(UserInterface& ui, Int counter): AbstractStorage{ui, StorageFlag::ReferenceCounted} {
+                    *createInPlace<Icon>() = counter % 3 ? Icon::Yes : Icon::No;
+                }
+                operator StorageQuery<Icon>() const {
+                    return {*this, [](const Storage& storage) {
+                        return *storage.data<Icon>();
+                    }};
+                }
+            } storage{ui, counter};
+            return label(Anchor{ui, {}, {48, 36}}, storage, LabelStyle(style)).node();
+        }},
+    {"data binding",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            /* Cannot use Ui::Storage as it'd cause a dangling reference to
+               lambda-local data */
+            struct Storage: AbstractStorage {
+                explicit Storage(UserInterface& ui, Int counter): AbstractStorage{ui, StorageFlag::ReferenceCounted} {
+                    *createInPlace<Icon>() = counter % 3 ? Icon::Yes : Icon::No;
+                }
+                operator StorageQuery<Icon>() const {
+                    return {*this, [](const Storage& storage) {
+                        return *storage.data<Icon>();
+                    }};
+                }
+            } storage{ui, counter};
+            return Label{NonOwned, Anchor{ui, {}, {48, 36}}, storage, LabelStyle(style)}.node();
         }},
 };
 
