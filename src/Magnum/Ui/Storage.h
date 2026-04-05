@@ -112,7 +112,7 @@ template<class T> class Storage: public AbstractStorage {
          * of the @ref operator[]() overloads.
          */
         StorageQuery<T> value() const {
-            return StorageQuery<T>{*this, [](const Storage<T>& storage) {
+            return {*this, [](const Storage<T>& storage) {
                 /* The StorageQuery requires lambdas so can't just pass the
                    query() static function by pointer */
                 return query(storage, {});
@@ -136,7 +136,7 @@ template<class T> class Storage: public AbstractStorage {
          * for indexing a 3D storage.
          */
         StorageQuery<T> operator[](std::size_t index) const {
-            return StorageQuery<T>{*this, index, [](const Storage<T>& storage, const std::size_t index) {
+            return {*this, index, [](const Storage<T>& storage, const std::size_t index) {
                 /* The StorageQuery requires lambdas so can't just pass the
                    query() static function by pointer */
                 return query(storage, {0, 0, index});
@@ -152,7 +152,7 @@ template<class T> class Storage: public AbstractStorage {
          * storage.
          */
         StorageQuery<T> operator[](const Containers::Size2D& index) const {
-            return StorageQuery<T>{*this, index, [](const Storage<T>& storage, const Containers::Size2D& index) {
+            return {*this, index, [](const Storage<T>& storage, const Containers::Size2D& index) {
                 /* The StorageQuery requires lambdas so can't just pass the
                    query() static function by pointer */
                 return query(storage, {0, index[0], index[1]});
@@ -165,7 +165,7 @@ template<class T> class Storage: public AbstractStorage {
          * Expects that @p index is less than @ref size().
          */
         StorageQuery<T> operator[](const Containers::Size3D& index) const {
-            return StorageQuery<T>{*this, index, [](const Storage<T>& storage, const Containers::Size3D& index) {
+            return {*this, index, [](const Storage<T>& storage, const Containers::Size3D& index) {
                 /* The StorageQuery requires lambdas so can't just pass the
                    query() static function by pointer */
                 return query(storage, index);
@@ -179,7 +179,7 @@ template<class T> class Storage: public AbstractStorage {
          * of the other overloads.
          */
         template<class U> StorageQuery<U> value() const {
-            return StorageQuery<U>{*this, [](const Storage<T>& storage) {
+            return {*this, [](const Storage<T>& storage) {
                 /* The StorageQuery requires lambdas so can't just pass the
                    query() static function by pointer */
                 return U(query(storage, {}));
@@ -195,7 +195,7 @@ template<class T> class Storage: public AbstractStorage {
          * for indexing a 3D storage.
          */
         template<class U> StorageQuery<U> value(std::size_t index) const {
-            return StorageQuery<U>{*this, index, [](const Storage<T>& storage, std::size_t index) {
+            return {*this, index, [](const Storage<T>& storage, std::size_t index) {
                 /* The StorageQuery requires lambdas so can't just pass the
                    query() static function by pointer */
                 return U(query(storage, {0, 0, index}));
@@ -211,7 +211,7 @@ template<class T> class Storage: public AbstractStorage {
          * storage.
          */
         template<class U> StorageQuery<U> value(const Containers::Size2D& index) const {
-            return StorageQuery<U>{*this, index, [](const Storage<T>& storage, const Containers::Size2D& index) {
+            return {*this, index, [](const Storage<T>& storage, const Containers::Size2D& index) {
                 /* The StorageQuery requires lambdas so can't just pass the
                    query() static function by pointer */
                 return U(query(storage, {0, index[0], index[1]}));
@@ -224,7 +224,7 @@ template<class T> class Storage: public AbstractStorage {
          * Expects that @p index is less than @ref size().
          */
         template<class U> StorageQuery<U> value(const Containers::Size3D& index) const {
-            return StorageQuery<U>{*this, index, [](const Storage<T>& storage, const Containers::Size3D& index) {
+            return {*this, index, [](const Storage<T>& storage, const Containers::Size3D& index) {
                 /* The StorageQuery requires lambdas so can't just pass the
                    query() static function by pointer */
                 return U(query(storage, index));

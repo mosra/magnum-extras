@@ -1270,7 +1270,7 @@ void DataLayerTest::removeStorageInvalid() {
         explicit DummyStorage(DataLayer& layer, StorageFlags flags = {}): AbstractStorage{layer, flags} {}
 
         operator StorageQuery<Int>() const {
-            return StorageQuery<Int>{*this, [](const DummyStorage&) {
+            return {*this, [](const DummyStorage&) {
                 return 3;
             }};
         }
@@ -1406,7 +1406,7 @@ void DataLayerTest::setStorageDirty() {
         explicit DummyStorage(DataLayer& layer, StorageFlags flags): AbstractStorage{layer, flags} {}
 
         operator StorageQuery<Int>() const {
-            return StorageQuery<Int>{*this, [](const DummyStorage&) {
+            return {*this, [](const DummyStorage&) {
                 return 3371;
             }};
         }
@@ -2014,7 +2014,7 @@ void DataLayerTest::createRemove() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer, 15} {}
 
         StorageQuery<Int> operator[](std::size_t index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, std::size_t index) {
+            return {*this, index, [](const DummyStorage&, std::size_t index) {
                 CORRADE_COMPARE(index, 13);
                 ++storageCalled;
                 return 0x333;
@@ -2027,7 +2027,7 @@ void DataLayerTest::createRemove() {
         explicit DummyStorageImplicit(DataLayer& layer): AbstractStorage{layer} {}
 
         operator StorageQuery<Int>() const {
-            return StorageQuery<Int>{*this, [](const DummyStorageImplicit&) {
+            return {*this, [](const DummyStorageImplicit&) {
                 ++storageImplicitCalled;
                 return 0x4444;
             }};
@@ -2343,7 +2343,7 @@ void DataLayerTest::createRemoveHandleRecycle() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer, {13, 5, 22}} {}
 
         StorageQuery<Int> operator[](const Containers::Size3D& index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size3D&) -> Int {
+            return {*this, index, [](const DummyStorage&, const Containers::Size3D&) -> Int {
                 CORRADE_FAIL("This should never be called.");
                 return {};
             }};
@@ -2398,13 +2398,13 @@ void DataLayerTest::createInvalid() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
 
         operator StorageQuery<Int>() const {
-            return StorageQuery<Int>{*this, [](const DummyStorage&) -> Int {
+            return {*this, [](const DummyStorage&) -> Int {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
 
         StorageQuery<Float> value() const {
-            return StorageQuery<Float>{*this, [](const DummyStorage&) -> Float {
+            return {*this, [](const DummyStorage&) -> Float {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
@@ -2461,17 +2461,17 @@ void DataLayerTest::setIndex() {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
 
         StorageQuery<Int> operator[](std::size_t index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, std::size_t) {
+            return {*this, index, [](const DummyStorage&, std::size_t) {
                 return 667;
             }};
         }
         StorageQuery<Int> operator[](const Containers::Size2D& index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size2D&) {
+            return {*this, index, [](const DummyStorage&, const Containers::Size2D&) {
                 return 667;
             }};
         }
         StorageQuery<Int> operator[](const Containers::Size3D& index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size3D&) {
+            return {*this, index, [](const DummyStorage&, const Containers::Size3D&) {
                 return 667;
             }};
         }
@@ -2625,17 +2625,17 @@ void DataLayerTest::setIndexInvalid() {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
 
         StorageQuery<Int> operator[](std::size_t index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, std::size_t) -> Int {
+            return {*this, index, [](const DummyStorage&, std::size_t) -> Int {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
         StorageQuery<Int> operator[](const Containers::Size2D& index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size2D&) -> Int {
+            return {*this, index, [](const DummyStorage&, const Containers::Size2D&) -> Int {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
         StorageQuery<Int> operator[](const Containers::Size3D& index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size3D&) -> Int {
+            return {*this, index, [](const DummyStorage&, const Containers::Size3D&) -> Int {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
@@ -2747,7 +2747,7 @@ void DataLayerTest::indexLinearization() {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
 
         StorageQuery<Int> operator[](const Containers::Size3D& index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size3D&) {
+            return {*this, index, [](const DummyStorage&, const Containers::Size3D&) {
                 return 1337;
             }};
         }
@@ -2799,7 +2799,7 @@ void DataLayerTest::indexLinearizationFullStorageCapacity() {
         explicit DummyStorage(DataLayer& layer, std::size_t size): AbstractStorage{layer, size} {}
 
         StorageQuery<Int> operator[](const std::size_t index) const {
-            return StorageQuery<Int>{*this, index, [](const DummyStorage&, std::size_t) {
+            return {*this, index, [](const DummyStorage&, std::size_t) {
                 return 1337;
             }};
         }
@@ -2837,7 +2837,7 @@ void DataLayerTest::clean() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
 
         operator StorageQuery<Int>() const {
-            return StorageQuery<Int>{*this, [](const DummyStorage&) {
+            return {*this, [](const DummyStorage&) {
                 ++queryCalled;
                 return 0x333;
             }};
@@ -2922,7 +2922,7 @@ void DataLayerTest::update() {
         explicit Storage(DataLayer& layer): AbstractStorage{layer} {}
 
         StorageQuery<Float> leet() const {
-            return StorageQuery<Float>{*this, [](const Storage&) {
+            return {*this, [](const Storage&) {
                 return 1.337f;
             }};
         }
@@ -2937,7 +2937,7 @@ void DataLayerTest::update() {
         }
 
         StorageQuery<Short> operator[](const Containers::Size2D& index) const {
-            return StorageQuery<Short>{*this, index, [](const Storage2D& storage, const Containers::Size2D& index) {
+            return {*this, index, [](const Storage2D& storage, const Containers::Size2D& index) {
                 return storage.data<Short>()[index[0]*3 + index[1]];
             }};
         }
@@ -3167,7 +3167,7 @@ void DataLayerTest::referenceCounted() {
         }
 
         operator StorageQuery<Int>() const {
-            return StorageQuery<Int>{*this, [](const NonTrivialStorage&) -> Int {
+            return {*this, [](const NonTrivialStorage&) -> Int {
                 return {};
             }};
         }

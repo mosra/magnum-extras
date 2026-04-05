@@ -165,7 +165,7 @@ struct ScrollAreaStorage: AbstractStorage {
     /* When this changes, the storage is marked as dirty, and setNodeOffset*()
        gets called on the contents node */
     StorageQuery<Float> contentsOffset() const {
-        return StorageQuery<Float>{*this, [](const ScrollAreaStorage& storage) {
+        return {*this, [](const ScrollAreaStorage& storage) {
             return storage.data<Data>()->contentsOffset;
         }};
     }

@@ -1341,7 +1341,7 @@ template<class T> class StorageQuery {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value, int>::type = 0
             #endif
-        > explicit StorageQuery(const Storage& storage,
+        > /*implicit*/ StorageQuery(const Storage& storage,
             #ifndef DOXYGEN_GENERATING_OUTPUT
             F query
             #else
@@ -1365,7 +1365,7 @@ template<class T> class StorageQuery {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type = 0
             #endif
-        > explicit StorageQuery(const Storage& storage, std::size_t index,
+        > /*implicit*/ StorageQuery(const Storage& storage, std::size_t index,
             #ifndef DOXYGEN_GENERATING_OUTPUT
             F query
             #else
@@ -1385,7 +1385,7 @@ template<class T> class StorageQuery {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type = 0
             #endif
-        > explicit StorageQuery(const Storage& storage, const Containers::Size1D& index,
+        > /*implicit*/ StorageQuery(const Storage& storage, const Containers::Size1D& index,
             #ifndef DOXYGEN_GENERATING_OUTPUT
             F query
             #else
@@ -1409,7 +1409,7 @@ template<class T> class StorageQuery {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type = 0
             #endif
-        > explicit StorageQuery(const Storage& storage, const Containers::Size2D& index,
+        > /*implicit*/ StorageQuery(const Storage& storage, const Containers::Size2D& index,
             #ifndef DOXYGEN_GENERATING_OUTPUT
             F query
             #else
@@ -1433,7 +1433,7 @@ template<class T> class StorageQuery {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type = 0
             #endif
-        > explicit StorageQuery(const Storage& storage, const Containers::Size3D& index,
+        > /*implicit*/ StorageQuery(const Storage& storage, const Containers::Size3D& index,
             #ifndef DOXYGEN_GENERATING_OUTPUT
             F query
             #else
