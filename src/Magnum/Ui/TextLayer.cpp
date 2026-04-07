@@ -1496,8 +1496,6 @@ Containers::StringView TextLayer::textInternal(const UnsignedInt id) const {
     const Implementation::TextLayerData& data = state.data[id];
     CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
         "Ui::TextLayer::text(): text doesn't have" << TextDataFlag::Editable << "set", {});
-
-    CORRADE_INTERNAL_ASSERT(data.textRun != ~UnsignedInt{});
     return state.textData.sliceSize(state.textRuns[data.textRun].textOffset,
                                     state.textRuns[data.textRun].textSize);
 }
