@@ -1327,16 +1327,17 @@ void TextLayer::remove(const LayerDataHandle handle) {
 
 void TextLayer::removeInternal(const UnsignedInt id) {
     State& state = static_cast<State&>(*_state);
+    Implementation::TextLayerData& data = state.data[id];
 
     /* Mark the glyph run as unused. It'll be removed during the next
        recompaction in doUpdate(). */
-    if(state.data[id].glyphRun != ~UnsignedInt{})
-        state.glyphRuns[state.data[id].glyphRun].glyphOffset = ~UnsignedInt{};
+    if(data.glyphRun != ~UnsignedInt{})
+        state.glyphRuns[data.glyphRun].glyphOffset = ~UnsignedInt{};
 
     /* If there's a text run, mark it as unused as well; it'll be removed in
        doUpdate() too */
-    if(state.data[id].textRun != ~UnsignedInt{})
-        state.textRuns[state.data[id].textRun].textOffset = ~UnsignedInt{};
+    if(data.textRun != ~UnsignedInt{})
+        state.textRuns[data.textRun].textOffset = ~UnsignedInt{};
 
     /* Data removal doesn't need anything to be reuploaded to continue working
        correctly, thus setNeedsUpdate() isn't called.
@@ -1541,8 +1542,8 @@ void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringVi
 
     /* If there's a text run, mark it as unused as well; it'll be removed in
        doUpdate() too */
-    if(state.data[id].textRun != ~UnsignedInt{})
-        state.textRuns[state.data[id].textRun].textOffset = ~UnsignedInt{};
+    if(data.textRun != ~UnsignedInt{})
+        state.textRuns[data.textRun].textOffset = ~UnsignedInt{};
 
     /* Shape the text, save its properties and optionally also the source
        string if it's editable; mark the layer as needing an update */
@@ -1897,8 +1898,8 @@ void TextLayer::setGlyphInternal(const UnsignedInt id, const UnsignedInt glyph, 
 
     /* If there's a text run, mark it as unused as well; it'll be removed in
        doUpdate() too */
-    if(state.data[id].textRun != ~UnsignedInt{})
-        state.textRuns[state.data[id].textRun].textOffset = ~UnsignedInt{};
+    if(data.textRun != ~UnsignedInt{})
+        state.textRuns[data.textRun].textOffset = ~UnsignedInt{};
 
     /* Shape the glyph, mark the layer as needing an update */
     shapeGlyphInternal(
