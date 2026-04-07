@@ -686,7 +686,23 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return onUpdateInternal(*query._layer, query._storage, query._index, query._call, Utility::move(function), node);
+            return onUpdateInternal(*query._layer, query._storage, query._index, query._callReference, Utility::move(function), node);
+        }
+        /** @overload */
+        template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            Containers::Function<void(T)>&&
+            #else /* Without this, deduction of T won't work */
+            typename std::common_type<Containers::Function<void(T)>>::type&&
+            #endif
+        function, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return onUpdateInternal(*query._layer, query._storage, query._index, query._callValue, Utility::move(function), node);
         }
 
         /**
@@ -695,7 +711,8 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * Assuming the @p storage has a `Type` @cpp typedef @ce which denotes
          * what @ref StorageQuery type the storage is implicitly convertible
          * to, delegates to @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(const T&)>&&, NodeHandle)
-         * with given type. See its documentation for more information.
+         * and overloads with given type. See their documentation for more
+         * information.
          */
         template<class Storage
             #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -706,6 +723,26 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             Containers::Function<void(const typename Storage::Type&)>&&
             #else /* Without this, deduction of T won't work */
             typename std::common_type<Containers::Function<void(const typename Storage::Type&)>>::type&&
+            #endif
+        function, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return onUpdate<typename Storage::Type>(storage, Utility::move(function), node);
+        }
+        /** @overload */
+        template<class Storage
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , typename std::enable_if<std::is_base_of<AbstractStorage, Storage>::value, int>::type = 0
+            #endif
+        > DataHandle onUpdate(const Storage& storage,
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            Containers::Function<void(typename Storage::Type)>&&
+            #else /* Without this, deduction of T won't work */
+            typename std::common_type<Containers::Function<void(typename Storage::Type)>>::type&&
             #endif
         function, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1435,13 +1472,14 @@ template<class T> class StorageQuery {
            getters */
         friend DataLayer;
 
-        explicit StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&));
+        explicit StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&));
 
         DataLayer* _layer;
         DataLayerStorageHandle _storage;
         /* 0/4 bytes free */
         Containers::Size3D _index;
-        void(*_call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
+        void(*_callReference)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
+        void(*_callValue)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
 };
 
 template<class Storage> Storage DataLayer::storage(const StorageHandle handle) {
@@ -1474,27 +1512,28 @@ namespace Implementation {
            from an empty struct doesn't break the "`this` pointer is never
            null" rule and avoids compiler warnings. */
         struct {} empty;
-        reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage)));
+        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage)));
     }
     template<class T, class Storage, class F> void storageQueryUpdateCall1D(const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
         /* See above for why we're casting from an empty struct */
         struct {} empty;
-        reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index[2]));
+        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index[2]));
     }
     template<class T, class Storage, class F> void storageQueryUpdateCall2D(const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
         /* See above for why we're casting from an empty struct */
         struct {} empty;
-        reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), {index[1], index[2]}));
+        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), {index[1], index[2]}));
     }
     template<class T, class Storage, class F> void storageQueryUpdateCall3D(const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
         /* See above for why we're casting from an empty struct */
         struct {} empty;
-        reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index));
+        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index));
     }
 }
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, F): StorageQuery{storage, {},
+    Implementation::storageQueryUpdateCall<const T&, Storage, F>,
     Implementation::storageQueryUpdateCall<T, Storage, F>
 } {
     static_assert(
@@ -1517,6 +1556,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, F): StorageQuery{storage, {0, 0, index},
+    Implementation::storageQueryUpdateCall1D<const T&, Storage, F>,
     Implementation::storageQueryUpdateCall1D<T, Storage, F>
 } {
     static_assert(
@@ -1536,6 +1576,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, F): StorageQuery{storage, {0, 0, index},
+    Implementation::storageQueryUpdateCall1D<const T&, Storage, F>,
     Implementation::storageQueryUpdateCall1D<T, Storage, F>
 } {
     static_assert(
@@ -1555,6 +1596,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, F): StorageQuery{storage, {0, index[0], index[1]},
+    Implementation::storageQueryUpdateCall2D<const T&, Storage, F>,
     Implementation::storageQueryUpdateCall2D<T, Storage, F>
 } {
     static_assert(
@@ -1574,6 +1616,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, F): StorageQuery{storage, index,
+    Implementation::storageQueryUpdateCall3D<const T&, Storage, F>,
     Implementation::storageQueryUpdateCall3D<T, Storage, F>
 } {
     static_assert(
@@ -1586,7 +1629,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "expected query to be a non-capturing lambda");
 }
 
-template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&)): _layer{storage._layer}, _storage{storage._handle}, _index{index}, _call{call} {
+template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&)): _layer{storage._layer}, _storage{storage._handle}, _index{index}, _callReference{callReference}, _callValue{callValue} {
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
         "Ui::StorageQuery: invalid handle" << storageHandle(_layer->handle(), _storage), );
     #ifndef CORRADE_NO_ASSERT
@@ -1597,11 +1640,11 @@ template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, 
 }
 
 template<class T> StorageQuery<T>::operator T() const {
-    /* We're abusing the _call function, which *passes* the storage value
-       elsewhere instead of returning it, to copy the passed value outside and
-       return it. To support non-copyable types it's an union which is
-       placement-new'd into, the assumption is that the storage wouldn't return
-       move-only types so these don't work here. */
+    /* We're abusing the _callReference function, which *passes* the storage
+       value elsewhere instead of returning it, to copy the passed value
+       outside and return it. To support non-copyable types it's an union which
+       is placement-new'd into, the assumption is that the storage wouldn't
+       return move-only types so these don't work here. */
     union NotInitialized {
         explicit NotInitialized() {}
         T value;
@@ -1611,7 +1654,7 @@ template<class T> StorageQuery<T>::operator T() const {
     Containers::Function<void(const T&)> update{[&out](const T& value) {
         new(&out.value) T{value};
     }};
-    _call(AbstractStorage{*_layer, _storage}, _index, update);
+    _callReference(AbstractStorage{*_layer, _storage}, _index, update);
     return out.value;
 }
 #endif
