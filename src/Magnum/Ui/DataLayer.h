@@ -1337,6 +1337,26 @@ template<class T> class StorageQuery {
         );
 
         /**
+         * @brief Create a query to a 1D storage
+         *
+         * Same as @ref StorageQuery() "StorageQuery(const Storage&, std::size_t, T(*)(const Storage&, std::size_t))",
+         * just with @ref Containers::Size1D instead of @ref std::size_t as an
+         * index type to make it easier for generic storage implementations.
+         * @todoc fix the constructor link once Doxygen is capable of that
+         */
+        template<class Storage
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type = 0
+            #endif
+        > explicit StorageQuery(const Storage& storage, const Containers::Size1D& index,
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            F query
+            #else
+            T(*query)(const Storage& storage, const Containers::Size1D& index)
+            #endif
+        );
+
+        /**
          * @brief Create a query to a 2D storage
          * @param storage   Storage instance
          * @param index     Value index to query
@@ -1506,6 +1526,33 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, F): StorageQuery{storage, {0, 0, index},
+    #ifndef CORRADE_MSVC2015_COMPATIBILITY
+    [](const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
+        /* See above for why we're casting from an empty struct */
+        struct {} empty;
+        reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index[2]));
+    }
+    #else
+    Implementation::storageQueryUpdateCall1D<T, Storage, F>
+    #endif
+} {
+    static_assert(
+        #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+        std::is_trivially_copyable<Storage>::value &&
+        #endif
+        sizeof(Storage) == sizeof(AbstractStorage),
+        "AbstractStorage subclasses expected to be trivially copyable with no extra members");
+    #ifndef CORRADE_NO_ASSERT
+    /* Base type and handle validity reasoning same as above */
+    const Containers::Size3D size = _layer->isHandleValid(_storage) ? static_cast<const AbstractStorage&>(storage).size() : Containers::Size3D{1, 1, 1};
+    #endif
+    CORRADE_ASSERT(size[0] == 1 && size[1] == 1,
+        "Ui::StorageQuery: expected a 1D storage but got a size of" << size, );
+    static_assert(std::is_empty<F>::value,
+        "expected query to be a non-capturing lambda");
+}
+
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, F): StorageQuery{storage, {0, 0, index},
     #ifndef CORRADE_MSVC2015_COMPATIBILITY
     [](const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
         /* See above for why we're casting from an empty struct */
