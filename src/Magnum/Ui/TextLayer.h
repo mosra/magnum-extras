@@ -2495,10 +2495,11 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid and the text was created or set with
          * @ref TextDataFlag::Editable present. The returned view is only valid
-         * until the next @ref create(), @ref setText() or @ref update() call
-         * and is never
+         * until the next @ref create(), @ref setText(), @ref updateText(),
+         * @ref editText() or @ref update() call and is never
          * @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref flags(DataHandle) const
          */
         Containers::StringView text(DataHandle handle) const;
 
@@ -2648,7 +2649,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         void updateText(LayerDataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor, UnsignedInt selection);
 
         /**
-         * @brief Update text and cursor position in an editable text
+         * @brief Update text and cursor position in an editable text assuming it belongs to this layer
          *
          * Same as calling @ref updateText(DataHandle, UnsignedInt, UnsignedInt, UnsignedInt, Containers::StringView, UnsignedInt, UnsignedInt)
          * with @p position passed to both @p position and @p selection, i.e.

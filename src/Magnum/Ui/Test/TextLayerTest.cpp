@@ -6672,13 +6672,12 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             data.customFont ? GlyphIndex(13) : GlyphIndex(66),
             textProperties);
         /* This changes empty text to a non-empty, i.e. there's no previous
-           glyph run to remove. OTOH it makes the text non-editable, so the
-           text run is removed without a replacement. Plus it uses a newline
-           to verify it's propagated correctly all the way to
-           Text::RendererCore and back. */
+           glyph run to remove. Plus it uses a newline to verify it's
+           propagated correctly all the way to Text::RendererCore and back. */
         layer.setText(dataHandleData(fifth), "a\nh", textProperties, TextDataFlags{});
-        /* This changes empty text to a glyph, so again no previous glyph run
-           to remove. But it again causes the text run to be removed. */
+        /* This changes empty editable text to a glyph, so again no previous
+           glyph run to remove. OTOH it makes the text non-editable, so the
+           text run is removed without a replacement. */
         layer.setGlyph(dataHandleData(third), GlyphIndex(33), textProperties);
     } else {
         /* Have to pass the flags explicitly because otherwise it'll retain
