@@ -1113,7 +1113,7 @@ void TextLayer::shapeRememberTextInternal(
         if(data.editData == ~UnsignedInt{}) {
             if(state.firstFreeEditData == ~UnsignedInt{})  {
                 data.editData = state.editData.size();
-                arrayAppend(state.editData, NoInit, 1);
+                arrayAppend(state.editData, InPlaceInit);
             } else {
                 data.editData = state.firstFreeEditData;
                 state.firstFreeEditData = state.editData[data.editData].nextFree;
@@ -1151,9 +1151,12 @@ void TextLayer::shapeRememberTextInternal(
 
     /* Otherwise mark it as having no associated edit data and text run */
     } else {
-        /* If there were edit data before, put them on the free list */
+        /* If there were edit data before, clear the previous callback to free
+           its state, if any, and put them on the free list */
         if(data.editData != ~UnsignedInt{}) {
-            state.editData[data.editData].nextFree = state.firstFreeEditData;
+            Implementation::TextLayerEditData& editData = state.editData[data.editData];
+            editData.textEditCallback = {};
+            editData.nextFree = state.firstFreeEditData;
             state.firstFreeEditData = data.editData;
             data.editData = ~UnsignedInt{};
         }
@@ -1371,7 +1374,9 @@ void TextLayer::removeInternal(const UnsignedInt id) {
 
     /* If the text is editable, put the edit data on the free list */
     if(data.editData != ~UnsignedInt{}) {
-        state.editData[data.editData].nextFree = state.firstFreeEditData;
+        Implementation::TextLayerEditData& editData = state.editData[data.editData];
+        editData.textEditCallback = {};
+        editData.nextFree = state.firstFreeEditData;
         state.firstFreeEditData = data.editData;
     }
 
@@ -1637,7 +1642,7 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
         "Ui::TextLayer::updateText(): selection position" << selection << "out of range for a text of" << textSize << "bytes", );
 
     /* If there's nothing to remove or insert, update just the cursor and
-       bail */
+       bail. This means the textEditCallback also doesn't get called. */
     if(!removeSize && !insertText) {
         setCursorInternal(id, cursor, selection);
         return;
@@ -1732,7 +1737,7 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
        layer as needing an update. Forming a TextProperties from the internal
        state that was saved earlier in shapeRememberTextInternal() above. */
     TextProperties properties{NoInit};
-    const Implementation::TextLayerEditData& editData = state.editData[data.editData];
+    Implementation::TextLayerEditData& editData = state.editData[data.editData];
     Utility::copy(editData.language, properties._language);
     properties._script = editData.script;
     /* The font is passed through an argument, shouldn't be taken from here */
@@ -1757,6 +1762,10 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
         CORRADE_INTERNAL_DEBUG_ASSERT(!(state.flags >= TextLayerFlag::Transformable));
         setNeedsUpdate(LayerState::NeedsLayoutUpdate);
     }
+
+    /* If there's a text edit callback, call it with the new text */
+    if(editData.textEditCallback)
+        editData.textEditCallback(text);
 }
 
 void TextLayer::editText(const DataHandle handle, const TextEdit edit, const Containers::StringView insert) {
@@ -1907,6 +1916,46 @@ void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, cons
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
+bool TextLayer::hasTextEditCallback(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::hasTextEditCallback(): invalid handle" << handle, {});
+    return hasTextEditCallbackInternal(dataHandleId(handle));
+}
+
+bool TextLayer::hasTextEditCallback(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::hasTextEditCallback(): invalid handle" << handle, {});
+    return hasTextEditCallbackInternal(layerDataHandleId(handle));
+}
+
+bool TextLayer::hasTextEditCallbackInternal(const UnsignedInt id) const {
+    auto& state = static_cast<const State&>(*_state);
+    const Implementation::TextLayerData& data = state.data[id];
+    CORRADE_ASSERT(data.editData != ~UnsignedInt{},
+        "Ui::TextLayer::hasTextEditCallback(): text doesn't have" << TextDataFlag::Editable << "set", {});
+    return !!state.editData[data.editData].textEditCallback;
+}
+
+void TextLayer::setTextEditCallback(const DataHandle handle, Containers::Function<void(Containers::StringView)>&& function) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::setTextEditCallback(): invalid handle" << handle, );
+    setTextEditCallbackInternal(dataHandleId(handle), Utility::move(function));
+}
+
+void TextLayer::setTextEditCallback(const LayerDataHandle handle, Containers::Function<void(Containers::StringView)>&& function) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::setTextEditCallback(): invalid handle" << handle, );
+    setTextEditCallbackInternal(layerDataHandleId(handle), Utility::move(function));
+}
+
+void TextLayer::setTextEditCallbackInternal(const UnsignedInt id, Containers::Function<void(Containers::StringView)>&& function) {
+    auto& state = static_cast<State&>(*_state);
+    Implementation::TextLayerData& data = state.data[id];
+    CORRADE_ASSERT(data.editData != ~UnsignedInt{},
+        "Ui::TextLayer::setTextEditCallback(): text doesn't have" << TextDataFlag::Editable << "set", );
+   state.editData[data.editData].textEditCallback = Utility::move(function);
+}
+
 void TextLayer::setGlyph(const DataHandle handle, const UnsignedInt glyph, const TextProperties& properties) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::setGlyph(): invalid handle" << handle, );
@@ -1941,7 +1990,9 @@ void TextLayer::setGlyphInternal(const UnsignedInt id, const UnsignedInt glyph, 
        setTextInternal(), where shapeRememberTextInternal() may reuse the edit
        data, here they're never used and thus are freed upfront. */
     if(data.editData != ~UnsignedInt{}) {
-        state.editData[data.editData].nextFree = state.firstFreeEditData;
+        Implementation::TextLayerEditData& editData = state.editData[data.editData];
+        editData.textEditCallback = {};
+        editData.nextFree = state.firstFreeEditData;
         state.firstFreeEditData = data.editData;
         data.editData = ~UnsignedInt{};
     }

@@ -181,6 +181,7 @@ struct TextLayerTest: TestSuite::Tester {
     void updateTextInvalid();
     void editText();
     void editTextInvalid();
+    void textEditCallback();
 
     void cycleGlyphEditableNonEditableText();
 
@@ -1696,6 +1697,7 @@ TextLayerTest::TextLayerTest() {
         Containers::arraySize(EditData));
 
     addTests({&TextLayerTest::editTextInvalid,
+              &TextLayerTest::textEditCallback,
 
               &TextLayerTest::cycleGlyphEditableNonEditableText});
 
@@ -6248,6 +6250,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.cursor(first), Containers::pair(5u, 5u));
         /* textProperties() tested in createSetTextTextPropertiesEditable() */
         CORRADE_COMPARE(layer.text(first), "hello");
+        /* Callback behavior tested fully in textEditCallback() below */
+        CORRADE_VERIFY(!layer.hasTextEditCallback(first));
     }
     CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
     if(data.layerFlags >= TextLayerFlag::Transformable)
@@ -6305,6 +6309,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             CORRADE_COMPARE(layer.cursor(dataHandleData(second)), Containers::pair(4u, 4u));
             /* textProperties() tested in createSetTextTextPropertiesEditable() */
             CORRADE_COMPARE(layer.text(dataHandleData(second)), "ahoy");
+            /* Callback behavior tested fully in textEditCallback() below */
+            CORRADE_VERIFY(!layer.hasTextEditCallback(dataHandleData(second)));
         }
         CORRADE_COMPARE(layer.color(dataHandleData(second)), 0xffffff_rgbf);
         if(data.layerFlags >= TextLayerFlag::Transformable)
@@ -6323,6 +6329,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             CORRADE_COMPARE(layer.cursor(second), Containers::pair(4u, 4u));
             /* textProperties() tested in createSetTextTextPropertiesEditable() */
             CORRADE_COMPARE(layer.text(second), "ahoy");
+            /* Callback behavior tested fully in textEditCallback() below */
+            CORRADE_VERIFY(!layer.hasTextEditCallback(second));
         }
         CORRADE_COMPARE(layer.color(second), 0xffffff_rgbf);
         if(data.layerFlags >= TextLayerFlag::Transformable)
@@ -6382,6 +6390,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.cursor(third), Containers::pair(0u, 0u));
         /* textProperties() tested in createSetTextTextPropertiesEditable() */
         CORRADE_COMPARE(layer.text(third), "");
+        /* Callback behavior tested fully in textEditCallback() below */
+        CORRADE_VERIFY(!layer.hasTextEditCallback(third));
     }
     CORRADE_COMPARE(layer.color(third), 0xffffff_rgbf);
     if(data.layerFlags >= TextLayerFlag::Transformable)
@@ -6467,6 +6477,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     if(data.flags && *data.flags >= TextDataFlag::Editable) {
         CORRADE_COMPARE(layer.cursor(sixth), Containers::pair(0u, 0u));
         CORRADE_COMPARE(layer.text(sixth), "");
+        CORRADE_VERIFY(!layer.hasTextEditCallback(sixth));
     }
     CORRADE_COMPARE(layer.color(sixth), 0xffffff_rgbf);
     if(data.layerFlags >= TextLayerFlag::Transformable)
@@ -7102,9 +7113,18 @@ void TextLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first)].textRun, data.flagsBefore >= TextDataFlag::Editable ? 0 : 0xffffffffu);
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(second)].textRun, data.flagsBefore >= TextDataFlag::Editable ? 1 : 0xffffffffu);
     CORRADE_COMPARE(layer.stateData().editData.size(), data.flagsBefore >= TextDataFlag::Editable ? 2 : 0);
+    /* If the text is editable, set a text edit callback to verify it gets
+       properly reset after. The full behavior of setTextEditCallback() along
+       with non-trivial state destruction is tested in textEditCallback()
+       below. */
+    if(data.flagsBefore >= TextDataFlag::Editable) {
+        layer.setTextEditCallback(second, [](Containers::StringView) {});
+        CORRADE_VERIFY(layer.hasTextEditCallback(second));
+    }
 
     /* Data that reuses a previous slot should have all properties cleared, as
-       well as the flags and text run if the previous one was editable */
+       well as the flags, text run and callback if the previous one was
+       editable */
     layer.remove(second);
     DataHandle second2 = layer.create(0, "yes", {}, data.flagsAfter);
     CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
@@ -7135,6 +7155,8 @@ void TextLayerTest::createRemoveHandleRecycle() {
             data.flagsAfter >= TextDataFlag::Editable ? 1 : 0);
     CORRADE_COMPARE(layer.stateData().firstFreeEditData,
         data.flagsBefore >= TextDataFlag::Editable && !(data.flagsAfter >= TextDataFlag::Editable) ? 1 : 0xffffffffu);
+    if(data.flagsAfter >= TextDataFlag::Editable)
+        CORRADE_VERIFY(!layer.hasTextEditCallback(second2));
 
     /* Same for a glyph */
     layer.remove(first);
@@ -7935,6 +7957,319 @@ void TextLayerTest::editTextInvalid() {
         "Ui::TextLayer::editText(): Ui::TextEdit::RemoveAfterCursor requires no text to insert\n"
         "Ui::TextLayer::editText(): Ui::TextEdit::MoveCursorLeft requires no text to insert\n",
         TestSuite::Compare::String);
+}
+
+void TextLayerTest::textEditCallback() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    NodeHandle node = ui.createNode({}, {100, 100}, NodeFlag::Focusable);
+
+    /* A non-editable text to verify the very first text isn't used always */
+    /*DataHandle notEditable =*/ layer.create(0, "static", {});
+
+    /* Data without a text edit callback */
+    DataHandle noCallback = layer.create(0, "no call", {}, TextDataFlag::Editable);
+    CORRADE_VERIFY(!layer.hasTextEditCallback(noCallback));
+
+    /* Callback functor that records all construction, moves and destruction
+       to verify we're not leaking anything anywhere */
+    struct State {
+        Int constructed = 0;
+        Int moved = 0;
+        Int destructed = 0;
+        Int called = 0;
+        const char* expected = nullptr;
+    } state;
+    struct Callback {
+        explicit Callback(State& state): _state{&state} {
+            ++_state->constructed;
+        }
+
+        Callback(Callback&& other) noexcept: _state{other._state} {
+            ++_state->constructed;
+            ++_state->moved;
+        }
+
+        ~Callback() {
+            ++_state->destructed;
+        }
+
+        /* Nothing should need to move-assign the callback state */
+        Callback& operator=(Callback&&) noexcept = delete;
+
+        void operator()(Containers::StringView text) const {
+            CORRADE_COMPARE(text, _state->expected);
+            ++_state->called;
+        }
+
+        private:
+            State* _state;
+    };
+
+    /* Data with a callback. A temporary instance gets constructed, moved out
+       and then destructed. */
+    DataHandle withCallback = layer.create(0, "hello!!", {}, TextDataFlag::Editable, node);
+    layer.setTextEditCallback(withCallback, Callback{state});
+    CORRADE_VERIFY(layer.hasTextEditCallback(withCallback));
+    CORRADE_COMPARE(state.constructed, 2);
+    CORRADE_COMPARE(state.moved, 1);
+    CORRADE_COMPARE(state.destructed, 1);
+    CORRADE_COMPARE(state.called, 0);
+
+    /* Should be called on updateText(), inserting a ? at the end */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        state.expected = "hello!?!";
+        layer.updateText(withCallback, 0, 0, 6, "?", 5, 5);
+        CORRADE_COMPARE(layer.text(withCallback), "hello!?!");
+        CORRADE_COMPARE(state.called, 1);
+
+    /* The function should be called also when using editText() */
+    } {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        state.expected = "hell!?!";
+        layer.editText(withCallback, TextEdit::RemoveBeforeCursor, {});
+        CORRADE_COMPARE(layer.text(withCallback), "hell!?!");
+        CORRADE_COMPARE(state.called, 2);
+
+    /* And from key press events for a focused node */
+    } {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        state.expected = "hell?!";
+
+        FocusEvent focusEvent{{}};
+        CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
+
+        KeyEvent event{{}, Key::Delete, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(withCallback), "hell?!");
+        CORRADE_COMPARE(state.called, 3);
+
+        FocusEvent blurEvent{{}};
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, blurEvent));
+
+    /* And also from text input events */
+    } {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        state.expected = "helloo?!";
+
+        FocusEvent focusEvent{{}};
+        CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
+
+        TextInputEvent event{{}, "oo"};
+        CORRADE_VERIFY(ui.textInputEvent(event));
+        CORRADE_COMPARE(layer.text(withCallback), "helloo?!");
+        CORRADE_COMPARE(state.called, 4);
+
+        FocusEvent blurEvent{{}};
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, blurEvent));
+
+    /* The function should not be called when the text is not changing.
+       Cursor / selection change isn't considered, the edit state, callback
+       etc. stays as before. */
+    } {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        layer.updateText(withCallback, 3, 0, 2, "", 3, 2);
+        CORRADE_COMPARE(layer.text(withCallback), "helloo?!");
+        CORRADE_COMPARE(state.called, 4);
+
+    /* Similarly for editText() */
+    } {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        layer.editText(withCallback, TextEdit::ExtendSelectionRight, {});
+        CORRADE_COMPARE(layer.text(withCallback), "helloo?!");
+        CORRADE_COMPARE(state.called, 4);
+
+    /* And for key press event that just moves the cursor */
+    } {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        FocusEvent focusEvent{{}};
+        CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
+
+        KeyEvent event{{}, Key::Right, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(withCallback), "helloo?!");
+        CORRADE_COMPARE(state.called, 4);
+
+        FocusEvent blurEvent{{}};
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, blurEvent));
+
+    /* And for text input event that has no contents */
+    } {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        FocusEvent focusEvent{{}};
+        CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
+
+        TextInputEvent event{{}, ""};
+        CORRADE_VERIFY(ui.textInputEvent(event));
+        CORRADE_COMPARE(layer.text(withCallback), "helloo?!");
+        CORRADE_COMPARE(state.called, 4);
+
+        FocusEvent blurEvent{{}};
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, blurEvent));
+
+    /* Calling setText() changes the text but doesn't call the function as this
+       is not an editing operation. The callback stays set however. */
+    } {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        layer.setText(withCallback, "hey, what now", {});
+        CORRADE_COMPARE(layer.text(withCallback), "hey, what now");
+        CORRADE_VERIFY(layer.hasTextEditCallback(withCallback));
+        CORRADE_COMPARE(state.called, 4);
+    }
+
+    /* Setting a different callback replaces the previous one, destructing it.
+       The new one again has a temporary instance that's moved out and
+       destructed. LayerDataHandle overloads. */
+    State state2;
+    layer.setTextEditCallback(dataHandleData(withCallback), Callback{state2});
+    CORRADE_VERIFY(layer.hasTextEditCallback(dataHandleData(withCallback)));
+    CORRADE_COMPARE(state.constructed, 2);
+    CORRADE_COMPARE(state.moved, 1);
+    CORRADE_COMPARE(state.destructed, 2);
+    CORRADE_COMPARE(state.called, 4);
+    CORRADE_COMPARE(state2.constructed, 2);
+    CORRADE_COMPARE(state2.moved, 1);
+    CORRADE_COMPARE(state2.destructed, 1);
+    CORRADE_COMPARE(state2.called, 0);
+
+    /* Update the text calls the new callback */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        state2.expected = "hey, what?";
+        layer.updateText(withCallback, 9, 4, 9, "?", 0, 0);
+        CORRADE_COMPARE(layer.text(withCallback), "hey, what?");
+        CORRADE_COMPARE(state.called, 4);
+        CORRADE_COMPARE(state2.called, 1);
+    }
+
+    /* Adding new editable data reallocates the edit data array but as the
+       callback state is allocated inside Function, it doesn't get moved */
+    DataHandle another = layer.create(0, "hi", {}, TextDataFlag::Editable);
+    DataHandle third = layer.create(0, "hey", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(state.constructed, 2);
+    CORRADE_COMPARE(state.moved, 1);
+    CORRADE_COMPARE(state.destructed, 2);
+    CORRADE_COMPARE(state.called, 4);
+    CORRADE_COMPARE(state2.constructed, 2); /* no change */
+    CORRADE_COMPARE(state2.moved, 1); /* no change */
+    CORRADE_COMPARE(state2.destructed, 1); /* nothing here either */
+    CORRADE_COMPARE(state2.called, 1);
+
+    /* Set new callbacks for both */
+    State anotherState, thirdState;
+    layer.setTextEditCallback(another, Callback{anotherState});
+    layer.setTextEditCallback(third, Callback{thirdState});
+    CORRADE_VERIFY(layer.hasTextEditCallback(another));
+    CORRADE_VERIFY(layer.hasTextEditCallback(third));
+    CORRADE_COMPARE(anotherState.constructed, 2);
+    CORRADE_COMPARE(anotherState.moved, 1);
+    CORRADE_COMPARE(anotherState.destructed, 1);
+    CORRADE_COMPARE(anotherState.called, 0);
+    CORRADE_COMPARE(thirdState.constructed, 2);
+    CORRADE_COMPARE(thirdState.moved, 1);
+    CORRADE_COMPARE(thirdState.destructed, 1);
+    CORRADE_COMPARE(thirdState.called, 0);
+
+    /* Removing a data destructs the callback */
+    layer.remove(another);
+    CORRADE_COMPARE(anotherState.constructed, 2);
+    CORRADE_COMPARE(anotherState.moved, 1);
+    CORRADE_COMPARE(anotherState.destructed, 2); /* here */
+    CORRADE_COMPARE(anotherState.called, 0);
+
+    /* Creating a new data and assigning a callback to it doesn't attempt to
+       destruct the previous again */
+    DataHandle another2 = layer.create(0, "hallo", {}, TextDataFlag::Editable);
+    State another2State;
+    layer.setTextEditCallback(another2, Callback{another2State});
+    CORRADE_COMPARE(dataHandleId(another2), dataHandleId(another));
+    CORRADE_VERIFY(layer.hasTextEditCallback(another2));
+    CORRADE_COMPARE(anotherState.constructed, 2);
+    CORRADE_COMPARE(anotherState.moved, 1);
+    CORRADE_COMPARE(anotherState.destructed, 2);
+    CORRADE_COMPARE(anotherState.called, 0);
+    CORRADE_COMPARE(another2State.constructed, 2);
+    CORRADE_COMPARE(another2State.moved, 1);
+    CORRADE_COMPARE(another2State.destructed, 1);
+    CORRADE_COMPARE(another2State.called, 0);
+
+    /* Setting a non-editable text destructs the callback */
+    layer.setText(third, "nope", {}, TextDataFlags{});
+    CORRADE_COMPARE(thirdState.constructed, 2);
+    CORRADE_COMPARE(thirdState.moved, 1);
+    CORRADE_COMPARE(thirdState.destructed, 2); /* yeah */
+    CORRADE_COMPARE(thirdState.called, 0);
+
+    /* Setting a glyph as well */
+    layer.setGlyph(another2, 0, {});
+    CORRADE_COMPARE(another2State.constructed, 2);
+    CORRADE_COMPARE(another2State.moved, 1);
+    CORRADE_COMPARE(another2State.destructed, 2); /* yeah */
+    CORRADE_COMPARE(another2State.called, 0);
+
+    /* Clearing the callback destructs the previous one */
+    layer.setTextEditCallback(withCallback, nullptr);
+    CORRADE_COMPARE(state2.constructed, 2);
+    CORRADE_COMPARE(state2.moved, 1);
+    CORRADE_COMPARE(state2.destructed, 2); /* this */
+    CORRADE_COMPARE(state2.called, 1);
+
+    /* Updating calls nothing now */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+        layer.updateText(withCallback, 5, 5, 5, "hello??", 0, 0);
+        CORRADE_COMPARE(layer.text(withCallback), "hey, hello??");
+        CORRADE_COMPARE(state.called, 4);
+        CORRADE_COMPARE(state2.called, 1);
+    }
 }
 
 void TextLayerTest::cycleGlyphEditableNonEditableText() {
@@ -9050,6 +9385,10 @@ void TextLayerTest::invalidHandle() {
     layer.updateText(LayerDataHandle::Null, 0, 0, 0, {}, 0);
     layer.editText(DataHandle::Null, TextEdit::MoveCursorLeft, {});
     layer.editText(LayerDataHandle::Null, TextEdit::MoveCursorLeft, {});
+    layer.hasTextEditCallback(DataHandle::Null);
+    layer.hasTextEditCallback(LayerDataHandle::Null);
+    layer.setTextEditCallback(DataHandle::Null, nullptr);
+    layer.setTextEditCallback(LayerDataHandle::Null, nullptr);
     layer.setGlyph(DataHandle::Null, 0, {});
     layer.setGlyph(LayerDataHandle::Null, 0, {});
     layer.color(DataHandle::Null);
@@ -9081,6 +9420,10 @@ void TextLayerTest::invalidHandle() {
         "Ui::TextLayer::updateText(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::TextLayer::editText(): invalid handle Ui::DataHandle::Null\n"
         "Ui::TextLayer::editText(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::TextLayer::hasTextEditCallback(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::hasTextEditCallback(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::TextLayer::setTextEditCallback(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::setTextEditCallback(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::TextLayer::setGlyph(): invalid handle Ui::DataHandle::Null\n"
         "Ui::TextLayer::setGlyph(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::TextLayer::color(): invalid handle Ui::DataHandle::Null\n"
@@ -9257,6 +9600,10 @@ void TextLayerTest::nonEditableText() {
     layer.updateText(glyph, 0, 0, 0, {}, 0);
     layer.editText(text, TextEdit::MoveCursorLeft, {});
     layer.editText(glyph, TextEdit::MoveCursorLeft, {});
+    layer.hasTextEditCallback(text);
+    layer.hasTextEditCallback(glyph);
+    layer.setTextEditCallback(text, nullptr);
+    layer.setTextEditCallback(glyph, nullptr);
     CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::cursor(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::cursor(): text doesn't have Ui::TextDataFlag::Editable set\n"
@@ -9269,7 +9616,11 @@ void TextLayerTest::nonEditableText() {
         "Ui::TextLayer::updateText(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::updateText(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::editText(): text doesn't have Ui::TextDataFlag::Editable set\n"
-        "Ui::TextLayer::editText(): text doesn't have Ui::TextDataFlag::Editable set\n",
+        "Ui::TextLayer::editText(): text doesn't have Ui::TextDataFlag::Editable set\n"
+        "Ui::TextLayer::hasTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n"
+        "Ui::TextLayer::hasTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n"
+        "Ui::TextLayer::setTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n"
+        "Ui::TextLayer::setTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n",
         TestSuite::Compare::String);
 }
 

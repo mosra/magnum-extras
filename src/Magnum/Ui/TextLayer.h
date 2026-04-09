@@ -2540,6 +2540,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * empty @ref TextProperties::features() --- only the features supplied
          * by the style are used for editable text.
          *
+         * A text edit callback, if it's set with @ref setTextEditCallback(),
+         * isn't called from this function, only from @ref updateText() and
+         * @ref editText().
+         *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set, and if @ref TextLayerFlag::Transformable isn't enabled and
          * @p handle is attached to a node, @ref LayerState::NeedsLayoutUpdate
@@ -2614,6 +2618,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * possible to remove or insert partial multi-byte UTF-8 sequences and
          * position the cursor inside them as well.
          *
+         * If the text actually changes and a text edit callback is set with
+         * @ref setTextEditCallback() it's called with the new text.
+         *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set, unless the operation performed is a no-op, which is when both
          * @p removeSize and @p insertText size are both @cpp 0 @ce and
@@ -2671,6 +2678,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * if appropriate @p edit operation is used. See documentation of the
          * @ref TextEdit enum for detailed behavior of each operation.
          *
+         * If the text actually changes and a text edit callback is set with
+         * @ref setTextEditCallback() it's called with the new text.
+         *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set, unless the operation performed is a no-op such as inserting
          * empty text or moving a cursor / deleting a character with there
@@ -2692,6 +2702,60 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *      @ref dataHandleData()
          */
         void editText(LayerDataHandle handle, TextEdit edit, Containers::StringView insert);
+
+        /**
+         * @brief Whether a text edit callback is set
+         *
+         * Expects that @p handle is valid and the text was created or set with
+         * @ref TextDataFlag::Editable enabled.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        bool hasTextEditCallback(DataHandle data) const;
+
+        /**
+         * @brief Whether a text edit callback is set assuming it belongs to this layer
+         *
+         * Like @ref hasTextEditCallback(DataHandle) const but without checking
+         * that @p handle indeed belongs to this layer. See its documentation
+         * for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        bool hasTextEditCallback(LayerDataHandle data) const;
+
+        /**
+         * @brief Set a text edit callback
+         *
+         * Expects that @p handle is valid and the text was created or set with
+         * @ref TextDataFlag::Editable enabled. The @p function is called from
+         * @ref updateText(), @ref editText() or in response to input events
+         * every time the text changes (i.e., when a non-empty string is
+         * inserted or removed), receiving the current @p text. The @p function
+         * is *not* called in response to @ref setText() or when just cursor or
+         * selection changes.
+         *
+         * Note that unlike e.g. the @ref EventLayer, calling this function
+         * again for the same @p handle *replaces* the previous callback.
+         * Passing @cpp nullptr @ce as @p function removes the previous
+         * callback. By default no callback is present.
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref flags(DataHandle) const
+         */
+        /* The function also isn't called `onTextEdit()` like in the event
+           layer to not falsely suggest that one can attach multiple callbacks
+           to a single data */
+        void setTextEditCallback(DataHandle handle, Containers::Function<void(Containers::StringView text)>&& function);
+
+        /**
+         * @brief Set a text edit callback assuming it belongs to this layer
+         *
+         * Like @ref setTextEditCallback(DataHandle, Containers::Function<void(Containers::StringView text)>&&)
+         * but without checking that @p handle indeed belongs to this layer.
+         * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void setTextEditCallback(LayerDataHandle handle, Containers::Function<void(Containers::StringView text)>&& function);
 
         /**
          * @brief Set a single glyph
@@ -3156,6 +3220,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL void setTextInternal(UnsignedInt id, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
         MAGNUM_UI_LOCAL void updateTextInternal(UnsignedInt id, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView text, UnsignedInt cursor, UnsignedInt selection);
         MAGNUM_UI_LOCAL void editTextInternal(UnsignedInt id, TextEdit edit, Containers::StringView text);
+        MAGNUM_UI_LOCAL bool hasTextEditCallbackInternal(UnsignedInt id) const;
+        MAGNUM_UI_LOCAL void setTextEditCallbackInternal(UnsignedInt id, Containers::Function<void(Containers::StringView)>&& function);
         MAGNUM_UI_LOCAL void setGlyphInternal(UnsignedInt id, UnsignedInt glyph, const TextProperties& properties);
         MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color4& color);
         MAGNUM_UI_LOCAL Vector4 paddingInternal(UnsignedInt id) const;

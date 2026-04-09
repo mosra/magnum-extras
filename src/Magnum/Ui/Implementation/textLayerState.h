@@ -32,6 +32,7 @@
    implementations */
 
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/Reference.h>
 #include <Magnum/Math/Complex.h>
 #include <Magnum/Math/Range.h>
@@ -199,6 +200,12 @@ struct TextLayerEditData {
        shaper, TextLayerData::shapedDirection is what the shaper returns, which
        may be different after each edit */
     UnsignedByte direction;
+
+    /* Text edit callback. Is reset back to a default-constructed instance when
+       the edit data are put on the free list (i.e., when the text is removed
+       or when setText() / setGlyph() is called that removes the Editable
+       flag). */
+    Containers::Function<void(Containers::StringView)> textEditCallback;
 };
 
 struct TextLayerTextRun {
