@@ -1108,6 +1108,31 @@ void TextLayer::shapeRememberTextInternal(
             properties.shapeDirection() != Text::ShapeDirection::BottomToTop,
             messagePrefix << "vertical shape direction for an editable text is not implemented yet, sorry", );
 
+        /* If the text has no associated edit data, add a new item or recycle
+           it from the free list */
+        if(data.editData == ~UnsignedInt{}) {
+            if(state.firstFreeEditData == ~UnsignedInt{})  {
+                data.editData = state.editData.size();
+                arrayAppend(state.editData, NoInit, 1);
+            } else {
+                data.editData = state.firstFreeEditData;
+                state.firstFreeEditData = state.editData[data.editData].nextFree;
+            }
+        }
+
+        /* Save the edit properties, overwriting the previous if there were
+           any. The text properties are are subset of the TextProperties
+           instance to have the edit properties trivially copyable. */
+        Implementation::TextLayerEditData& editData = state.editData[data.editData];
+        editData.cursor = editData.selection = text.size();
+        Utility::copy(properties._language, editData.language);
+        editData.script = properties._script;
+        /* Save the actual font used to not have to do the above branching (and
+           assertions) on every updateText() / editText() */
+        editData.font = font;
+        editData.alignment = properties._alignment;
+        editData.direction = properties._direction;
+
         /* Add a new text run */
         const UnsignedInt textRun = state.textRuns.size();
         const UnsignedInt textOffset = state.textData.size();
@@ -1116,18 +1141,6 @@ void TextLayer::shapeRememberTextInternal(
         run.textOffset = textOffset;
         run.textSize = text.size();
         run.data = id;
-        run.cursor = run.selection = text.size();
-
-        /* Save the text properties. Copy the internals instead of saving the
-           whole TextProperties instance to have the text runs trivially
-           copyable. */
-        Utility::copy(properties._language, run.language);
-        run.script = properties._script;
-        /* Save the actual font used to not have to do the above branching (and
-           assertions) on every updateText() / editText() */
-        run.font = font;
-        run.alignment = properties._alignment;
-        run.direction = properties._direction;
 
         /* Save the text run reference. Any previous run for this data should
            have been marked as unused in previous remove(), setText() or
@@ -1136,8 +1149,17 @@ void TextLayer::shapeRememberTextInternal(
            freshly allocated instead of recycled. */
         data.textRun = textRun;
 
-    /* Otherwise mark it as having no associated text run */
-    } else data.textRun = ~UnsignedInt{};
+    /* Otherwise mark it as having no associated edit data and text run */
+    } else {
+        /* If there were edit data before, put them on the free list */
+        if(data.editData != ~UnsignedInt{}) {
+            state.editData[data.editData].nextFree = state.firstFreeEditData;
+            state.firstFreeEditData = data.editData;
+            data.editData = ~UnsignedInt{};
+        }
+
+        data.textRun = ~UnsignedInt{};
+    }
 }
 
 void TextLayer::shapeGlyphInternal(
@@ -1229,6 +1251,9 @@ void TextLayer::shapeGlyphInternal(
     data.glyphRun = glyphRun;
     data.textRun = ~UnsignedInt{};
     data.flags = {};
+    /* The edit data shouldn't be present, either not set at all from
+       createGlyph() or already freed from setGlyph() */
+    CORRADE_INTERNAL_ASSERT(data.editData == ~UnsignedInt{});
 }
 
 DataHandle TextLayer::createInternal(const NodeHandle node) {
@@ -1249,6 +1274,11 @@ DataHandle TextLayer::createInternal(const NodeHandle node) {
         data.transformation = {};
     else
         data.padding = {};
+    /* shapeRememberTextInternal() will attempt to recycle the edit data if
+       `editData` isn't ~UnsignedInt{}, so set it to that by default. The
+       `glyphRun` or `textRun` doesn't need to be initialized as they're not
+       recycled in any way. */
+    data.editData = ~UnsignedInt{};
     return handle;
 }
 
@@ -1339,6 +1369,12 @@ void TextLayer::removeInternal(const UnsignedInt id) {
     if(data.textRun != ~UnsignedInt{})
         state.textRuns[data.textRun].textOffset = ~UnsignedInt{};
 
+    /* If the text is editable, put the edit data on the free list */
+    if(data.editData != ~UnsignedInt{}) {
+        state.editData[data.editData].nextFree = state.firstFreeEditData;
+        state.firstFreeEditData = data.editData;
+    }
+
     /* Data removal doesn't need anything to be reuploaded to continue working
        correctly, thus setNeedsUpdate() isn't called.
 
@@ -1409,11 +1445,14 @@ Containers::Pair<UnsignedInt, UnsignedInt> TextLayer::cursor(const LayerDataHand
 Containers::Pair<UnsignedInt, UnsignedInt> TextLayer::cursorInternal(const UnsignedInt id) const {
     const State& state = static_cast<const State&>(*_state);
     const Implementation::TextLayerData& data = state.data[id];
-    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+    CORRADE_ASSERT(data.editData != ~UnsignedInt{},
         "Ui::TextLayer::cursor(): text doesn't have" << TextDataFlag::Editable << "set", {});
+    const Implementation::TextLayerEditData& editData = state.editData[data.editData];
+    #ifndef CORRADE_NO_ASSERT
     const Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
-    CORRADE_INTERNAL_ASSERT(run.cursor <= run.textSize && run.selection <= run.textSize);
-    return {run.cursor, run.selection};
+    #endif
+    CORRADE_INTERNAL_ASSERT(editData.cursor <= run.textSize && editData.selection <= run.textSize);
+    return {editData.cursor, editData.selection};
 }
 
 void TextLayer::setCursor(const DataHandle handle, const UnsignedInt position, const UnsignedInt selection) {
@@ -1431,18 +1470,21 @@ void TextLayer::setCursor(const LayerDataHandle handle, const UnsignedInt positi
 void TextLayer::setCursorInternal(const UnsignedInt id, const UnsignedInt position, const UnsignedInt selection) {
     State& state = static_cast<State&>(*_state);
     const Implementation::TextLayerData& data = state.data[id];
-    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+    CORRADE_ASSERT(data.editData != ~UnsignedInt{},
         "Ui::TextLayer::setCursor(): text doesn't have" << TextDataFlag::Editable << "set", );
 
+    Implementation::TextLayerEditData& editData = state.editData[data.editData];
+    #ifndef CORRADE_NO_ASSERT
     Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
+    #endif
     CORRADE_ASSERT(position <= run.textSize,
         "Ui::TextLayer::setCursor(): position" << position << "out of range for a text of" << run.textSize << "bytes", );
     CORRADE_ASSERT(selection <= run.textSize,
         "Ui::TextLayer::setCursor(): selection" << selection << "out of range for a text of" << run.textSize << "bytes", );
 
-    if(position != run.cursor || selection != run.selection) {
-        run.cursor = position;
-        run.selection = selection;
+    if(position != editData.cursor || selection != editData.selection) {
+        editData.cursor = position;
+        editData.selection = selection;
         setNeedsUpdate(LayerState::NeedsDataUpdate);
     }
 }
@@ -1462,21 +1504,21 @@ TextProperties TextLayer::textProperties(const LayerDataHandle handle) const {
 TextProperties TextLayer::textPropertiesInternal(const UnsignedInt id) const {
     const State& state = static_cast<const State&>(*_state);
     const Implementation::TextLayerData& data = state.data[id];
-    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+    CORRADE_ASSERT(data.editData != ~UnsignedInt{},
         "Ui::TextLayer::textProperties(): text doesn't have" << TextDataFlag::Editable << "set", {});
-    const Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
+    const Implementation::TextLayerEditData& editData = state.editData[data.editData];
 
     TextProperties properties{NoInit};
-    Utility::copy(run.language, properties._language);
-    properties._script = run.script;
+    Utility::copy(editData.language, properties._language);
+    properties._script = editData.script;
     /* Contrary to what was passed to create() or setText(), the font is always
        non-null here. We'd have to maintain an additional state bit to
        distinguish between font being taken from the style or from the
        TextProperties, then do all the extra font selection logic, then handle
        cases of the style font suddenly becoming null ... Not worth it. */
-    properties._font = run.font;
-    properties._alignment = run.alignment;
-    properties._direction = run.direction;
+    properties._font = editData.font;
+    properties._alignment = editData.alignment;
+    properties._direction = editData.direction;
     return properties;
 }
 
@@ -1575,7 +1617,7 @@ void TextLayer::updateText(const LayerDataHandle handle, const UnsignedInt remov
 void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor, const UnsignedInt selection) {
     State& state = static_cast<State&>(*_state);
     Implementation::TextLayerData& data = state.data[id];
-    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+    CORRADE_ASSERT(data.textRun != ~UnsignedInt{} && data.editData != ~UnsignedInt{},
         "Ui::TextLayer::updateText(): text doesn't have" << TextDataFlag::Editable << "set", );
 
     /* Getting a copy of the previous run and not a reference, as the textRuns
@@ -1623,14 +1665,6 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
     run.textOffset = textOffset;
     run.textSize = textSize;
     run.data = id;
-    /* run.cursor updated by setCursorInternal() at the end */
-
-    /* Copy the TextProperties internals verbatim */
-    Utility::copy(previousRun.language, run.language);
-    run.script = previousRun.script;
-    run.font = previousRun.font;
-    run.alignment = previousRun.alignment;
-    run.direction = previousRun.direction;
 
     /* We can insert either before the removed range, in which case the copy
        before the removed range has to be split */
@@ -1694,21 +1728,22 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
     state.textRuns[data.textRun].textOffset = ~UnsignedInt{};
     data.textRun = textRun;
 
-    /* Shape the new text using properties saved in the run and mark the layer
-       as needing an update. Forming a TextProperties from the internal state
-       that was saved earlier in shapeRememberTextInternal() above. */
+    /* Shape the new text using properties saved in the edit data and mark the
+       layer as needing an update. Forming a TextProperties from the internal
+       state that was saved earlier in shapeRememberTextInternal() above. */
     TextProperties properties{NoInit};
-    Utility::copy(run.language, properties._language);
-    properties._script = run.script;
+    const Implementation::TextLayerEditData& editData = state.editData[data.editData];
+    Utility::copy(editData.language, properties._language);
+    properties._script = editData.script;
     /* The font is passed through an argument, shouldn't be taken from here */
     properties._font = FontHandle::Null;
     /* The saved alignment has a special value denoting NullOpt, so just
        verbatinm copying it back */
-    properties._alignment = run.alignment;
+    properties._alignment = editData.alignment;
     /* Similarly, the direction is both the layout and shape directions
        together, verbatim copy them back */
-    properties._direction = run.direction;
-    shapeTextInternal(id, data.style, text, properties, run.font, data.flags);
+    properties._direction = editData.direction;
+    shapeTextInternal(id, data.style, text, properties, editData.font, data.flags);
 
     /* Update the cursor position and all related state */
     setCursorInternal(id, cursor, selection);
@@ -1744,10 +1779,11 @@ void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, cons
 
     State& state = static_cast<State&>(*_state);
     const Implementation::TextLayerData& data = state.data[id];
-    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+    CORRADE_ASSERT(data.textRun != ~UnsignedInt{} && data.editData != ~UnsignedInt{},
         "Ui::TextLayer::editText(): text doesn't have" << TextDataFlag::Editable << "set", );
 
     Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
+    Implementation::TextLayerEditData& editData = state.editData[data.editData];
     const Containers::StringView text = state.textData.sliceSize(run.textOffset, run.textSize);
 
     /* Simple cursor / selection movement, delegate to setCursor() */
@@ -1760,7 +1796,7 @@ void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, cons
        edit == TextEdit::ExtendSelectionLeft ||
        edit == TextEdit::ExtendSelectionRight)
     {
-        UnsignedInt cursor = run.cursor;
+        UnsignedInt cursor = editData.cursor;
 
         /* Line begin / end movement has no special-casing for RTL direction
            -- it moves at the begin/end of the byte stream in both cases and
@@ -1774,22 +1810,22 @@ void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, cons
         /* Cursor left / right movement has special-casing for RTL tho, the
            intent is for movement left to always go left, and not right, and
            vice versa */
-        else if(run.cursor > 0 && (
+        else if(editData.cursor > 0 && (
                 ((edit == TextEdit::MoveCursorLeft ||
                   edit == TextEdit::ExtendSelectionLeft)
                     && data.usedDirection != Text::ShapeDirection::RightToLeft) ||
                 ((edit == TextEdit::MoveCursorRight ||
                   edit == TextEdit::ExtendSelectionRight)
                     && data.usedDirection == Text::ShapeDirection::RightToLeft)))
-            cursor = Utility::Unicode::prevChar(text, run.cursor).second();
-        else if(run.cursor < run.textSize && (
+            cursor = Utility::Unicode::prevChar(text, editData.cursor).second();
+        else if(editData.cursor < run.textSize && (
                 ((edit == TextEdit::MoveCursorRight ||
                   edit == TextEdit::ExtendSelectionRight)
                     && data.usedDirection != Text::ShapeDirection::RightToLeft) ||
                 ((edit == TextEdit::MoveCursorLeft ||
                   edit == TextEdit::ExtendSelectionLeft)
                     && data.usedDirection == Text::ShapeDirection::RightToLeft)))
-            cursor = Utility::Unicode::nextChar(text, run.cursor).second();
+            cursor = Utility::Unicode::nextChar(text, editData.cursor).second();
 
         /* If we're extending the selection, the other end of it stays,
            otherwise the selection gets reset by setting both to the same
@@ -1799,7 +1835,7 @@ void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, cons
            edit == TextEdit::ExtendSelectionLineEnd ||
            edit == TextEdit::ExtendSelectionLeft ||
            edit == TextEdit::ExtendSelectionRight)
-            selection = run.selection;
+            selection = editData.selection;
         else
             selection = cursor;
 
@@ -1816,37 +1852,37 @@ void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, cons
         UnsignedInt removeOffset = 0;
         UnsignedInt removeSize = 0;
         UnsignedInt insertOffset = 0;
-        UnsignedInt cursor = run.cursor;
+        UnsignedInt cursor = editData.cursor;
 
         /* No selection active */
-        if(run.cursor == run.selection) {
+        if(editData.cursor == editData.selection) {
             /* Insertion has no special-casing for RTL -- it just inserts the
                data at the place of the cursor and then either moves the cursor
                after the inserted bytes or leaves it where it was, the
                difference is only optical */
             if(edit == TextEdit::InsertBeforeCursor) {
-                insertOffset = run.cursor;
-                cursor = run.cursor + insert.size();
+                insertOffset = editData.cursor;
+                cursor = editData.cursor + insert.size();
             } else if(edit == TextEdit::InsertAfterCursor) {
-                insertOffset = run.cursor;
-                cursor = run.cursor;
+                insertOffset = editData.cursor;
+                cursor = editData.cursor;
             /* Deletion as well -- the difference is only optical, and compared
                to left/right arrow keys the backspace and delete keys don't
                have any implicit optical direction in the name that would need
                matching */
-            } else if(edit == TextEdit::RemoveBeforeCursor && run.cursor > 0) {
-                removeOffset = Utility::Unicode::prevChar(text, run.cursor).second();
-                removeSize = run.cursor - removeOffset;
+            } else if(edit == TextEdit::RemoveBeforeCursor && editData.cursor > 0) {
+                removeOffset = Utility::Unicode::prevChar(text, editData.cursor).second();
+                removeSize = editData.cursor - removeOffset;
                 cursor = removeOffset;
-            } else if(edit == TextEdit::RemoveAfterCursor && run.cursor < run.textSize) {
-                removeOffset = run.cursor;
-                removeSize = Utility::Unicode::nextChar(text, run.cursor).second() - run.cursor;
-                cursor = run.cursor;
+            } else if(edit == TextEdit::RemoveAfterCursor && editData.cursor < run.textSize) {
+                removeOffset = editData.cursor;
+                removeSize = Utility::Unicode::nextChar(text, editData.cursor).second() - editData.cursor;
+                cursor = editData.cursor;
             }
 
         /* With selection active it replaces it */
         } else {
-            const Containers::Pair<UnsignedInt, UnsignedInt> selection = Math::minmax(run.cursor, run.selection);
+            const Containers::Pair<UnsignedInt, UnsignedInt> selection = Math::minmax(editData.cursor, editData.selection);
             removeOffset = selection.first();
             removeSize = selection.second() - selection.first();
 
@@ -1900,6 +1936,15 @@ void TextLayer::setGlyphInternal(const UnsignedInt id, const UnsignedInt glyph, 
        doUpdate() too */
     if(data.textRun != ~UnsignedInt{})
         state.textRuns[data.textRun].textOffset = ~UnsignedInt{};
+
+    /* If there were edit data before, put them on the free list. Unlike with
+       setTextInternal(), where shapeRememberTextInternal() may reuse the edit
+       data, here they're never used and thus are freed upfront. */
+    if(data.editData != ~UnsignedInt{}) {
+        state.editData[data.editData].nextFree = state.firstFreeEditData;
+        state.firstFreeEditData = data.editData;
+        data.editData = ~UnsignedInt{};
+    }
 
     /* Shape the glyph, mark the layer as needing an update */
     shapeGlyphInternal(
@@ -2362,6 +2407,11 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         CORRADE_INTERNAL_ASSERT(outputTextRunOffset <= state.textRuns.size());
         arrayResize(state.textData, outputTextDataOffset);
         arrayResize(state.textRuns, outputTextRunOffset);
+
+        /* As currently there should be exactly one text run for each editable
+           text, the count of used `state.editData` items should match the size
+           of the `state.textRuns` array. But counting that is too expensive,
+           so we can't really do any sanity checks for that either. */
     }
 
     /* Fill in indices in desired order if either the data themselves or the
@@ -2382,7 +2432,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             if(data.glyphRun != ~UnsignedInt{}) {
                 drawGlyphCount += state.glyphRuns[data.glyphRun].glyphCount;
             }
-            if(data.textRun != ~UnsignedInt{}) {
+            if(data.editData != ~UnsignedInt{}) {
                 Int cursorStyle, selectionStyle;
                 /** @todo ugh, this is duplicated three times */
                 if(data.calculatedStyle < sharedState.styleCount) {
@@ -2395,8 +2445,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     cursorStyle = state.dynamicStyleCursorStyles[dynamicStyleId] ? Implementation::cursorStyleForDynamicStyle(dynamicStyleId) : -1;
                     selectionStyle = state.dynamicStyleSelectionStyles[dynamicStyleId] ? Implementation::selectionStyleForDynamicStyle(dynamicStyleId) : -1;
                 }
-                const Implementation::TextLayerTextRun& textRun = state.textRuns[data.textRun];
-                if(selectionStyle != -1 && textRun.selection != textRun.cursor)
+                const Implementation::TextLayerEditData& editData = state.editData[data.editData];
+                if(selectionStyle != -1 && editData.selection != editData.cursor)
                     ++drawEditingRectCount;
                 if(cursorStyle != -1)
                     ++drawEditingRectCount;
@@ -2429,7 +2479,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                rectangle like is usual in editors, on the other hand the style
                can fine-tune the look for each text style so that doesn't seem
                really important. */
-            if(data.textRun != ~UnsignedInt{}) {
+            if(data.editData != ~UnsignedInt{}) {
                 Int cursorStyle, selectionStyle;
                 /** @todo ugh, this is duplicated three times */
                 if(data.calculatedStyle < sharedState.styleCount) {
@@ -2442,7 +2492,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     cursorStyle = state.dynamicStyleCursorStyles[dynamicStyleId] ? Implementation::cursorStyleForDynamicStyle(dynamicStyleId) : -1;
                     selectionStyle = state.dynamicStyleSelectionStyles[dynamicStyleId] ? Implementation::selectionStyleForDynamicStyle(dynamicStyleId) : -1;
                 }
-                const Implementation::TextLayerTextRun& textRun = state.textRuns[data.textRun];
+                const Implementation::TextLayerEditData& editData = state.editData[data.editData];
                 const auto createEditingQuadIndices = [&state, &editingRectOffset](const UnsignedInt vertexOffset) {
                     UnsignedInt indexOffset = editingRectOffset*6;
 
@@ -2467,11 +2517,17 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
                 /* The selection is shown only if there's a style for it and
                    something is actually selected, and is drawn first */
-                if(selectionStyle != -1 && textRun.selection != textRun.cursor)
+                if(selectionStyle != -1 && editData.selection != editData.cursor)
+                    /* We're using text run index and *not* `data.editData` for
+                       indexing the cursor and selection vertices, see the
+                       `arrayResize(state.editingVertices` below for why */
                     createEditingQuadIndices(data.textRun*8);
                 /* The cursor only if there's a style for it, and is drawn
                    after the selection */
                 if(cursorStyle != -1)
+                    /* We're using text run index and *not* `data.editData` for
+                       indexing the cursor and selection vertices, see the
+                       `arrayResize(state.editingVertices` below for why */
                     createEditingQuadIndices(data.textRun*8 + 4);
             }
         }
@@ -2520,7 +2576,10 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             nullptr;
 
         /* If any selection or cursor style is present, make room in the
-           editing vertex array as well */
+           editing vertex array as well. Using size of the text runs array and
+           not of `state.editData`, as those were recompacted at the top of
+           this function to be without gaps and with a smaller size bound than
+           editData, thus better suited for sizing a vertex array */
         if(sharedState.hasEditingStyles)
             arrayResize(state.editingVertices, NoInit, state.textRuns.size()*2*4);
 
@@ -2642,7 +2701,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
             /* If the text is editable, generate also the cursor and selection
                mesh, unless they don't have any style */
-            if(data.textRun != ~UnsignedInt{}) {
+            if(data.editData != ~UnsignedInt{}) {
                 Int cursorStyle, selectionStyle;
                 /** @todo ugh, this is duplicated three times */
                 if(data.calculatedStyle < sharedState.styleCount) {
@@ -2655,8 +2714,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     cursorStyle = state.dynamicStyleCursorStyles[dynamicStyleId] ? Implementation::cursorStyleForDynamicStyle(dynamicStyleId) : -1;
                     selectionStyle = state.dynamicStyleSelectionStyles[dynamicStyleId] ? Implementation::selectionStyleForDynamicStyle(dynamicStyleId) : -1;
                 }
-                const Implementation::TextLayerTextRun& textRun = state.textRuns[data.textRun];
-                const Containers::Pair<UnsignedInt, UnsignedInt> glyphRangeForCursorSelection = Text::glyphRangeForBytes(glyphData.slice(&Implementation::TextLayerGlyphData::glyphCluster), textRun.cursor, textRun.selection);
+                const Implementation::TextLayerEditData& editData = state.editData[data.editData];
+                const Containers::Pair<UnsignedInt, UnsignedInt> glyphRangeForCursorSelection = Text::glyphRangeForBytes(glyphData.slice(&Implementation::TextLayerGlyphData::glyphCluster), editData.cursor, editData.selection);
 
                 /* The rectangle is Y-up, which means the max() is the top and
                    we need to subtract it from the offset, and min() is bottom,
@@ -2739,13 +2798,16 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                    non-empty selection. It's drawn below the cursor, so it's
                    first in the vertex buffer for given run (and first in the
                    index buffer also). */
-                if(selectionStyle != -1 && textRun.selection != textRun.cursor) {
+                if(selectionStyle != -1 && editData.selection != editData.cursor) {
                     const Containers::Pair<UnsignedInt, UnsignedInt> selection = Math::minmax(glyphRangeForCursorSelection.first(), glyphRangeForCursorSelection.second());
                     createEditingQuad(
                         data.calculatedStyle >= sharedState.styleCount,
                         selectionStyle,
                         selection.first(),
                         selection.second(),
+                        /* We're using text run index and *not* `data.editData`
+                           for indexing the cursor and selection vertices, see
+                           `arrayResize(state.editingVertices` above for why */
                         data.textRun*2*4,
                         data.usedDirection,
                         nodeOpacities[nodeId]);
@@ -2759,6 +2821,9 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                         cursorStyle,
                         glyphRangeForCursorSelection.first(),
                         glyphRangeForCursorSelection.first(),
+                        /* We're using text run index and *not* `data.editData`
+                           for indexing the cursor and selection vertices, see
+                           `arrayResize(state.editingVertices` above for why */
                         data.textRun*2*4 + 4,
                         data.usedDirection,
                         nodeOpacities[nodeId]);

@@ -607,11 +607,13 @@ const struct {
 const struct {
     const char* name;
     TextLayerFlags layerFlags;
-    TextDataFlags flags;
+    TextDataFlags flagsBefore, flagsAfter;
 } CreateRemoveHandleRecycleData[]{
-    {"", {}, {}},
-    {"transformable", TextLayerFlag::Transformable, {}},
-    {"editable", {}, TextDataFlag::Editable},
+    {"", {}, {}, {}},
+    {"transformable", TextLayerFlag::Transformable, {}, {}},
+    {"editable before", {}, TextDataFlag::Editable, {}},
+    {"editable after", {}, {}, TextDataFlag::Editable},
+    {"editable before and after", {}, TextDataFlag::Editable, TextDataFlag::Editable},
 };
 
 const struct {
@@ -6525,8 +6527,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         {1.5f, 1.0f}
     }), TestSuite::Compare::Container);
 
-    /* For editable text, there should be also cluster IDs and text runs,
-       except for single glyphs that never have it */
+    /* For editable text, there should be also cluster IDs, edit data and text
+       runs, except for single glyphs that never have it */
     if(data.flags && *data.flags >= TextDataFlag::Editable) {
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphData).slice(&Implementation::TextLayerGlyphData::glyphCluster), Containers::arrayView({
             /* Five glyphs corresponding to five characters */
@@ -6540,10 +6542,18 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             /* Two glyphs corresponding to two characters */
             0u, 1u
         }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::editData), Containers::arrayView({
+            /* Glyphs and texts that are never editable have no edit data */
+            0u, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u, 0xffffffffu, 4u
+        }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             /* Glyphs and texts that are never editable have no runs */
             0u, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u, 0xffffffffu, 4u
         }), TestSuite::Compare::Container);
+        /* There should be initially five edit data with nothing on the free
+           list. Should be enough to check just this and not the contents. */
+        CORRADE_COMPARE(layer.stateData().firstFreeEditData, 0xffffffffu);
+        CORRADE_COMPARE(layer.stateData().editData.size(), 5);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
             0u, 5u, 9u, 9u, 11u,
         }), TestSuite::Compare::Container);
@@ -6561,12 +6571,18 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             "",
             TestSuite::Compare::String);
 
-    /* And no runs if no text is editable */
+    /* And no edit data or runs if no text is editable */
     } else {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::editData), Containers::arrayView<UnsignedInt>({
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu,
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
+        }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView<UnsignedInt>({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu,
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
         }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layer.stateData().firstFreeEditData, 0xffffffffu);
+        CORRADE_COMPARE(layer.stateData().editData.size(), 0);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset),
             Containers::ArrayView<UnsignedInt>{},
             TestSuite::Compare::Container);
@@ -6605,11 +6621,20 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         0u, 1u, 2u, 3u, 5u
     }), TestSuite::Compare::Container);
 
-    /* Similarly for text runs for editable text, if any */
+    /* Similarly for edit data and text runs for editable text, if any */
     if(data.flags && *data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::editData), Containers::arrayView({
+            /* The edit data references stay present in the removed data so
+               here's no change compared to above. Edit data 3 and 4 are unused
+               now. */
+            0u, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u, 0xffffffffu, 4u
+        }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0u, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u, 0xffffffffu, 4u
         }), TestSuite::Compare::Container);
+        /* The free list now points to the last removed */
+        CORRADE_COMPARE(layer.stateData().firstFreeEditData, 4);
+        CORRADE_COMPARE(layer.stateData().editData.size(), 5);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
             0u, 5u, 9u, 0xffffffffu, 0xffffffffu
         }), TestSuite::Compare::Container);
@@ -6629,10 +6654,16 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
 
     /* Nothing changes if no text is editable */
     } else {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::editData), Containers::arrayView<UnsignedInt>({
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu,
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
+        }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView<UnsignedInt>({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu,
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
         }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layer.stateData().firstFreeEditData, 0xffffffffu);
+        CORRADE_COMPARE(layer.stateData().editData.size(), 0);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset),
             Containers::ArrayView<UnsignedInt>{},
             TestSuite::Compare::Container);
@@ -6825,8 +6856,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         }), TestSuite::Compare::Container);
     }
 
-    /* Similarly for text runs for editable text. What was a glyph before is
-       now text and what was a text is now glyph. */
+    /* Similarly for edit data and text runs for editable text. What was a
+       glyph before is now text and what was a text is now glyph. */
     if(data.flags && *data.flags >= TextDataFlag::Editable) {
         if(data.customFont)
             CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphData).slice(&Implementation::TextLayerGlyphData::glyphCluster), Containers::arrayView({
@@ -6866,11 +6897,22 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
                 /* Single non-editable glyph */
                 0u
             }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::editData), Containers::arrayView({
+            /* Edit data 4 (which were referenced by the now-removed `sixth`)
+               are now repurposed for `secondGlyph`. The `second` and `fifth`
+               are now glyphs, so its edit data (1 and 2) are put on the free
+               list. */
+            0u, 0xffffffffu, 0xffffffffu, 4u, 0xffffffffu, 3u, 0xffffffffu, 4u
+        }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             /* Changes to the `fifth` and `sixth` text result in no new text
                runs, only the change to the `secondGlyph` is a new run */
             0u, 0xffffffffu, 0xffffffffu, 5u, 0xffffffffu, 3u, 0xffffffffu, 4u
         }), TestSuite::Compare::Container);
+        /* Edit data 4 from the free list were repurposed, and then data 1 and
+           2 were put there */
+        CORRADE_COMPARE(layer.stateData().firstFreeEditData, 2);
+        CORRADE_COMPARE(layer.stateData().editData.size(), 5);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
             0u, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 11u
         }), TestSuite::Compare::Container);
@@ -6891,10 +6933,15 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
 
     /* Nothing changes if no text is editable */
     } else {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::editData), Containers::arrayView<UnsignedInt>({
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu,
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
+        }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView<UnsignedInt>({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu,
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
         }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layer.stateData().editData.size(), 0);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset),
             Containers::ArrayView<UnsignedInt>{},
             TestSuite::Compare::Container);
@@ -6956,9 +7003,16 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     if(data.flags && *data.flags >= TextDataFlag::Editable) {
         /* Not verifying TextLayerGlyphData::glyphCluster as there's no new
            variant to check */
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::editData), Containers::arrayView({
+            /* The edit data references are't modified compared to before */
+            0u, 0xffffffffu, 0xffffffffu, 4u, 0xffffffffu, 3u, 0xffffffffu, 4u
+        }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0u, 0xffffffffu, 0xffffffffu, 6u, 0xffffffffu, 3u, 0xffffffffu, 4u
         }), TestSuite::Compare::Container);
+        /* Also no newly added or freed edit data */
+        CORRADE_COMPARE(layer.stateData().firstFreeEditData, 2);
+        CORRADE_COMPARE(layer.stateData().editData.size(), 5);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
             0u, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 14u
         }), TestSuite::Compare::Container);
@@ -7023,8 +7077,8 @@ void TextLayerTest::createRemoveHandleRecycle() {
         }
     } layer{layerHandle(0, 1), shared, data.layerFlags};
 
-    DataHandle first = layer.create(0, "hello", {}, data.flags);
-    DataHandle second = layer.create(0, "again", {}, data.flags);
+    DataHandle first = layer.create(0, "hello", {}, data.flagsBefore);
+    DataHandle second = layer.create(0, "again", {}, data.flagsBefore);
     layer.setColor(first, 0x663399_rgbf);
     layer.setColor(second, 0xff3366_rgbf);
     if(data.layerFlags >= TextLayerFlag::Transformable) {
@@ -7043,23 +7097,44 @@ void TextLayerTest::createRemoveHandleRecycle() {
         CORRADE_COMPARE(layer.padding(first), Vector4{15.0f});
         CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
     }
-    CORRADE_COMPARE(layer.flags(first), data.flags);
-    CORRADE_COMPARE(layer.flags(second), data.flags);
-    CORRADE_COMPARE(layer.stateData().data[dataHandleId(first)].textRun, data.flags >= TextDataFlag::Editable ? 0 : 0xffffffffu);
-    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second)].textRun, data.flags >= TextDataFlag::Editable ? 1 : 0xffffffffu);
+    CORRADE_COMPARE(layer.flags(first), data.flagsBefore);
+    CORRADE_COMPARE(layer.flags(second), data.flagsBefore);
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(first)].textRun, data.flagsBefore >= TextDataFlag::Editable ? 0 : 0xffffffffu);
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second)].textRun, data.flagsBefore >= TextDataFlag::Editable ? 1 : 0xffffffffu);
+    CORRADE_COMPARE(layer.stateData().editData.size(), data.flagsBefore >= TextDataFlag::Editable ? 2 : 0);
 
     /* Data that reuses a previous slot should have all properties cleared, as
        well as the flags and text run if the previous one was editable */
     layer.remove(second);
-    DataHandle second2 = layer.create(0, "yes", {});
+    DataHandle second2 = layer.create(0, "yes", {}, data.flagsAfter);
     CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
     CORRADE_COMPARE(layer.color(second2), 0xffffff_rgbf);
     if(data.layerFlags >= TextLayerFlag::Transformable)
         CORRADE_COMPARE(layer.transformation(second2), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
     else
         CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
-    CORRADE_COMPARE(layer.flags(second2), TextDataFlags{});
-    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].textRun, 0xffffffffu);
+    CORRADE_COMPARE(layer.flags(second2), data.flagsAfter);
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].editData,
+        /* If there was no editable text before, this is the first slot,
+           otherwise the slot from `second` gets reused */
+        data.flagsAfter >= TextDataFlag::Editable ?
+            data.flagsBefore >= TextDataFlag::Editable ? 1 : 0 :
+            0xffffffffu);
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].textRun,
+        /* If there was no editable text before, this is the first run,
+           otherwise there are three other already (one for the first, one
+           now unused for second) */
+        data.flagsAfter >= TextDataFlag::Editable ?
+            data.flagsBefore >= TextDataFlag::Editable ? 2 : 0 :
+            0xffffffffu);
+    /* There should at most two slots. If the previous text was editable and
+       the new aren't, the edit data should be put on the free list. */
+    CORRADE_COMPARE(layer.stateData().editData.size(),
+        data.flagsBefore >= TextDataFlag::Editable ?
+            2 :
+            data.flagsAfter >= TextDataFlag::Editable ? 1 : 0);
+    CORRADE_COMPARE(layer.stateData().firstFreeEditData,
+        data.flagsBefore >= TextDataFlag::Editable && !(data.flagsAfter >= TextDataFlag::Editable) ? 1 : 0xffffffffu);
 
     /* Same for a glyph */
     layer.remove(first);
@@ -7071,7 +7146,40 @@ void TextLayerTest::createRemoveHandleRecycle() {
     else
         CORRADE_COMPARE(layer.padding(first2), Vector4{0.0f});
     CORRADE_COMPARE(layer.flags(first2), TextDataFlags{});
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].editData, 0xffffffffu);
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].textRun, 0xffffffffu);
+    /* If the previous one was editable, its edit data should be put on the
+       free list */
+    CORRADE_COMPARE(layer.stateData().firstFreeEditData,
+        data.flagsBefore >= TextDataFlag::Editable ? 0 : 0xffffffffu);
+
+    /* Creating new editable texts will pick free edit data slots for as long
+       as they're available */
+    if(data.flagsBefore >= TextDataFlag::Editable) {
+        /* This one reuses the slot after `first`, which got replaced by a
+           glyph */
+        DataHandle editable1 = layer.create(0, "", {}, TextDataFlag::Editable);
+        CORRADE_COMPARE(layer.stateData().data[dataHandleId(editable1)].editData, 0);
+
+        /* If `second2` isn't editable, there's one more slot left over
+           `second`, allocate from it */
+        if(!(data.flagsAfter >= TextDataFlag::Editable)) {
+            CORRADE_COMPARE(layer.stateData().firstFreeEditData, 1);
+            DataHandle editable2 = layer.create(0, "", {}, TextDataFlag::Editable);
+            CORRADE_COMPARE(layer.stateData().data[dataHandleId(editable2)].editData, 1);
+        }
+
+        /* Now there are no more slots */
+        CORRADE_COMPARE(layer.stateData().firstFreeEditData, 0xffffffffu);
+        CORRADE_COMPARE(layer.stateData().editData.size(), 2);
+
+        /* Allocating another editable text will grow the editable data
+           array */
+        DataHandle editable3 = layer.create(0, "", {}, TextDataFlag::Editable);
+        CORRADE_COMPARE(layer.stateData().data[dataHandleId(editable3)].editData, 2);
+        CORRADE_COMPARE(layer.stateData().firstFreeEditData, 0xffffffffu);
+        CORRADE_COMPARE(layer.stateData().editData.size(), 3);
+    }
 }
 
 void TextLayerTest::createStyleOutOfRange() {

@@ -177,14 +177,12 @@ struct TextLayerGlyphRun {
     Float scale;
 };
 
-struct TextLayerTextRun {
-    UnsignedInt textOffset;
-    UnsignedInt textSize;
-    /* Backreference to the `TextLayerData` so the `textRun` can be updated
-       there when recompacting */
-    UnsignedInt data;
-    /* Current editing position */
-    UnsignedInt cursor;
+struct TextLayerEditData {
+    /* Current editing position or the next free item if the item is unused */
+    union {
+        UnsignedInt cursor;
+        UnsignedInt nextFree;
+    };
     /* The other end of a selection. If less than `cursor`, it's before the
        cursor, if greater it's after, if the same, there's no selection. */
     UnsignedInt selection;
@@ -203,6 +201,14 @@ struct TextLayerTextRun {
     UnsignedByte direction;
 };
 
+struct TextLayerTextRun {
+    UnsignedInt textOffset;
+    UnsignedInt textSize;
+    /* Backreference to the `TextLayerData` so the `textRun` can be updated
+       there when recompacting */
+    UnsignedInt data;
+};
+
 struct TextLayerData {
     /* Transformation or padding is used depending on the layer having
        TextLayerFlag::Transformation set */
@@ -216,9 +222,9 @@ struct TextLayerData {
     };
     /* Set to ~UnsignedInt{} if there are no glyphs */
     UnsignedInt glyphRun;
-    /* Used only if flags contain TextDataFlag::Editable, otherwise set to
+    /* Used only if flags contain TextDataFlag::Editable, otherwise both set to
        ~UnsignedInt{} */
-    UnsignedInt textRun;
+    UnsignedInt editData, textRun;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     UnsignedInt style, calculatedStyle;
     /* Actual rectangle occupied by the text glyphs. Used for cursor /
@@ -346,9 +352,19 @@ struct TextLayer::State: AbstractVisualLayer::State {
     Containers::Array<Implementation::TextLayerGlyphRun> glyphRuns;
     Containers::Array<Implementation::TextLayerTextRun> textRuns;
 
-    /* Data for each text. Index to `glyphRus` and optionally `textRuns` above,
-       a style index and other properties. */
+    /* Data for each text. Index to `glyphRus` and optionally `textRuns` above
+       and `editData` below, a style index and other properties. */
     Containers::Array<Implementation::TextLayerData> data;
+
+    /* Data for editable texts, referenced by `TextLayerData::editData`. While
+       the amount of used entries is the same as the amount of used
+       `TextLayerTextRun` items, the edit data are separate to not waste
+       majority of run recompaction time copying static data. When an editable
+       text is removed or becomes non-editable, given item is added to the list
+       linked from `firstFreeEditData` and `TextLayerEditData::nextFree`. A
+       value of ~UnsignedInt{} means there's no (first/next) free data. */
+    Containers::Array<Implementation::TextLayerEditData> editData;
+    UnsignedInt firstFreeEditData = ~UnsignedInt{};
 
     /* Vertex data, ultimately built from `glyphData` combined with color and
        style index from `data`. Is either Implementation::TextLayerVertex or
