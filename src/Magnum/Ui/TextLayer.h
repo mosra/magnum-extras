@@ -2494,10 +2494,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @brief Contents of an editable text
          *
          * Expects that @p handle is valid and the text was created or set with
-         * @ref TextDataFlag::Editable present. The returned view is only valid
-         * until the next @ref create(), @ref setText(), @ref updateText(),
-         * @ref editText() or @ref update() call and is never
-         * @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
+         * @ref TextDataFlag::Editable present. The returned view is always
+         * @relativeref{Corrade,Containers::StringViewFlag::NullTerminated} and
+         * is only valid until the next @ref create(), @ref setText(),
+         * @ref updateText(), @ref editText() or @ref update() call.
          * @see @ref isHandleValid(DataHandle) const,
          *      @ref flags(DataHandle) const
          */
@@ -2730,9 +2730,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @ref TextDataFlag::Editable enabled. The @p function is called from
          * @ref updateText(), @ref editText() or in response to input events
          * every time the text changes (i.e., when a non-empty string is
-         * inserted or removed), receiving the current @p text. The @p function
-         * is *not* called in response to @ref setText() or when just cursor or
-         * selection changes.
+         * inserted or removed), receiving the current @p text, guaranteed to
+         * be @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
+         * The @p function is *not* called in response to @ref setText() or
+         * when just cursor or selection changes.
          *
          * Note that unlike e.g. the @ref EventLayer, calling this function
          * again for the same @p handle *replaces* the previous callback.

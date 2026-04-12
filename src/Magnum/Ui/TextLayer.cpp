@@ -1133,10 +1133,34 @@ void TextLayer::shapeRememberTextInternal(
         editData.alignment = properties._alignment;
         editData.direction = properties._direction;
 
+        /* Append the text to the internal array along with a null terminator.
+           First check if the text is a slice of our internal text array (i.e.,
+           coming from another widget, possibly). In that case we'll have to
+           relocate the view when we copy() it below to not copy garbage from
+           a location that has been reallocated elsewhere. Similar logic is in
+           updateText(), where the growing and copying is further decoupled,
+           here it could be handled by the relocating logic in arrayAppend()
+           directly if it was split into `arrayAppend(textData, text)` and
+           `arrayAppend(textData, '\0')` but that's potentially one additional
+           reallocation and a lot of extra checks which isn't wanted.
+
+           Checking against the capacity and not size for consistency with
+           arrayAppend(), see comments in its implementation for details
+           why. */
+        std::size_t textRelocateOffset = std::size_t(text.data() - state.textData.data());
+        if(textRelocateOffset >= arrayCapacity(state.textData))
+            textRelocateOffset = ~std::size_t{};
+        const UnsignedInt textOffset = state.textData.size();
+        arrayAppend(state.textData, NoInit, text.size() + 1);
+        state.textData.back() = '\0';
+        Utility::copy(
+            textRelocateOffset != ~std::size_t{} ?
+                state.textData.sliceSize(textRelocateOffset, text.size()) :
+                text,
+            state.textData.sliceSize(textOffset, text.size()));
+
         /* Add a new text run */
         const UnsignedInt textRun = state.textRuns.size();
-        const UnsignedInt textOffset = state.textData.size();
-        arrayAppend(state.textData, text);
         Implementation::TextLayerTextRun& run = arrayAppend(state.textRuns, NoInit, 1).front();
         run.textOffset = textOffset;
         run.textSize = text.size();
@@ -1544,8 +1568,9 @@ Containers::StringView TextLayer::textInternal(const UnsignedInt id) const {
     const Implementation::TextLayerData& data = state.data[id];
     CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
         "Ui::TextLayer::text(): text doesn't have" << TextDataFlag::Editable << "set", {});
-    return state.textData.sliceSize(state.textRuns[data.textRun].textOffset,
-                                    state.textRuns[data.textRun].textSize);
+    return {state.textData.sliceSize(state.textRuns[data.textRun].textOffset,
+                                     state.textRuns[data.textRun].textSize),
+            Containers::StringViewFlag::NullTerminated};
 }
 
 void TextLayer::setText(const DataHandle handle, const Containers::StringView text, const TextProperties& properties, const TextDataFlags flags) {
@@ -1650,9 +1675,10 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
 
     /* Check if the text is a slice of our internal text array (i.e., coming
        from another widget, possibly). In that case we'll have to relocate the
-       view when we copy() it below. Other cases in create() and setText() are
-       handled by the relocating logic in arrayAppend() directly, but as here
-       the growing and copying is decoupled, we have to handle it directly.
+       view when we copy() it below to not copy garbage from a location that
+       has been reallocated elsewhere. Similar logic is in
+       shapeRememberTextInternal(), which is called from both create() and
+       setText().
 
        Checking against the capacity and not size for consistency with
        arrayAppend(), see comments in its implementation for details why. */
@@ -1663,7 +1689,12 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
     /* Add a new text run for the modified contents */
     const UnsignedInt textRun = state.textRuns.size();
     const UnsignedInt textOffset = state.textData.size();
-    Containers::ArrayView<char> text = arrayAppend(state.textData, NoInit, textSize);
+    /* Append one extra byte and put a null terminator there */
+    arrayAppend(state.textData, NoInit, textSize + 1);
+    state.textData.back() = '\0';
+    const Containers::MutableStringView text{
+        state.textData.sliceSize(textOffset, textSize),
+        Containers::StringViewFlag::NullTerminated};
     Implementation::TextLayerTextRun& run = arrayAppend(state.textRuns, NoInit, 1).front();
 
     /* Fill the new run properties */
@@ -2431,12 +2462,16 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                 CORRADE_INTERNAL_DEBUG_ASSERT(run.textOffset > outputTextDataOffset);
                 CORRADE_INTERNAL_DEBUG_ASSERT(i != outputTextRunOffset);
 
+                /* Include the null terminator in the copy */
                 std::memmove(state.textData.data() + outputTextDataOffset,
                              state.textData.data() + run.textOffset,
-                             run.textSize);
+                             run.textSize + 1);
                 run.textOffset = outputTextDataOffset;
             }
-            outputTextDataOffset += run.textSize;
+
+            /* Offset for the next text is including the null terminator as
+               well */
+            outputTextDataOffset += run.textSize + 1;
 
             /* Move the text run info earlier if there were skipped runs
                before, update the reference to it in the data */

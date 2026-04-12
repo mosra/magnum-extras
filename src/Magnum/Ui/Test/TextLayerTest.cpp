@@ -6250,6 +6250,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.cursor(first), Containers::pair(5u, 5u));
         /* textProperties() tested in createSetTextTextPropertiesEditable() */
         CORRADE_COMPARE(layer.text(first), "hello");
+        CORRADE_COMPARE(layer.text(first).flags(), Containers::StringViewFlag::NullTerminated);
         /* Callback behavior tested fully in textEditCallback() below */
         CORRADE_VERIFY(!layer.hasTextEditCallback(first));
     }
@@ -6309,6 +6310,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             CORRADE_COMPARE(layer.cursor(dataHandleData(second)), Containers::pair(4u, 4u));
             /* textProperties() tested in createSetTextTextPropertiesEditable() */
             CORRADE_COMPARE(layer.text(dataHandleData(second)), "ahoy");
+            CORRADE_COMPARE(layer.text(dataHandleData(second)).flags(), Containers::StringViewFlag::NullTerminated);
             /* Callback behavior tested fully in textEditCallback() below */
             CORRADE_VERIFY(!layer.hasTextEditCallback(dataHandleData(second)));
         }
@@ -6329,6 +6331,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             CORRADE_COMPARE(layer.cursor(second), Containers::pair(4u, 4u));
             /* textProperties() tested in createSetTextTextPropertiesEditable() */
             CORRADE_COMPARE(layer.text(second), "ahoy");
+            CORRADE_COMPARE(layer.text(second).flags(), Containers::StringViewFlag::NullTerminated);
             /* Callback behavior tested fully in textEditCallback() below */
             CORRADE_VERIFY(!layer.hasTextEditCallback(second));
         }
@@ -6390,6 +6393,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.cursor(third), Containers::pair(0u, 0u));
         /* textProperties() tested in createSetTextTextPropertiesEditable() */
         CORRADE_COMPARE(layer.text(third), "");
+        CORRADE_COMPARE(layer.text(third).flags(), Containers::StringViewFlag::NullTerminated);
         /* Callback behavior tested fully in textEditCallback() below */
         CORRADE_VERIFY(!layer.hasTextEditCallback(third));
     }
@@ -6425,6 +6429,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.cursor(fourth), Containers::pair(2u, 2u));
         /* textProperties() tested in createSetTextTextPropertiesEditable() */
         CORRADE_COMPARE(layer.text(fourth), "hi");
+        CORRADE_COMPARE(layer.text(fourth).flags(), Containers::StringViewFlag::NullTerminated);
     }
     CORRADE_COMPARE(layer.color(fourth), 0xffffff_rgbf);
     if(data.layerFlags >= TextLayerFlag::Transformable)
@@ -6477,6 +6482,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     if(data.flags && *data.flags >= TextDataFlag::Editable) {
         CORRADE_COMPARE(layer.cursor(sixth), Containers::pair(0u, 0u));
         CORRADE_COMPARE(layer.text(sixth), "");
+        CORRADE_COMPARE(layer.text(sixth).flags(), Containers::StringViewFlag::NullTerminated);
         CORRADE_VERIFY(!layer.hasTextEditCallback(sixth));
     }
     CORRADE_COMPARE(layer.color(sixth), 0xffffff_rgbf);
@@ -6566,20 +6572,22 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.stateData().firstFreeEditData, 0xffffffffu);
         CORRADE_COMPARE(layer.stateData().editData.size(), 5);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0u, 5u, 9u, 9u, 11u,
+            /* The offsets include the previous text null terminator */
+            0u, 6u, 11u, 12u, 15u,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            /* The sizes are *without* the null terminator */
             5u, 4u, 0u, 2u, 0u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
             0u, 2u, 4u, 5u, 7u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
-            "hello"
-            "ahoy"
-            ""
-            "hi"
-            "",
+            "hello\0"
+            "ahoy\0"
+            "\0"
+            "hi\0"
+            "\0"_s,
             TestSuite::Compare::String);
 
     /* And no edit data or runs if no text is editable */
@@ -6647,20 +6655,22 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.stateData().firstFreeEditData, 4);
         CORRADE_COMPARE(layer.stateData().editData.size(), 5);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0u, 5u, 9u, 0xffffffffu, 0xffffffffu
+            /* The offsets include the previous text null terminator */
+            0u, 6u, 11u, 0xffffffffu, 0xffffffffu
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            /* The sizes are *without* the null terminator */
             5u, 4u, 0u, 2u, 0u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
             0u, 2u, 4u, 5u, 7u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
-            "hello"
-            "ahoy"
-            ""
-            "hi" /* now unused */
-            "", /* now unused */
+            "hello\0"
+            "ahoy\0"
+            "\0"
+            "hi\0"  /* now unused */
+            "\0"_s, /* now unused */
             TestSuite::Compare::String);
 
     /* Nothing changes if no text is editable */
@@ -6925,7 +6935,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.stateData().firstFreeEditData, 2);
         CORRADE_COMPARE(layer.stateData().editData.size(), 5);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0u, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 11u
+            0u, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 16u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
             5u, 4u, 0u, 2u, 0u, 3u
@@ -6934,12 +6944,12 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             0u, 2u, 4u, 5u, 7u, 3u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
-            "hello"
-            "ahoy" /* now unused */
-            ""     /* now unused */
-            "hi"   /* now unused */
-            ""     /* now unused */
-            "hey",
+            "hello\0"
+            "ahoy\0"    /* now unused */
+            "\0"        /* now unused */
+            "hi\0"      /* now unused */
+            "\0"        /* now unused */
+            "hey\0"_s,
             TestSuite::Compare::String);
 
     /* Nothing changes if no text is editable */
@@ -7025,7 +7035,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.stateData().firstFreeEditData, 2);
         CORRADE_COMPARE(layer.stateData().editData.size(), 5);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0u, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 14u
+            0u, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 20u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
             5u, 4u, 0u, 2u, 0u, 3u, 4u
@@ -7034,13 +7044,13 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             0u, 2u, 4u, 5u, 7u, 3u, 3u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
-            "hello"
-            "ahoy" /* now unused */
-            ""
-            "hi"   /* now unused */
-            ""     /* now unused */
-            "hey"  /* now unused */
-            "ahoy",
+            "hello\0"
+            "ahoy\0"    /* now unused */
+            "\0"
+            "hi\0"      /* now unused */
+            "\0"        /* now unused */
+            "hey\0"     /* now unused */
+            "ahoy\0"_s,
             TestSuite::Compare::String);
     }
 }
@@ -7585,6 +7595,7 @@ void TextLayerTest::updateText() {
     DataHandle text = layer.create(2, "hello", {}, TextDataFlag::Editable, data.node);
     layer.create(2, "bb", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState|data.expectedExtraCreateState);
     CORRADE_COMPARE(layer.glyphCount(text), 5);
@@ -7602,6 +7613,7 @@ void TextLayerTest::updateText() {
     layer.updateText(text, 5, 0, 5, "", 5);
     layer.updateText(text, 5, 0, 5, "", 5, 5);
     CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
     CORRADE_COMPARE(layer.state(), LayerStates{});
     /* No reshaping should be done in this case */
@@ -7611,6 +7623,7 @@ void TextLayerTest::updateText() {
        NeedsLayoutUpdate */
     layer.updateText(text, 0, 0, 0, "", 3);
     CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 3u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     /* No reshaping should be done in this case however */
@@ -7626,6 +7639,7 @@ void TextLayerTest::updateText() {
        NeedsLayoutUpdate */
     layer.updateText(text, 0, 0, 0, "", 3, 4);
     CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 4u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     /* No reshaping should be done in this case however */
@@ -7641,6 +7655,7 @@ void TextLayerTest::updateText() {
        glyph & text run and marks the original ones as unused. */
     layer.updateText(text, 0, 0, 5, "oo?!", 9);
     CORRADE_COMPARE(layer.text(text), "hellooo?!");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(9u, 9u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
@@ -7660,6 +7675,7 @@ void TextLayerTest::updateText() {
        originals as unused. */
     layer.updateText(dataHandleData(text), 6, 3, 0, "", 4);
     CORRADE_COMPARE(layer.text(text), "helloo");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 4u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
@@ -7678,6 +7694,7 @@ void TextLayerTest::updateText() {
        it. Again adds new runs and marks originals as unused. */
     layer.updateText(text, 1, 4, 2, "vercrafts", 5, 3);
     CORRADE_COMPARE(layer.text(text), "hovercrafts");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 3u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
@@ -7697,6 +7714,7 @@ void TextLayerTest::updateText() {
        originals as unused. */
     layer.updateText(dataHandleData(text), 5, 5, 2, "ldo", 4, 3);
     CORRADE_COMPARE(layer.text(text), "holdovers");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 3u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
@@ -7715,6 +7733,7 @@ void TextLayerTest::updateText() {
        Marks both the original runs as unused. */
     layer.updateText(text, 0, 9, 0, "", 0);
     CORRADE_COMPARE(layer.text(text), "");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 0u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
@@ -7732,6 +7751,7 @@ void TextLayerTest::updateText() {
     /* This is a no-op again */
     layer.updateText(text, 0, 0, 0, "", 0);
     CORRADE_COMPARE(layer.text(text), "");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 0u));
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 2);
@@ -7885,6 +7905,7 @@ void TextLayerTest::editText() {
 
     layer.editText(text, data.edit, data.insert);
     CORRADE_COMPARE(layer.text(text), data.expected);
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), data.expectedCursor);
     CORRADE_COMPARE(layer.state(), data.expectedState);
 
@@ -7904,6 +7925,7 @@ void TextLayerTest::editText() {
        actual text changes, not otherwise */
     layer.editText(assigned, data.edit, data.insert);
     CORRADE_COMPARE(layer.text(assigned), data.expected);
+    CORRADE_COMPARE(layer.text(assigned).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(assigned), data.expectedCursor);
     CORRADE_COMPARE(layer.state(), data.expectedState|(Containers::StringView{data.expected} == Containers::StringView{data.text} ? LayerStates{} : LayerState::NeedsLayoutUpdate));
 }
@@ -8035,6 +8057,7 @@ void TextLayerTest::textEditCallback() {
 
         void operator()(Containers::StringView text) const {
             CORRADE_COMPARE(text, _state->expected);
+            CORRADE_COMPARE(text.flags(), Containers::StringViewFlag::NullTerminated);
             ++_state->called;
         }
 
@@ -8709,6 +8732,7 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
             .setShapeDirection(Text::ShapeDirection::RightToLeft),
         TextDataFlag::Editable);
     CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
     /* Alignment wasn't set */
     CORRADE_COMPARE(layer.textProperties(text).alignment(), Containers::NullOpt);
@@ -8728,6 +8752,7 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
     /* updateText() should pass the same */
     layer.updateText(text, 0, 0, 5, "!", 6);
     CORRADE_COMPARE(layer.text(text), "hello!");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(6u, 6u));
     CORRADE_COMPARE(font.setScriptCalled, 2);
     CORRADE_COMPARE(font.setLanguageCalled, 2);
@@ -8764,6 +8789,7 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
        above */
     layer.editText(text, TextEdit::InsertBeforeCursor, "!");
     CORRADE_COMPARE(layer.text(text), "hello?!");
+    CORRADE_COMPARE(layer.text(text).flags(), Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(7u, 7u));
     CORRADE_COMPARE(font.setScriptCalled, 4);
     CORRADE_COMPARE(font.setLanguageCalled, 4);
@@ -8890,9 +8916,16 @@ void TextLayerTest::createSetUpdateTextFromLayerItself() {
     layer.updateText(third, 0, 0, 7, layer.text(first).exceptPrefix(5), 0);
 
     CORRADE_COMPARE(layer.text(first), "hello there" + " how is everyone"_s*testCaseRepeatId());
+    CORRADE_COMPARE(layer.text(first).flags(), Containers::StringViewFlag::NullTerminated);
+
     CORRADE_COMPARE(layer.text(firstCopy), "hello there" + " how is everyone"_s*testCaseRepeatId());
+    CORRADE_COMPARE(layer.text(firstCopy).flags(), Containers::StringViewFlag::NullTerminated);
+
     CORRADE_COMPARE(layer.text(second), "hey hey");
+    CORRADE_COMPARE(layer.text(second).flags(), Containers::StringViewFlag::NullTerminated);
+
     CORRADE_COMPARE(layer.text(third), "hey hey there" + " how is everyone"_s*testCaseRepeatId());
+    CORRADE_COMPARE(layer.text(third).flags(), Containers::StringViewFlag::NullTerminated);
 }
 
 void TextLayerTest::setColor() {
@@ -10446,19 +10479,21 @@ void TextLayerTest::updateCleanDataOrder() {
             0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0u, 5u, 9u, 11u
+            /* The offsets include the previous text null terminator */
+            0u, 6u, 11u, 14u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            /* The sizes are *without* the null terminator */
             5u, 4u, 2u, 0u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
             3u, 7u, 9u, 10u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
-            "hello"
-            "ahoy"
-            "hi"
-            "",
+            "hello\0"
+            "ahoy\0"
+            "hi\0"
+            "\0"_s,
             TestSuite::Compare::String);
     }
 
@@ -10926,19 +10961,21 @@ void TextLayerTest::updateCleanDataOrder() {
             0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0xffffffffu, 5u, 9u, 0xffffffffu
+            /* The offsets include the previous text null terminator */
+            0xffffffffu, 6u, 11u, 0xffffffffu
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            /* The sizes are *without* the null terminator */
             5u, 4u, 2u, 0u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
             3u, 7u, 9u, 10u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
-            "hello" /* now unused */
-            "ahoy"
-            "hi"
-            "", /* now unused */
+            "hello\0"   /* now unused */
+            "ahoy\0"
+            "hi\0"
+            "\0"_s,     /* now unused */
             TestSuite::Compare::String);
     }
 
@@ -10994,22 +11031,27 @@ void TextLayerTest::updateCleanDataOrder() {
             3u /* free data */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0u, 4u
+            /* The offsets include the previous text null terminator */
+            0u, 5u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            /* The sizes are *without* the null terminator */
             4u, 2u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
             7u, 9u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
-            "ahoy"
-            "hi",
+            "ahoy\0"
+            "hi\0"_s,
             TestSuite::Compare::String);
 
-        /* The text queries should still match also */
+        /* The text queries should still match also, and still produce
+           null-terminated views */
         CORRADE_COMPARE(layer.text(data7), "ahoy");
+        CORRADE_COMPARE(layer.text(data7).flags(), Containers::StringViewFlag::NullTerminated);
         CORRADE_COMPARE(layer.text(data9), "hi");
+        CORRADE_COMPARE(layer.text(data9).flags(), Containers::StringViewFlag::NullTerminated);
     }
 
     /* Indices for remaining 3 visible glyphs */
@@ -11174,7 +11216,8 @@ void TextLayerTest::updateCleanDataOrder() {
     }), TestSuite::Compare::Container);
     if(data.dataFlags >= TextDataFlag::Editable)
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0xffffffffu, 4u
+            /* The offsets include the previous text null terminator */
+            0xffffffffu, 5u
         }), TestSuite::Compare::Container);
 
     /* Again this explicitly adds NeedsDataUpdate to force recompaction */
@@ -11208,20 +11251,24 @@ void TextLayerTest::updateCleanDataOrder() {
             0xffffffffu, 0u, 3u /* free data */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            /* The offsets include the previous text null terminator */
             0u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            /* The sizes are *without* the null terminator */
             2u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
             9u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
-            "hi",
+            "hi\0"_s,
             TestSuite::Compare::String);
 
-        /* The text queries should still match also */
+        /* The text queries should still match also, and still produce
+           null-terminated views */
         CORRADE_COMPARE(layer.text(data9), "hi");
+        CORRADE_COMPARE(layer.text(data9).flags(), Containers::StringViewFlag::NullTerminated);
     }
 
     /* Indices for remaining 2 visible glyphs */
