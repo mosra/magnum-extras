@@ -361,7 +361,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
         MAGNUM_UI_LOCAL void setStyleInternal(UnsignedInt id, UnsignedInt style);
         MAGNUM_UI_LOCAL void setTransitionedStyleInternal(const AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
         MAGNUM_UI_LOCAL Containers::Pair<UnsignedInt, AnimatorDataHandle> styleOrAnimationTargetStyle(UnsignedInt style) const;
-        MAGNUM_UI_LOCAL void transitionStyle(
+        MAGNUM_UI_LOCAL void transitionStyleInternal(
             #ifndef CORRADE_NO_ASSERT
             const char* messagePrefix,
             #endif

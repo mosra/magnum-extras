@@ -236,8 +236,8 @@ void AbstractVisualLayer::setStyleInternal(const UnsignedInt id, const UnsignedI
     /** @todo this is too broad, LayerFeature::Layout may be used also by
         layers where the style doesn't necessarily (or always) affect the
         layout, or two styles may affect the layout the same way and thus this
-        isn't needed, etc; see also a todo in transitionStyle() below; plus the
-        virtual call is rather nasty... */
+        isn't needed, etc; see also a todo in transitionStyleInternal() below;
+        plus the virtual call is rather nasty... */
     if(nodes()[id] != NodeHandle::Null && features() >= LayerFeature::Layout)
         setNeedsUpdate(LayerState::NeedsLayoutUpdate);
 }
@@ -366,8 +366,8 @@ void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::S
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             const UnsignedInt styleCount = sharedState.styleCount;
             for(const UnsignedInt id: dataIds) {
-                /* Can't use the transitionStyle() helper here as it updates
-                   state.styles and not state.calculatedStyles */
+                /* Can't use the transitionStyleInternal() helper here as it
+                   updates state.styles and not state.calculatedStyles */
                 const UnsignedInt style = state.styles[id];
 
                 /* If the style is dynamic, maybe it has an animation with a
@@ -443,7 +443,7 @@ Containers::Pair<UnsignedInt, AnimatorDataHandle> AbstractVisualLayer::styleOrAn
     return {style, AnimatorDataHandle::Null};
 }
 
-void AbstractVisualLayer::transitionStyle(
+void AbstractVisualLayer::transitionStyleInternal(
     #ifndef CORRADE_NO_ASSERT
     const char* messagePrefix,
     #endif
@@ -554,7 +554,7 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
     UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
         sharedState.styleTransitionToPressedOver :
         sharedState.styleTransitionToPressedOut;
-    transitionStyle(
+    transitionStyleInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerPressEvent():",
         #endif
@@ -584,7 +584,7 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
         event.isNodeHovered() ?
             sharedState.styleTransitionToInactiveOver :
             sharedState.styleTransitionToInactiveOut;
-    transitionStyle(
+    transitionStyleInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerReleaseEvent():",
         #endif
@@ -614,7 +614,7 @@ void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerM
         sharedState.styleTransitionToPressedOver : event.isNodeFocused() ?
             sharedState.styleTransitionToFocusedOver :
             sharedState.styleTransitionToInactiveOver;
-    transitionStyle(
+    transitionStyleInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerEnterEvent():",
         #endif
@@ -632,7 +632,7 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
         sharedState.styleTransitionToPressedOut : event.isNodeFocused() ?
             sharedState.styleTransitionToFocusedOut :
             sharedState.styleTransitionToInactiveOut;
-    transitionStyle(
+    transitionStyleInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerLeaveEvent():",
         #endif
@@ -643,7 +643,7 @@ void AbstractVisualLayer::doPointerCancelEvent(const UnsignedInt dataId, Pointer
     /* Transition the style to inactive out. This transition has no associated
        animation but the inactive out style may still have a persistent
        animation. */
-    transitionStyle(
+    transitionStyleInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerCancelEvent():",
         #endif
@@ -658,7 +658,7 @@ void AbstractVisualLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& eve
         UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToFocusedOver :
             sharedState.styleTransitionToFocusedOut;
-        transitionStyle(
+        transitionStyleInternal(
             #ifndef CORRADE_NO_ASSERT
             "Ui::AbstractVisualLayer::focusEvent():",
             #endif
@@ -676,7 +676,7 @@ void AbstractVisualLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent& even
         UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToInactiveOver :
             sharedState.styleTransitionToInactiveOut;
-        transitionStyle(
+        transitionStyleInternal(
             #ifndef CORRADE_NO_ASSERT
             "Ui::AbstractVisualLayer::blurEvent():",
             #endif
@@ -705,9 +705,9 @@ void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, Visibi
         UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToInactiveOver :
             sharedState.styleTransitionToInactiveOut;
-        /* Not using transitionStyle() in this case because this function is
-           called from within update(), meaning one can't just fire animations
-           like a madman in the middle of _that_ */
+        /* Not using transitionStyleInternal() in this case because this
+           function is called from within update(), meaning one can't just fire
+           animations like a madman in the middle of _that_ */
         const UnsignedInt nextStyle = transition(currentStyle);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Ui::AbstractVisualLayer::visibilityLostEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
