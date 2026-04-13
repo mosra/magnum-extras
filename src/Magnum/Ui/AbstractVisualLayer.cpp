@@ -245,24 +245,22 @@ void AbstractVisualLayer::setStyleInternal(const UnsignedInt id, const UnsignedI
 void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const DataHandle handle, const UnsignedInt style) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::AbstractVisualLayer::setTransitionedStyle(): invalid handle" << handle, );
-    CORRADE_ASSERT(style < _state->shared.styleCount,
-        "Ui::AbstractVisualLayer::setTransitionedStyle(): style" << style << "out of range for" << _state->shared.styleCount << "styles", );
     setTransitionedStyleInternal(ui, dataHandleData(handle), style);
 }
 
 void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::AbstractVisualLayer::setTransitionedStyle(): invalid handle" << handle, );
-    CORRADE_ASSERT(style < _state->shared.styleCount,
-        "Ui::AbstractVisualLayer::setTransitionedStyle(): style" << style << "out of range for" << _state->shared.styleCount << "styles", );
     setTransitionedStyleInternal(ui, handle, style);
 }
 
 void AbstractVisualLayer::setTransitionedStyleInternal(const AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
     State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    CORRADE_ASSERT(style < sharedState.styleCount,
+        "Ui::AbstractVisualLayer::setTransitionedStyle(): style" << style << "out of range for" << sharedState.styleCount << "styles", );
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
 
-    const Shared::State& sharedState = state.shared;
     const NodeHandle node = this->node(handle);
     const bool hovered = ui.currentHoveredNode() == node;
     UnsignedInt(*transition)(UnsignedInt);
