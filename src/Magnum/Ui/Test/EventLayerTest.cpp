@@ -59,7 +59,7 @@ struct EventLayerTest: TestSuite::Tester {
     void constructMoveScopedConnectionsActive();
     void destructScopedConnectionsActive();
 
-    void invalidSlot();
+    void invalidFunction();
 
     void call();
 
@@ -337,13 +337,13 @@ const struct {
 
 const struct {
     const char* name;
-    bool positionCallback;
+    bool positionFunction;
     bool dragOrScroll;
 } DragFromUserInterfaceFallthroughThresholdData[]{
     {"", false, false},
-    {"with position callback", true, false},
+    {"with position function", true, false},
     {"drag or scroll", false, true},
-    {"drag or scroll, with position callback", true, true}
+    {"drag or scroll, with position function", true, true}
 };
 
 const struct {
@@ -453,7 +453,7 @@ EventLayerTest::EventLayerTest() {
               &EventLayerTest::constructMoveScopedConnectionsActive,
               &EventLayerTest::destructScopedConnectionsActive,
 
-              &EventLayerTest::invalidSlot,
+              &EventLayerTest::invalidFunction,
 
               &EventLayerTest::call});
 
@@ -821,7 +821,7 @@ void EventLayerTest::call() {
     CORRADE_COMPARE(functorCalledConstructedDestructedCount, 1121);
 }
 
-void EventLayerTest::invalidSlot() {
+void EventLayerTest::invalidFunction() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     EventLayer layer{layerHandle(0, 1)};
@@ -1324,7 +1324,7 @@ void EventLayerTest::releasePress() {
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
-    /* Verify that the callback is actually properly registered so this doesn't
+    /* Verify that the function is actually properly registered so this doesn't
        result in false positives */
     } {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
@@ -1569,7 +1569,7 @@ void EventLayerTest::tapOrClickPress() {
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
-    /* Verify that the callback is actually properly registered so this doesn't
+    /* Verify that the function is actually properly registered so this doesn't
        result in false positives */
     } {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {}, true, {1.0f, 1.0f}};
@@ -1809,7 +1809,7 @@ void EventLayerTest::middleClickPress() {
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
-    /* Verify that the callback is actually properly registered so this doesn't
+    /* Verify that the function is actually properly registered so this doesn't
        result in false positives */
     } {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {}, true, {1.0f, 1.0f}};
@@ -2042,7 +2042,7 @@ void EventLayerTest::rightClickPress() {
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
-    /* Verify that the callback is actually properly registered so this doesn't
+    /* Verify that the function is actually properly registered so this doesn't
        result in false positives */
     } {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {}, true, {1.0f, 1.0f}};
@@ -2404,7 +2404,7 @@ void EventLayerTest::dragPress() {
         CORRADE_COMPARE(called, 0);
     }
 
-    /* Verify that the callback is actually properly registered so this doesn't
+    /* Verify that the function is actually properly registered so this doesn't
        result in false positives */
     {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
@@ -2448,14 +2448,14 @@ void EventLayerTest::dragFromUserInterface() {
         layer.onDrag(node, function);
 
     Int positionCalled = 0;
-    auto positionSlot = [&positionCalled](const Vector2& position, const Vector2& offset) {
+    auto positionFunction = [&positionCalled](const Vector2& position, const Vector2& offset) {
         CORRADE_COMPARE(position, (Vector2{20.0f, 5.0f}));
         CORRADE_COMPARE(offset, (Vector2{-5.0f, -10.0f}));
         ++positionCalled;
     };
     data.dragOrScroll ?
-        layer.onDragOrScroll(node, positionSlot) :
-        layer.onDrag(node, positionSlot);
+        layer.onDragOrScroll(node, positionFunction) :
+        layer.onDrag(node, positionFunction);
 
     /* A move alone with a button pressed but no captured node shouldn't be
        accepted because it means it originates outside of the UI, and such
@@ -2524,12 +2524,12 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
 
     Vector2 belowCalled;
     NodeHandle nodeBelow = ui.createNode({}, {100, 100}, NodeFlag::FallthroughPointerEvents);
-    /* Verify that both variants of the callback get the same data for the
+    /* Verify that both variants of the function get the same data for the
        initial jump */
     /** @todo once it's possible to have multiple fallback onDrag handlers for
         the same node, add them both instead of having an instanced test
         case */
-    if(data.positionCallback) {
+    if(data.positionFunction) {
         auto function = [&belowCalled](const Vector2&, const Vector2& offset) {
             belowCalled += offset;
         };
@@ -2992,7 +2992,7 @@ void EventLayerTest::pinchReset() {
         layer.pointerPressEvent(dataHandleId(second), fingerPress);
         CORRADE_COMPARE(firstCalled, 2);
 
-        /* Slot no longer triggered on the next move on the first */
+        /* Function no longer triggered on the next move on the first */
         PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 2);
@@ -3013,7 +3013,7 @@ void EventLayerTest::pinchReset() {
         layer.pointerMoveEvent(dataHandleId(second), fingerMove);
         CORRADE_COMPARE(firstCalled, 3);
 
-        /* Slot no longer triggered on the next move on the first */
+        /* Function no longer triggered on the next move on the first */
         PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 3);
@@ -3034,7 +3034,7 @@ void EventLayerTest::pinchReset() {
         layer.pointerReleaseEvent(dataHandleId(second), fingerRelease);
         CORRADE_COMPARE(firstCalled, 4);
 
-        /* Slot no longer triggered on the next move on the first */
+        /* Function no longer triggered on the next move on the first */
         PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 4);
@@ -3054,7 +3054,7 @@ void EventLayerTest::pinchReset() {
         layer.pointerCancelEvent(dataHandleId(first), cancel);
         CORRADE_COMPARE(firstCalled, 5);
 
-        /* Slot no longer triggered on the next move on the first */
+        /* Function no longer triggered on the next move on the first */
         PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 5);
@@ -3074,7 +3074,7 @@ void EventLayerTest::pinchReset() {
         layer.visibilityLostEvent(dataHandleId(first), lost);
         CORRADE_COMPARE(firstCalled, 6);
 
-        /* Slot no longer triggered on the next move on the first */
+        /* Function no longer triggered on the next move on the first */
         PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 6);
@@ -3102,7 +3102,7 @@ void EventLayerTest::pinchReset() {
         });
         CORRADE_COMPARE(dataHandleId(first2), dataHandleId(first));
 
-        /* Slot no longer triggered on the next move on the first */
+        /* Function no longer triggered on the next move on the first */
         PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first2), move1);
         CORRADE_COMPARE(firstCalled, 7);
@@ -3710,7 +3710,7 @@ void EventLayerTest::enterMove() {
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
-    /* Verify that the callback is actually properly registered so this doesn't
+    /* Verify that the function is actually properly registered so this doesn't
        result in false positives */
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
@@ -3861,7 +3861,7 @@ void EventLayerTest::leaveMove() {
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
-    /* Verify that the callback is actually properly registered so this doesn't
+    /* Verify that the function is actually properly registered so this doesn't
        result in false positives */
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};

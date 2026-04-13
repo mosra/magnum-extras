@@ -901,8 +901,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onFocusScoped(NodeHandle node, Containers::Function<void()>&& callback) {
-            return EventConnection{*this, onFocus(node, Utility::move(callback))};
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onFocusScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onFocus(node, Utility::move(function))};
         }
 
         /**
@@ -929,8 +929,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onBlurScoped(NodeHandle node, Containers::Function<void()>&& callback) {
-            return EventConnection{*this, onBlur(node, Utility::move(callback))};
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onBlurScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onBlur(node, Utility::move(function))};
         }
 
         /**
