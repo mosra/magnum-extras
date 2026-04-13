@@ -2200,6 +2200,7 @@ Ui::NodeHandle node = ui.createNode(DOXYGEN_ELLIPSIS({}, {}), Ui::NodeFlag::Focu
 Ui::DataHandle text = textLayer.create(DOXYGEN_ELLIPSIS(0, "", {}), Ui::TextDataFlag::Editable, node);
 /* [TextLayer-editing-focusable] */
 static_cast<void>(text);
+}
 
 {
 Ui::EventLayer& eventLayer = ui.setLayerInstance(Containers::pointer<Ui::EventLayer>(ui.createLayer()));
@@ -2224,7 +2225,6 @@ eventLayer.onPress(keyBackspace, [&ui]{
 });
 DOXYGEN_ELLIPSIS()
 /* [TextLayer-editing-virtual-keyboard] */
-}
 }
 
 {
