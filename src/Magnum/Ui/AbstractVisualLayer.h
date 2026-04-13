@@ -158,8 +158,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          * set. If the @p handle is attached to a node and the layer advertises
          * @ref LayerFeature::Layout, @ref LayerState::NeedsLayoutUpdate is set
          * as well.
-         * @see @ref isHandleValid(DataHandle) const,
-         *      @ref setTransitionedStyle()
+         * @see @ref isHandleValid(DataHandle) const, @ref transitionStyle()
          */
         void setStyle(DataHandle handle, UnsignedInt style);
 
@@ -201,7 +200,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
         }
 
         /**
-         * @brief Set data style index, potentially transitioning it based on user interface state
+         * @brief Transition to a data style index
          *
          * Like @ref setStyle(), but if @p handle is assigned to a node that's
          * referenced from @ref AbstractUserInterface::currentPressedNode(),
@@ -219,43 +218,43 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          * as well.
          * @see @ref isHandleValid(DataHandle) const
          */
-        void setTransitionedStyle(const AbstractUserInterface& ui, DataHandle handle, UnsignedInt style);
+        void transitionStyle(DataHandle handle, UnsignedInt style);
 
         /**
-         * @brief Set data style index in a concrete enum type, potentially transitioning it based on user interface state
+         * @brief Transition to a data style index in a concrete enum type
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref setTransitionedStyle(const AbstractUserInterface&, DataHandle, UnsignedInt).
+         * @ref transitionStyle(DataHandle, UnsignedInt).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
-        > void setTransitionedStyle(const AbstractUserInterface& ui, DataHandle handle, StyleIndex style) {
-            setTransitionedStyle(ui, handle, UnsignedInt(style));
+        > void transitionStyle(DataHandle handle, StyleIndex style) {
+            transitionStyle(handle, UnsignedInt(style));
         }
 
         /**
-         * @brief Set data style index assuming it belongs to this layer, potentially transitioning it based on user interface state
+         * @brief Transition to a data style index assuming it belongs to this layer
          *
-         * Like @ref setTransitionedStyle(const AbstractUserInterface&, DataHandle, UnsignedInt) but without
+         * Like @ref transitionStyle(DataHandle, UnsignedInt) but without
          * checking that @p handle indeed belongs to this layer. See its
          * documentation for more information.
          */
-        void setTransitionedStyle(const AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
+        void transitionStyle(LayerDataHandle handle, UnsignedInt style);
 
         /**
-         * @brief Set data style index in a concrete enum type assuming it belongs to this layer, potentially transitioning it based on user interface state
+         * @brief Transition to a data style index in a concrete enum type assuming it belongs to this layer
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref setTransitionedStyle(const AbstractUserInterface&, LayerDataHandle, UnsignedInt).
+         * @ref transitionStyle(LayerDataHandle, UnsignedInt).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
-        > void setTransitionedStyle(const AbstractUserInterface& ui, LayerDataHandle handle, StyleIndex style) {
-            setTransitionedStyle(ui, handle, UnsignedInt(style));
+        > void transitionStyle(LayerDataHandle handle, StyleIndex style) {
+            transitionStyle(handle, UnsignedInt(style));
         }
 
         /**
@@ -359,7 +358,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
 
     private:
         MAGNUM_UI_LOCAL void setStyleInternal(UnsignedInt id, UnsignedInt style);
-        MAGNUM_UI_LOCAL void setTransitionedStyleInternal(const AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
+        MAGNUM_UI_LOCAL void transitionStyleInternal(LayerDataHandle handle, UnsignedInt style);
         MAGNUM_UI_LOCAL Containers::Pair<UnsignedInt, AnimatorDataHandle> styleOrAnimationTargetStyle(UnsignedInt style) const;
         MAGNUM_UI_LOCAL void transitionStyleInternal(
             #ifndef CORRADE_NO_ASSERT

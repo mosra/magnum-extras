@@ -242,26 +242,29 @@ void AbstractVisualLayer::setStyleInternal(const UnsignedInt id, const UnsignedI
         setNeedsUpdate(LayerState::NeedsLayoutUpdate);
 }
 
-void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const DataHandle handle, const UnsignedInt style) {
+void AbstractVisualLayer::transitionStyle(const DataHandle handle, const UnsignedInt style) {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::AbstractVisualLayer::setTransitionedStyle(): invalid handle" << handle, );
-    setTransitionedStyleInternal(ui, dataHandleData(handle), style);
+        "Ui::AbstractVisualLayer::transitionStyle(): invalid handle" << handle, );
+    transitionStyleInternal(dataHandleData(handle), style);
 }
 
-void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
+void AbstractVisualLayer::transitionStyle(const LayerDataHandle handle, const UnsignedInt style) {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::AbstractVisualLayer::setTransitionedStyle(): invalid handle" << handle, );
-    setTransitionedStyleInternal(ui, handle, style);
+        "Ui::AbstractVisualLayer::transitionStyle(): invalid handle" << handle, );
+    transitionStyleInternal(handle, style);
 }
 
-void AbstractVisualLayer::setTransitionedStyleInternal(const AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
+void AbstractVisualLayer::transitionStyleInternal(const LayerDataHandle handle, const UnsignedInt style) {
     State& state = *_state;
     const Shared::State& sharedState = state.shared;
     CORRADE_ASSERT(style < sharedState.styleCount,
-        "Ui::AbstractVisualLayer::setTransitionedStyle(): style" << style << "out of range for" << sharedState.styleCount << "styles", );
+        "Ui::AbstractVisualLayer::transitionStyle(): style" << style << "out of range for" << sharedState.styleCount << "styles", );
+    CORRADE_ASSERT(hasUi(),
+        "Ui::AbstractVisualLayer::transitionStyle(): layer not part of a user interface", );
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
 
     const NodeHandle node = this->node(handle);
+    const AbstractUserInterface& ui = this->ui();
     const bool hovered = ui.currentHoveredNode() == node;
     UnsignedInt(*transition)(UnsignedInt);
     if(ui.currentPressedNode() == node) transition = hovered ?

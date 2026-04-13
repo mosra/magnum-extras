@@ -239,12 +239,12 @@ EventConnection Button::onTriggerScoped(Containers::Function<void()>&& function)
 
 Button& Button::setStyle(const ButtonStyle style) {
     _style = style;
-    ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseStyle(style));
+    ui().baseLayer().transitionStyle(_backgroundData, baseStyle(style));
     if(_textData != LayerDataHandle::Null)
-        ui().textLayer().setTransitionedStyle(ui(), _textData,
+        ui().textLayer().transitionStyle(_textData,
             (_iconData == LayerDataHandle::Null ? textStyleTextOnly : textStyleText)(style));
     if(_iconData != LayerDataHandle::Null)
-        ui().textLayer().setTransitionedStyle(ui(), _iconData,
+        ui().textLayer().transitionStyle(_iconData,
             (_textData == LayerDataHandle::Null ? textStyleIconOnly : textStyleIcon)(style));
     return *this;
 }

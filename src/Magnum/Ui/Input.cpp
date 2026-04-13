@@ -113,8 +113,8 @@ Input::Input(const Anchor anchor, const InputStyle style): Input{anchor, {}, sty
 
 Input& Input::setStyleInternal(const InputStyle style, Implementation::TextStyle(*const textStyle)(InputStyle)) {
     _style = style;
-    ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseStyle(style));
-    ui().textLayer().setTransitionedStyle(ui(), _textData, textStyle(style));
+    ui().baseLayer().transitionStyle(_backgroundData, baseStyle(style));
+    ui().textLayer().transitionStyle(_textData, textStyle(style));
     /** @todo re-set the text if font / alignment ... changed */
     return *this;
 }
