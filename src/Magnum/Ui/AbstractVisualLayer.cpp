@@ -478,8 +478,8 @@ void AbstractVisualLayer::transitionStyleInternal(
         if(transitionAnimation)
             animation = transitionAnimation(*state.styleAnimator, currentStyleAnimation.first(), nextStyle, time, layerDataHandle(dataId, generations()[dataId]), currentStyleAnimation.second());
 
-        /* All of those are debug-only assertions because it's quite a lot
-            of checking */
+        /* All of those are debug-only assertions because it's quite a lot of
+           checking */
         #ifndef CORRADE_NO_DEBUG_ASSERT
         if(animation != AnimationHandle::Null) {
             CORRADE_DEBUG_ASSERT(state.styleAnimator->isHandleValid(animation),

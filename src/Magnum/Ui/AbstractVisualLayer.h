@@ -767,9 +767,10 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::Shared {
          * but allows to use a concrete animator type and a concrete enum type
          * instead of a typeless index. Same as with the type-erased variant,
          * if any of the function template parameters is @cpp nullptr @ce, it's
-         * equivalent to a function returning @cpp false @ce without any side
-         * effects. Example usage, in this case with @ref BaseLayer and its
-         * corresponding @link BaseLayerStyleAnimator @endlink:
+         * equivalent to a function returning @ref AnimationHandle::Null
+         * without any side effects. Example usage, in this case with
+         * @ref BaseLayer and its corresponding
+         * @link BaseLayerStyleAnimator @endlink:
          *
          * @m_class{m-console-wrap}
          *
