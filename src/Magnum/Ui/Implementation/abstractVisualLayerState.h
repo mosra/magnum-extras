@@ -82,6 +82,7 @@ struct AbstractVisualLayer::Shared::State {
     AnimationHandle(*styleAnimationOnBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
     AnimationHandle(*styleAnimationOnPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
     AnimationHandle(*styleAnimationOnRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
+    AnimationHandle(*styleAnimationOnTransition)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
     AnimationHandle(*styleAnimationPersistent)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
 
     /* Incremented every time the styleTransitionToDisabled pointer is changed.

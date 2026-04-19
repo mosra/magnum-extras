@@ -796,7 +796,9 @@ accept a set of functions that get called in response to various events. In the
 following snippet we specify two animations, a faster one for animating
 transitions that happen on pointer enter, press or node focus --- as a longer
 animation could make the UI feel sluggish ---, and a slower fade out animation
-on pointer leave, release or blur:
+on pointer leave, release or blur. For simplicity we're not supplying any
+animations for when @ref transitionStyle() is called and no persistent
+animations, which are the remaining two @cpp nullptr @ce arguments:
 
 @snippet Ui.cpp BaseLayer-style-animations
 

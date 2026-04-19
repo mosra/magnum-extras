@@ -67,17 +67,20 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
     void constructMove();
 
     template<class T> void setStyle();
+
+    void resetCounters();
+
     void transitionStyle();
+    void transitionStyleAnimation();
     void transitionStyleInEvent();
     void transitionStyleInvalid();
+    void transitionStyleInvalidAnimation();
     void invalidHandle();
     void styleOutOfRange();
 
     void dynamicStyleAllocateRecycle();
     void dynamicStyleAllocateNoDynamicStyles();
     void dynamicStyleAllocateRecycleInvalid();
-
-    void resetCounters();
 
     void eventStyleTransitionNoOp();
     void eventStyleTransition();
@@ -188,9 +191,165 @@ const struct {
     const char* name;
     LayerFeatures extraLayerFeatures;
     LayerStates expectedExtraState;
+    bool originalStyleDynamic;
+    bool timeOverload;
+    bool defaultAnimator;
+    bool transitionAnimation, transitionAnimationNoOp;
+    bool persistentAnimation, persistentAnimationNoOp;
 } TransitionStyleData[]{
-    {"", {}, {}},
-    {"layout layer", LayerFeature::Layout, LayerState::NeedsLayoutUpdate},
+    {"",
+        {}, {},
+        false, false, false,
+        false, false, false, false},
+    {"layout layer",
+        LayerFeature::Layout, LayerState::NeedsLayoutUpdate,
+        false, false, false,
+        false, false, false, false},
+    {"time overload, no animations",
+        {}, {},
+        false, true, false,
+        false, false, false, false},
+    {"time overload, no animations, layout layer",
+        LayerFeature::Layout, LayerState::NeedsLayoutUpdate,
+        false, true, false,
+        false, false, false, false},
+    {"time overload, no default animator set, transition + persistent animation",
+        {}, {},
+        false, true, false,
+        true, false, true, false},
+    {"time overload, default animator set, no-op transition animation",
+        {}, {},
+        false, true, true,
+        true, true, false, false},
+    {"time overload, default animator set, no-op transition animation, layout layer",
+        LayerFeature::Layout, LayerState::NeedsLayoutUpdate,
+        false, true, true,
+        true, true, false, false},
+    {"time overload, default animator set, no-op persistent animation",
+        {}, {},
+        false, true, true,
+        false, false, true, true},
+    {"time overload, default animator set, no-op persistent animation, layout layer",
+        LayerFeature::Layout, LayerState::NeedsLayoutUpdate,
+        false, true, true,
+        false, false, true, true},
+    {"time overload, default animator set, no-op transition + persistent animation",
+        {}, {},
+        false, true, true,
+        true, true, true, true},
+    {"time overload, default animator set, no-op transition + persistent animation, layout layer",
+        LayerFeature::Layout, LayerState::NeedsLayoutUpdate,
+        false, true, true,
+        true, true, true, true},
+    {"original style dynamic",
+        {}, {},
+        true, false, true,
+        false, false, false, false},
+    {"original style dynamic, time overload, default animator set, no-op transition animation",
+        {}, {},
+        true, true, true,
+        true, true, false, false},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    bool templated;
+    bool originalStyleDynamic;
+    bool dynamicStyleAnimated;
+    bool transitionAnimation, transitionAnimationNoOp;
+    bool persistentAnimation, persistentAnimationNoOp;
+    AnimationFlags animationFlags;
+    Int expectedTransitionAnimationCalled;
+} TransitionStyleAnimationData[]{
+    {"transition animation",
+        false, false, false,
+        true, false, false, false,
+        {}, 1},
+    {"persistent animation",
+        false, false, false,
+        false, false, true, false,
+        {}, 0},
+    {"no-op transition animation, persistent animation",
+        false, false, false,
+        true, true, true, false,
+        {}, 0},
+    {"transition animation, no-op persistent animations",
+        false, false, false,
+        true, false, true, true,
+        {}, 1},
+    {"transition & persistent animations",
+        false, false, false,
+        true, false, true, false,
+        {}, 1},
+    {"templated, transition animation",
+        true, false, false,
+        true, false, false, false,
+        {}, 1},
+    {"templated, persistent animation",
+        true, false, false,
+        false, false, true, false,
+        {}, 0},
+    {"templated, no-op transition animation, persistent animation",
+        true, false, false,
+        true, true, true, false,
+        {}, 0},
+    {"templated, transition animation, no-op persistent animation",
+        true, false, false,
+        true, false, true, true,
+        {}, 1},
+    {"templated, transition & persistent animation",
+        true, false, false,
+        true, false, true, false,
+        {}, 1},
+    {"dynamic style with no animation assigned, persistent animation",
+        false, true, false,
+        false, false, true, false,
+        {}, 0},
+    {"dynamic style with no animation assigned, transition & persistent animation",
+        false, true, false,
+        true, false, true, false,
+        /* There's no non-dynamic source style for the transition animation
+           and thus the transition animation function doesn't get called */
+        {}, 0},
+    {"dynamic animated style, transition animation",
+        false, true, true,
+        true, false, false, false,
+        {}, 1},
+    {"dynamic animated style, persistent animation",
+        false, true, true,
+        false, false, true, false,
+        {}, 0},
+    {"dynamic animated style, no-op transition animation, persistent animation",
+        false, true, true,
+        true, true, true, false,
+        {}, 0},
+    {"dynamic animated style, transition animation, no-op persistent animation",
+        false, true, true,
+        true, false, true, true,
+        {}, 1},
+    {"dynamic animated style, transition & persistent animation",
+        false, true, true,
+        true, false, true, false,
+        {}, 1},
+    {"dynamic animated style, reverse, transition animation",
+        false, true, true,
+        true, false, false, false,
+        AnimationFlag::Reverse, 1},
+    {"dynamic animated style, reverse, persistent animation",
+        false, true, true,
+        false, false, true, false,
+        AnimationFlag::Reverse, 0},
+};
+
+const struct {
+    const char* name;
+    bool transitionAnimation;
+    bool persistentAnimation;
+} TransitionStyleInEventData[]{
+    {"", false, false},
+    {"transition animations", true, false},
+    {"persistent animations", false, true},
+    {"transition + persistent animations", true, true},
 };
 
 const struct {
@@ -705,10 +864,22 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
         Containers::arraySize(SetStyleData));
 
     addInstancedTests({&AbstractVisualLayerTest::transitionStyle},
-        Containers::arraySize(TransitionStyleData));
+        Containers::arraySize(TransitionStyleData),
+        &AbstractVisualLayerTest::resetCounters,
+        &AbstractVisualLayerTest::resetCounters);
 
-    addTests({&AbstractVisualLayerTest::transitionStyleInEvent,
-              &AbstractVisualLayerTest::transitionStyleInvalid,
+    addInstancedTests({&AbstractVisualLayerTest::transitionStyleAnimation},
+        Containers::arraySize(TransitionStyleAnimationData),
+        &AbstractVisualLayerTest::resetCounters,
+        &AbstractVisualLayerTest::resetCounters);
+
+    addInstancedTests({&AbstractVisualLayerTest::transitionStyleInEvent},
+        Containers::arraySize(TransitionStyleInEventData),
+        &AbstractVisualLayerTest::resetCounters,
+        &AbstractVisualLayerTest::resetCounters);
+
+    addTests({&AbstractVisualLayerTest::transitionStyleInvalid,
+              &AbstractVisualLayerTest::transitionStyleInvalidAnimation,
               &AbstractVisualLayerTest::invalidHandle});
 
     addInstancedTests({&AbstractVisualLayerTest::styleOutOfRange},
@@ -1071,9 +1242,62 @@ template<class T> void AbstractVisualLayerTest::setStyle() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 }
 
+Int onEnterNoOpAnimationCalled = 0;
+Int onLeaveNoOpAnimationCalled = 0;
+Int onFocusAnimationCalled = 0;
+Int onBlurNoOpAnimationCalled = 0;
+Int onPressNoOpAnimationCalled = 0;
+Int onReleaseNoOpAnimationCalled = 0;
+Int onTransitionNoOpAnimationCalled = 0;
+Int persistentNoOpAnimationCalled = 0;
+
+Int onEnterFocusPressAnimationCalled = 0;
+Int onLeaveBlurReleaseAnimationCalled = 0;
+Int onTransitionAnimationCalled = 0;
+Int persistentAnimationCalled = 0;
+
+void AbstractVisualLayerTest::resetCounters() {
+    onEnterNoOpAnimationCalled =
+        onLeaveNoOpAnimationCalled =
+        onFocusAnimationCalled =
+        onBlurNoOpAnimationCalled =
+        onPressNoOpAnimationCalled =
+        onReleaseNoOpAnimationCalled =
+        onTransitionNoOpAnimationCalled =
+        persistentNoOpAnimationCalled =
+        onEnterFocusPressAnimationCalled =
+        onLeaveBlurReleaseAnimationCalled =
+        onTransitionAnimationCalled =
+        persistentAnimationCalled = 0;
+}
+
+AnimationHandle styleIndexAnimationDoNotCall(StyleLayerStyleAnimator&, StyleIndex, StyleIndex targetStyle, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    CORRADE_FAIL("Called with" << UnsignedInt(targetStyle));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+AnimationHandle styleIndexPersistentAnimationDoNotCall(StyleLayerStyleAnimator&, StyleIndex style, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    CORRADE_FAIL("Called with" << UnsignedInt(style));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+AnimationHandle styleIndexAnimationTransitionStyleNoOpOnTransition(StyleLayerStyleAnimator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    ++onTransitionNoOpAnimationCalled;
+    return {};
+}
+
+AnimationHandle styleIndexAnimationTransitionStyleNoOpPersistent(StyleLayerStyleAnimator&, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    ++persistentNoOpAnimationCalled;
+    return {};
+}
+
 void AbstractVisualLayerTest::transitionStyle() {
     auto&& data = TransitionStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+
+    /* For the transitionStyle(Nanoseconds) overloads verifies only that they
+       behave exactly as transitionStyle() if no animation ends up being used.
+       Animation behavior tested in transitionStyleAnimation() below. */
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -1094,8 +1318,9 @@ void AbstractVisualLayerTest::transitionStyle() {
     };
 
     /* Style transition isn't allowed to use dynamic styles so the dynamic
-       count shouldn't affect it */
-    StyleLayerShared shared{12, 0};
+       count shouldn't affect it. If animators are present, we need at least
+       one dynamic style. */
+    StyleLayerShared shared{12, data.defaultAnimator ? 1u : 0u};
     shared.setStyleTransition(
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
@@ -1217,15 +1442,94 @@ void AbstractVisualLayerTest::transitionStyle() {
         });
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared, data.extraLayerFeatures));
 
+    /* Set up an animator if it's going to be used */
+    if(data.defaultAnimator) {
+        Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+        layer.assignAnimator(*animatorInstance);
+        layer.setDefaultStyleAnimator(&ui.setAnimatorInstance(Utility::move(animatorInstance)));
+    }
+
+    /* All cases are no-op to verify both transitionAnimation() and
+       transitionAnimation(Nanoseconds) when no animation is created behave the
+       same. Non-no-op cases verified in transitionStyleAnimation() below. */
+    if(data.transitionAnimation || data.persistentAnimation) {
+        /* Set a transition or persistent animation function or both. The other
+           function from the pair is nullptr to verify it doesn't get called if
+           it's not there. All event-related functions are nullptr as well, as
+           we need to call events below to verify all variants. Their behavior
+           is fully tested in eventStyleTransition(). */
+        if(data.transitionAnimation && data.persistentAnimation && !data.transitionAnimationNoOp && !data.persistentAnimationNoOp)
+            shared.setStyleAnimation<StyleIndex,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                styleIndexAnimationDoNotCall,
+                styleIndexPersistentAnimationDoNotCall>();
+        else if(data.transitionAnimationNoOp && data.persistentAnimationNoOp)
+            shared.setStyleAnimation<StyleIndex,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                styleIndexAnimationTransitionStyleNoOpOnTransition,
+                styleIndexAnimationTransitionStyleNoOpPersistent>();
+        else if(data.transitionAnimationNoOp)
+            shared.setStyleAnimation<StyleIndex,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                styleIndexAnimationTransitionStyleNoOpOnTransition,
+                nullptr>();
+        else if(data.persistentAnimationNoOp)
+            shared.setStyleAnimation<StyleIndex,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                styleIndexAnimationTransitionStyleNoOpPersistent>();
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+        /* Cannot really test for equality because of the wrapping. And calling
+           those has a side effect, so just verify they're all set. */
+        CORRADE_VERIFY(!shared.styleAnimationOnEnter());
+        CORRADE_VERIFY(!shared.styleAnimationOnLeave());
+        CORRADE_VERIFY(!shared.styleAnimationOnFocus());
+        CORRADE_VERIFY(!shared.styleAnimationOnBlur());
+        CORRADE_VERIFY(!shared.styleAnimationOnPress());
+        CORRADE_VERIFY(!shared.styleAnimationOnRelease());
+        CORRADE_COMPARE(shared.styleAnimationOnTransition(), data.transitionAnimation);
+        CORRADE_COMPARE(shared.styleAnimationPersistent(), data.persistentAnimation);
+    }
+
     /* Setting a transitioned style on a non-attached data is the same as
        calling setStyle() directly, it also doesn't set any extra LayerState
-       besides NeedsDataUpdate. */
-    DataHandle notAttached = layer.create(InactiveOut1);
-    layer.transitionStyle(notAttached, PressedOut2);
+       besides NeedsDataUpdate. With the time overload as well, as either no
+       animator is present or the animation function returns nothing.
+
+       The UnsignedInt cast is because GCC otherwise complains that "enumerated
+       and non-enumerated type in conditional expression". */
+    DataHandle notAttached = layer.create(data.originalStyleDynamic ? *layer.allocateDynamicStyle() : UnsignedInt(InactiveOut1));
+    if(data.timeOverload)
+        layer.transitionStyle(notAttached, PressedOut2, 123456_nsec);
+    else
+        layer.transitionStyle(notAttached, PressedOut2);
     /* The following passes in this case but that's only because both are Null
        and it shouldn't affect the style transition in any way */
     CORRADE_COMPARE(ui.currentPressedNode(), layer.node(notAttached));
     CORRADE_COMPARE(ui.currentHoveredNode(), layer.node(notAttached));
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 1 : 0);
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 1 : 0);
     CORRADE_COMPARE(layer.style(notAttached), PressedOut2);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
@@ -1248,8 +1552,15 @@ void AbstractVisualLayerTest::transitionStyle() {
 
     /* Setting a transitioned style picks InactiveOut. Switching the IDs to be
        sure it actually changed. */
-    layer.transitionStyle(data1, PressedOut2);
-    layer.transitionStyle(data2, InactiveOver1);
+    if(data.timeOverload) {
+        layer.transitionStyle(data1, PressedOut2, 123456_nsec);
+        layer.transitionStyle(data2, InactiveOver1, 123456_nsec);
+    } else {
+        layer.transitionStyle(data1, PressedOut2);
+        layer.transitionStyle(data2, InactiveOver1);
+    }
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 3 : 0);
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 3 : 0);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), InactiveOut1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
@@ -1271,8 +1582,16 @@ void AbstractVisualLayerTest::transitionStyle() {
     /* Setting a transitioned style (switching IDs again) picks InactiveOver
        for the hovered node, the other stays InactiveOut. Using the integer
        overload. */
-    layer.transitionStyle(data1, UnsignedInt(InactiveOver1));
-    layer.transitionStyle(data2, UnsignedInt(PressedOut2));
+    if(data.timeOverload) {
+        layer.transitionStyle(data1, UnsignedInt(InactiveOver1), 123456_nsec);
+        layer.transitionStyle(data2, UnsignedInt(PressedOut2), 123456_nsec);
+    } else {
+        layer.transitionStyle(data1, UnsignedInt(InactiveOver1));
+        layer.transitionStyle(data2, UnsignedInt(PressedOut2));
+    }
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 5 : 0);
+    /* The persistent animation gets called from the event as well */
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 6 : 0);
     CORRADE_COMPARE(layer.style(data1), InactiveOut1);
     CORRADE_COMPARE(layer.style(data2), InactiveOver2);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
@@ -1294,8 +1613,16 @@ void AbstractVisualLayerTest::transitionStyle() {
     /* Setting a transitioned style (switching IDs again) picks PressedOver
        for the pressed & hovered node, the other again stays InactiveOut.
        Using the LayerDataHandle overload. */
-    layer.transitionStyle(dataHandleData(data1), PressedOut2);
-    layer.transitionStyle(dataHandleData(data2), InactiveOut1);
+    if(data.timeOverload) {
+        layer.transitionStyle(dataHandleData(data1), PressedOut2, 123456_nsec);
+        layer.transitionStyle(dataHandleData(data2), InactiveOut1, 123456_nsec);
+    } else {
+        layer.transitionStyle(dataHandleData(data1), PressedOut2);
+        layer.transitionStyle(dataHandleData(data2), InactiveOut1);
+    }
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 7 : 0);
+    /* The persistent animation gets called from the event as well */
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 9 : 0);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), PressedOver1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
@@ -1318,8 +1645,16 @@ void AbstractVisualLayerTest::transitionStyle() {
     /* Setting a transitioned style (switching IDs again) picks PressedOut
        for the pressed node, the other again stays InactiveOut. Using the
        integer + LayerDataHandle overload. */
-    layer.transitionStyle(dataHandleData(data1), UnsignedInt(InactiveOut1));
-    layer.transitionStyle(dataHandleData(data2), UnsignedInt(PressedOver2));
+    if(data.timeOverload) {
+        layer.transitionStyle(dataHandleData(data1), UnsignedInt(InactiveOut1), 123456_nsec);
+        layer.transitionStyle(dataHandleData(data2), UnsignedInt(PressedOver2), 123456_nsec);
+    } else {
+        layer.transitionStyle(dataHandleData(data1), UnsignedInt(InactiveOut1));
+        layer.transitionStyle(dataHandleData(data2), UnsignedInt(PressedOver2));
+    }
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 9 : 0);
+    /* The persistent animation gets called from the event as well */
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 12 : 0);
     CORRADE_COMPARE(layer.style(data1), InactiveOut1);
     CORRADE_COMPARE(layer.style(data2), PressedOut2);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
@@ -1340,8 +1675,16 @@ void AbstractVisualLayerTest::transitionStyle() {
 
     /* Setting a transitioned style (switching IDs again) picks InactiveOut
        for both */
-    layer.transitionStyle(data1, PressedOut2);
-    layer.transitionStyle(data2, InactiveOver1);
+    if(data.timeOverload) {
+        layer.transitionStyle(data1, PressedOut2, 123456_nsec);
+        layer.transitionStyle(data2, InactiveOver1, 123456_nsec);
+    } else {
+        layer.transitionStyle(data1, PressedOut2);
+        layer.transitionStyle(data2, InactiveOver1);
+    }
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 11 : 0);
+    /* The persistent animation gets called from the event as well */
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 15 : 0);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), InactiveOut1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
@@ -1365,8 +1708,16 @@ void AbstractVisualLayerTest::transitionStyle() {
 
     /* Setting a transitioned style (switching IDs again) picks FocusedOut
        for the focused node, the other stays InactiveOut */
-    layer.transitionStyle(data1, FocusedOver1);
-    layer.transitionStyle(data2, InactiveOut2);
+    if(data.timeOverload) {
+        layer.transitionStyle(data1, FocusedOver1, 123456_nsec);
+        layer.transitionStyle(data2, InactiveOut2, 123456_nsec);
+    } else {
+        layer.transitionStyle(data1, FocusedOver1);
+        layer.transitionStyle(data2, InactiveOut2);
+    }
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 13 : 0);
+    /* The persistent animation gets called from the event as well */
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 18 : 0);
     CORRADE_COMPARE(layer.style(data1), InactiveOut1);
     CORRADE_COMPARE(layer.style(data2), FocusedOut2);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
@@ -1388,8 +1739,16 @@ void AbstractVisualLayerTest::transitionStyle() {
 
     /* Setting a transitioned style (switching IDs again) should pick
        PressedOut for the focused node as well, the other stays InactiveOut */
-    layer.transitionStyle(data1, FocusedOut2);
-    layer.transitionStyle(data2, InactiveOver1);
+    if(data.timeOverload) {
+        layer.transitionStyle(data1, FocusedOut2, 123456_nsec);
+        layer.transitionStyle(data2, InactiveOver1, 123456_nsec);
+    } else {
+        layer.transitionStyle(data1, FocusedOut2);
+        layer.transitionStyle(data2, InactiveOver1);
+    }
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 15 : 0);
+    /* The persistent animation gets called from the event as well */
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 21 : 0);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), PressedOut1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
@@ -1411,8 +1770,16 @@ void AbstractVisualLayerTest::transitionStyle() {
 
     /* Setting a transitioned style (switching IDs again) should pick
        PressedOver again, the other stays InactiveOut */
-    layer.transitionStyle(data1, FocusedOver1);
-    layer.transitionStyle(data2, InactiveOut2);
+    if(data.timeOverload) {
+        layer.transitionStyle(data1, FocusedOver1, 123456_nsec);
+        layer.transitionStyle(data2, InactiveOut2, 123456_nsec);
+    } else {
+        layer.transitionStyle(data1, FocusedOver1);
+        layer.transitionStyle(data2, InactiveOut2);
+    }
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 17 : 0);
+    /* The persistent animation gets called from the event as well */
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 24 : 0);
     CORRADE_COMPARE(layer.style(data1), InactiveOut1);
     CORRADE_COMPARE(layer.style(data2), PressedOver2);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
@@ -1433,14 +1800,319 @@ void AbstractVisualLayerTest::transitionStyle() {
 
     /* Setting a transitioned style (switching IDs again) picks FocusedOver for
        the focused node, the other stays InactiveOut */
-    layer.transitionStyle(data1, FocusedOver2);
-    layer.transitionStyle(data2, PressedOut1);
+    if(data.timeOverload) {
+        layer.transitionStyle(data1, FocusedOver2, 123456_nsec);
+        layer.transitionStyle(data2, PressedOut1, 123456_nsec);
+    } else {
+        layer.transitionStyle(data1, FocusedOver2);
+        layer.transitionStyle(data2, PressedOut1);
+    }
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled, data.transitionAnimationNoOp ? 19 : 0);
+    /* The persistent animation gets called from the event as well */
+    CORRADE_COMPARE(persistentNoOpAnimationCalled, data.persistentAnimationNoOp ? 27 : 0);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), FocusedOver1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 }
 
+AnimationHandle styleIndexAnimationTransitionStyleOnTransition(StyleLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+    ++onTransitionAnimationCalled;
+    CORRADE_COMPARE(time, 1773_nsec);
+    CORRADE_COMPARE(currentAnimation, AnimatorDataHandle::Null);
+    CORRADE_COMPARE_AS(UnsignedInt(sourceStyle), StyleCount,
+                       TestSuite::Compare::Less);
+    CORRADE_COMPARE_AS(UnsignedInt(targetStyle), StyleCount,
+                       TestSuite::Compare::Less);
+    return animator.create(sourceStyle, targetStyle, time, 0_nsec, data);
+}
+
+AnimationHandle styleIndexAnimationTransitionStyleOnTransitionReplaceAnimation(StyleLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+    ++onTransitionAnimationCalled;
+    CORRADE_COMPARE(time, 1773_nsec);
+    CORRADE_VERIFY(animator.isHandleValid(currentAnimation));
+    /* The current animation is the manually added one, which also isn't
+       attached to any data */
+    CORRADE_COMPARE(animator.started(currentAnimation), 667_nsec);
+    CORRADE_COMPARE(animator.data(currentAnimation), DataHandle::Null);
+    CORRADE_COMPARE_AS(UnsignedInt(sourceStyle), StyleCount,
+                       TestSuite::Compare::Less);
+    CORRADE_COMPARE_AS(UnsignedInt(targetStyle), StyleCount,
+                       TestSuite::Compare::Less);
+    return animator.create(sourceStyle, targetStyle, time, 0_nsec, data);
+}
+
+AnimationHandle styleIndexAnimationTransitionStylePersistent(StyleLayerStyleAnimator& animator, StyleIndex style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+    ++persistentAnimationCalled;
+    CORRADE_COMPARE(time, 1773_nsec);
+    CORRADE_COMPARE(currentAnimation, AnimatorDataHandle::Null);
+    CORRADE_COMPARE_AS(UnsignedInt(style), StyleCount,
+                       TestSuite::Compare::Less);
+    /* Picking a style which is unlikely to be at any start of a style
+       transition to differentiate from transition animations */
+    return animator.create(StyleIndex::RedBlueDisabled, style, time, 0_nsec, data);
+}
+
+AnimationHandle styleIndexAnimationTransitionStylePersistentReplaceAnimation(StyleLayerStyleAnimator& animator, StyleIndex style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+    ++persistentAnimationCalled;
+    CORRADE_COMPARE(time, 1773_nsec);
+    CORRADE_VERIFY(animator.isHandleValid(currentAnimation));
+    /* The transition animation should have started at the same time for the
+       same data and have `style` as the target */
+    CORRADE_COMPARE(animator.started(currentAnimation), 1773_nsec);
+    CORRADE_COMPARE(dataHandleData(animator.data(currentAnimation)), data);
+    CORRADE_COMPARE(animator.styles<StyleIndex>(currentAnimation).second(), style);
+    CORRADE_COMPARE_AS(UnsignedInt(style), StyleCount, TestSuite::Compare::Less);
+    animator.remove(currentAnimation);
+    /* Picking a style which is unlikely to be at any start of a style
+       transition to differentiate from transition animations */
+    return animator.create(StyleIndex::RedBlueDisabled, style, time, 0_nsec, data);
+}
+
+void AbstractVisualLayerTest::transitionStyleAnimation() {
+    auto&& data = TransitionStyleAnimationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Variant of transitionStyle() verifying the actual animation behavior
+       with a single transition. All possible transitionStyle() cases that
+       should call the animation functions were tested above, so here it
+       verifies just that the actual animation gets used. */
+
+    /* Transition for dynamic styles (that don't have an animation with
+       targetStyle()) tested in transitionStyleAnimationDynamicStyle(). */
+    StyleLayerShared shared{StyleCount, 1u};
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        /* There's only a press event fired, so handle just the toPressedOut
+           transition */
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(StyleIndex(style)) {
+                case StyleIndex::Green:
+                    return UnsignedInt(StyleIndex::GreenPressed);
+                case StyleIndex::Red:
+                    return UnsignedInt(StyleIndex::RedPressed);
+                default:
+                    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            }
+        },
+        nullptr,
+        nullptr);
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node = ui.createNode({}, {10.0f, 10.0f});
+
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    /* One extra data to verify it's not always using the first one */
+    layer.create(StyleIndex::Blue);
+    DataHandle layerData = layer.create(StyleIndex::Green, node);
+
+    /* Animator instance */
+    Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+    layer.assignAnimator(*animatorInstance);
+    layer.setDefaultStyleAnimator(animatorInstance.get());
+    StyleLayerStyleAnimator& animator = ui.setAnimatorInstance(Utility::move(animatorInstance));
+
+    /* Make the node pressed first. Do it without any transition animations set
+       yet as the persistent animation would be used here as well. */
+    {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+    }
+    CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenPressed);
+
+    /* If we're testing transitioning from a dynamic style, switch to it.
+       Optionally associate an animation with it as well with the original
+       style as a target (which should then become the source style for the
+       transition animation). No need to actually attach the animation to the
+       data in this case. */
+    if(data.originalStyleDynamic) {
+        AnimationHandle dynamicAnimation = AnimationHandle::Null;
+        if(data.dynamicStyleAnimated)
+            dynamicAnimation = animator.create(
+                data.animationFlags >= AnimationFlag::Reverse ?
+                    layer.style(layerData) : 0u,
+                data.animationFlags >= AnimationFlag::Reverse ?
+                    0u : layer.style(layerData),
+                667_nsec, 1_nsec, DataHandle::Null, data.animationFlags);
+        layer.setStyle(layerData, StyleCount + *layer.allocateDynamicStyle(dynamicAnimation));
+        CORRADE_COMPARE(layer.style(layerData), StyleCount + 0);
+    }
+
+    /* Set the transition animations now. StyleLayerShared uses the
+       *_SHARED_SUBCLASS_IMPLEMENTATION() macro, this verifies that all the
+       overrides do what's expected. */
+    StyleLayerShared* chaining;
+    if(data.templated && data.transitionAnimation && !data.transitionAnimationNoOp && data.persistentAnimation && !data.persistentAnimationNoOp)
+        chaining = &shared.setStyleAnimation<StyleIndex,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            styleIndexAnimationTransitionStyleOnTransition,
+            styleIndexAnimationTransitionStylePersistentReplaceAnimation>();
+    else if(data.templated && data.transitionAnimation && data.transitionAnimationNoOp && data.persistentAnimation && !data.persistentAnimationNoOp)
+        chaining = &shared.setStyleAnimation<StyleIndex,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            styleIndexAnimationTransitionStyleNoOpOnTransition,
+            styleIndexAnimationTransitionStylePersistent>();
+    else if(data.templated && data.transitionAnimation && !data.transitionAnimationNoOp && data.persistentAnimation && data.persistentAnimationNoOp)
+        chaining = &shared.setStyleAnimation<StyleIndex,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            styleIndexAnimationTransitionStyleOnTransition,
+            styleIndexAnimationTransitionStyleNoOpPersistent>();
+    else if(data.templated && data.transitionAnimation)
+        chaining = &shared.setStyleAnimation<StyleIndex,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            styleIndexAnimationTransitionStyleOnTransition,
+            nullptr>();
+    else if(data.templated && data.persistentAnimation)
+        chaining = &shared.setStyleAnimation<StyleIndex,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            styleIndexAnimationTransitionStylePersistent>();
+    else if(!data.templated)
+        chaining = &shared.setStyleAnimation(
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            data.transitionAnimation ?
+                data.transitionAnimationNoOp ?
+                    [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                        return styleIndexAnimationTransitionStyleNoOpOnTransition(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+                    } :
+                    data.dynamicStyleAnimated ?
+                        /* MSVC w/o /permissive- is unable to convert the two
+                           lambdas to a common function pointer type. Have to
+                           cast at least one of them. There could be + for the
+                           lambdas to turn them into function pointers to avoid
+                           ?: getting confused, but that doesn't work on MSVC
+                           2015. */
+                        /** @todo change to the + once
+                            CORRADE_MSVC2015_COMPATIBILITY is dropped */
+                        static_cast<AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)>([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                            return styleIndexAnimationTransitionStyleOnTransitionReplaceAnimation(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+                        }) :
+                        [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                            return styleIndexAnimationTransitionStyleOnTransition(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+                        } :
+                nullptr,
+            data.persistentAnimation ?
+                data.persistentAnimationNoOp ?
+                    /* MSVC workaround, see above */
+                    /** @todo change to the + once
+                        CORRADE_MSVC2015_COMPATIBILITY is dropped */
+                    static_cast<AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)>([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                        return styleIndexAnimationTransitionStyleNoOpPersistent(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(style), time, data, currentAnimation);
+                    }) :
+                    /* The persistent animation should replace the transition
+                       animation, if there's any. There isn't a transition
+                       animation if the function is no-op or if we have a
+                       dynamic style with no animation attached (for which
+                       there's no known non-dynamic source style for the
+                       transition). */
+                    (data.transitionAnimation && !data.transitionAnimationNoOp && (!data.originalStyleDynamic || data.dynamicStyleAnimated)) ?
+                        /* MSVC workaround, see above */
+                        /** @todo change to the + once
+                            CORRADE_MSVC2015_COMPATIBILITY is dropped */
+                        static_cast<AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)>([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                            return styleIndexAnimationTransitionStylePersistentReplaceAnimation(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(style), time, data, currentAnimation);
+                        }) :
+                        [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                            return styleIndexAnimationTransitionStylePersistent(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(style), time, data, currentAnimation);
+                        } :
+                nullptr);
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    CORRADE_COMPARE(chaining, &shared);
+
+    /* Cannot really test for equality because of the wrapping, so just verify
+       they're set if they should be */
+    CORRADE_VERIFY(!shared.styleAnimationOnEnter());
+    CORRADE_VERIFY(!shared.styleAnimationOnLeave());
+    CORRADE_VERIFY(!shared.styleAnimationOnFocus());
+    CORRADE_VERIFY(!shared.styleAnimationOnBlur());
+    CORRADE_VERIFY(!shared.styleAnimationOnPress());
+    CORRADE_VERIFY(!shared.styleAnimationOnRelease());
+    CORRADE_COMPARE(shared.styleAnimationOnTransition(), data.transitionAnimation);
+    CORRADE_COMPARE(shared.styleAnimationPersistent(), data.persistentAnimation);
+
+    /* Clear state flags */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Transitioning the style should call either of the animation functions,
+       or both, and result in *some* animation being created */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        layer.transitionStyle(layerData, StyleIndex::Red, 1773_nsec);
+    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
+    CORRADE_COMPARE(animator.capacity(), data.dynamicStyleAnimated ? 2 : 1);
+
+    CORRADE_COMPARE(onTransitionNoOpAnimationCalled,
+        data.transitionAnimationNoOp ? 1 : 0);
+    CORRADE_COMPARE(onTransitionAnimationCalled,
+        data.expectedTransitionAnimationCalled);
+    CORRADE_COMPARE(persistentNoOpAnimationCalled,
+        data.persistentAnimationNoOp ? 1 : 0);
+    CORRADE_COMPARE(persistentAnimationCalled,
+        data.persistentAnimation && !data.persistentAnimationNoOp ? 1 : 0);
+
+    UnsignedInt animationId = data.dynamicStyleAnimated ? 1 : 0;
+    AnimatorDataHandle createdAnimation = animatorDataHandle(animationId, animator.generations()[animationId]);
+    CORRADE_VERIFY(animator.isHandleValid(createdAnimation));
+    CORRADE_COMPARE(animator.styles<StyleIndex>(createdAnimation), Containers::pair(
+        data.persistentAnimation && !data.persistentAnimationNoOp ?
+            StyleIndex::RedBlueDisabled : StyleIndex::GreenPressed,
+            StyleIndex::RedPressed));
+    CORRADE_COMPARE(animator.data(createdAnimation), layerData);
+
+    /* Advance to run the (zero-duration) animation to have the style switched
+       to */
+    ui.advanceAnimations(1773_nsec);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::RedPressed);
+
+    /* After an update it gets reflected also in the calculated styles */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(layerData)]), StyleIndex::RedPressed);
+}
+
 void AbstractVisualLayerTest::transitionStyleInEvent() {
+    auto&& data = TransitionStyleInEventData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Compared to transitionStyle() verifies that calling the function in an
        event handler works as well, i.e. that the final style corresponds to
        the actual state.
@@ -1452,6 +2124,13 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
        makes the final result correct. For enter and leave it will do the
        correct thing already as those events are called only once the info
        about the current hovered node is updated.
+
+       Finally, when style transition animations are involved, things currently
+       don't work as there's no way for transitionStyle() to replace the
+       animation that was created in response to the event and vice versa,
+       meaning the two get executed in unspecified order, resulting in one of
+       the two target styles being picked at random. This is currently marked
+       with an XFAIL to add a reminder for the future.
 
        See comments in each case below for more details. */
 
@@ -1474,8 +2153,9 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
     };
 
     /* Style transition isn't allowed to use dynamic styles so the dynamic
-       count shouldn't affect it */
-    StyleLayerShared shared{12, 0};
+       count shouldn't affect it. If animators are present, pick enough dynamic
+       styles for all potentially concurrent animations. */
+    StyleLayerShared shared{12, data.transitionAnimation || data.persistentAnimation ? 2u : 0u};
     shared.setStyleTransition(
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
@@ -1597,10 +2277,37 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         });
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
 
+    /* Set up animators and animation functions if we're testing those */
+    StyleLayerStyleAnimator* animator{};
+    if(data.transitionAnimation || data.persistentAnimation) {
+        Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+        layer.assignAnimator(*animatorInstance);
+        layer.setDefaultStyleAnimator(animatorInstance.get());
+        animator = &ui.setAnimatorInstance(Utility::move(animatorInstance));
+
+        AnimationHandle(*transitionAnimation)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+            ++onTransitionAnimationCalled;
+            if(currentAnimation != AnimatorDataHandle::Null)
+                static_cast<StyleLayerStyleAnimator&>(animator).remove(currentAnimation);
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(sourceStyle, targetStyle, time, 0_nsec, data);
+        };
+        AnimationHandle(*persistentAnimation)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+            ++persistentAnimationCalled;
+            if(currentAnimation != AnimatorDataHandle::Null)
+                static_cast<StyleLayerStyleAnimator&>(animator).remove(currentAnimation);
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, data);
+        };
+        shared.setStyleAnimation(
+            data.transitionAnimation ? transitionAnimation : nullptr,
+            data.transitionAnimation ? transitionAnimation : nullptr,
+            data.transitionAnimation ? transitionAnimation : nullptr,
+            data.persistentAnimation ? persistentAnimation : nullptr);
+    }
+
     EventLayer& eventLayer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
     NodeHandle node = ui.createNode({}, {100, 50});
-    DataHandle data = layer.create(InactiveOut1, node);
+    DataHandle layerData = layer.create(InactiveOut1, node);
 
     /* Nothing is hovered, pressed or focused initially */
     CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
@@ -1611,24 +2318,53 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
        pick InactiveOver2 */
     {
         Int called = 0;
-        EventConnection connection = eventLayer.onEnterScoped(node, [&]{
-            layer.transitionStyle(data, FocusedOut2);
+        EventConnection connection = eventLayer.onEnterScoped(node, [&](Nanoseconds time) {
+            if(data.transitionAnimation || data.persistentAnimation)
+                layer.transitionStyle(layerData, FocusedOut2, time);
+            else
+                layer.transitionStyle(layerData, FocusedOut2);
             /* At this point, currentHoveredNode() is already updated and thus
-               the style is already transitioned to the final one. This is
-               because pointerEnterEvent() is called after pointerMoveEvent()
-               that updated the hovered node information. */
+               (unless there's an animated transition) the style is already
+               transitioned to the final one. This is because
+               pointerEnterEvent() is called after pointerMoveEvent() that
+               updated the hovered node information. */
             CORRADE_COMPARE(ui.currentHoveredNode(), node);
-            CORRADE_COMPARE(layer.style(data), InactiveOver2);
+            if(!data.transitionAnimation && !data.persistentAnimation)
+                CORRADE_COMPARE(layer.style(layerData), InactiveOver2);
             ++called;
         });
 
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
+        PointerMoveEvent event{1000_nsec, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 25}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOver2);
+        /* Both animations are called once for the transitionStyle() call and
+           once for the event transition */
+        CORRADE_COMPARE(onTransitionAnimationCalled, data.transitionAnimation ? 2 : 0);
+        CORRADE_COMPARE(persistentAnimationCalled, data.persistentAnimation ? 2 : 0);
+        if(data.transitionAnimation || data.persistentAnimation) {
+            {
+                CORRADE_EXPECT_FAIL("Animation from the event style transition doesn't get properly replaced by the transitionStyle() call, leading to the two executed in unspecified order.");
+                CORRADE_COMPARE(animator->usedCount(), 1);
+            }
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
+            ui.advanceAnimations(1000_nsec);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+        }
+
+        {
+            /* Note that creating two animations and removing them in inverse
+               order will make this pass, and fail the following instead. */
+            CORRADE_EXPECT_FAIL_IF(data.transitionAnimation || data.persistentAnimation,
+                "Animation from the event style transition doesn't get properly replaced by the transitionStyle() call, leading to the two executed in unspecified order.");
+            CORRADE_COMPARE(layer.style(layerData), InactiveOver2);
+
+            /* There's no point in continuing after the expected failure */
+            if(layer.style(layerData) != InactiveOver2)
+                return;
+        }
 
     /* Setting a transitioned style from the first group inside onLeave should
        pick InactiveOut1. Switching the group every time to ensure it doesn't
@@ -1636,13 +2372,13 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onLeaveScoped(node, [&]{
-            layer.transitionStyle(data, FocusedOver1);
+            layer.transitionStyle(layerData, FocusedOver1);
             /* At this point, currentHoveredNode() is again already updated and
                thus the style is already transitioned to the final one. This is
                because pointerLeaveEvent() is called after pointerMoveEvent()
                that updated the hovered node information. */
             CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-            CORRADE_COMPARE(layer.style(data), InactiveOut1);
+            CORRADE_COMPARE(layer.style(layerData), InactiveOut1);
             ++called;
         });
 
@@ -1652,21 +2388,25 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOut1);
+        /* Both animations are called once for the transitionStyle() call and
+           once for the event transition */
+        CORRADE_COMPARE(onTransitionAnimationCalled, data.transitionAnimation ? 4 : 0);
+        CORRADE_COMPARE(persistentAnimationCalled, data.persistentAnimation ? 4 : 0);
+        CORRADE_COMPARE(layer.style(layerData), InactiveOut1);
 
     /* Setting a transitioned style from the second group inside onPress should
        pick PressedOut2 */
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onPressScoped(node, [&]{
-            layer.transitionStyle(data, FocusedOver2);
+            layer.transitionStyle(layerData, FocusedOver2);
             /* At this point, currentPressedNode() is not updated yet because
                we don't yet know if the press events will actually be accepted.
                Which means the transition doesn't take the press into account,
                and what makes the style correct is a transition that only
                happens after, once the currentPressedNode() is updated. */
             CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-            CORRADE_COMPARE(layer.style(data), InactiveOut2);
+            CORRADE_COMPARE(layer.style(layerData), InactiveOut2);
             ++called;
         });
 
@@ -1676,14 +2416,18 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), PressedOut2);
+        /* Both animations are called once for the transitionStyle() call and
+           once for the event transition */
+        CORRADE_COMPARE(onTransitionAnimationCalled, data.transitionAnimation ? 6 : 0);
+        CORRADE_COMPARE(persistentAnimationCalled, data.persistentAnimation ? 6 : 0);
+        CORRADE_COMPARE(layer.style(layerData), PressedOut2);
 
     /* Setting a transitioned style from the first group inside onRelease
        should pick InactiveOut1 */
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onReleaseScoped(node, [&]{
-            layer.transitionStyle(data, FocusedOver1);
+            layer.transitionStyle(layerData, FocusedOver1);
             /* At this point, currentPressedNode() is not updated yet because
                certain other functionality such as generation of tap/click
                events relies on the knowledge of whether given node is pressed.
@@ -1692,7 +2436,7 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
                that only happens after, once the currentPressedNode() is
                updated. */
             CORRADE_COMPARE(ui.currentPressedNode(), node);
-            CORRADE_COMPARE(layer.style(data), PressedOut1);
+            CORRADE_COMPARE(layer.style(layerData), PressedOut1);
             ++called;
         });
 
@@ -1702,19 +2446,23 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOut1);
+        /* Both animations are called once for the transitionStyle() call and
+           once for the event transition */
+        CORRADE_COMPARE(onTransitionAnimationCalled, data.transitionAnimation ? 8 : 0);
+        CORRADE_COMPARE(persistentAnimationCalled, data.persistentAnimation ? 8 : 0);
+        CORRADE_COMPARE(layer.style(layerData), InactiveOut1);
 
     /* Setting a transitioned style from the second group inside onTapOrClick
        should pick InactiveOut2 */
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onTapOrClickScoped(node, [&]{
-            layer.transitionStyle(data, PressedOver2);
+            layer.transitionStyle(layerData, PressedOver2);
             /* As this is fired from a release event, currentPressedNode() is
                not updated yet same as with onRelease() above, and it's done
                only after all release events are fired. */
             CORRADE_COMPARE(ui.currentPressedNode(), node);
-            CORRADE_COMPARE(layer.style(data), PressedOut2);
+            CORRADE_COMPARE(layer.style(layerData), PressedOut2);
             ++called;
         });
 
@@ -1726,7 +2474,11 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOut2);
+        /* Both animations are called once for the transitionStyle() call and
+           once for the event transition */
+        CORRADE_COMPARE(onTransitionAnimationCalled, data.transitionAnimation ? 10 : 0);
+        CORRADE_COMPARE(persistentAnimationCalled, data.persistentAnimation ? 10 : 0);
+        CORRADE_COMPARE(layer.style(layerData), InactiveOut2);
     }
 
     /* Make the node focusable for the rest of the test */
@@ -1737,12 +2489,12 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
     {
         Int called = 0;
         EventConnection connection = eventLayer.onFocusScoped(node, [&]{
-            layer.transitionStyle(data, PressedOver1);
+            layer.transitionStyle(layerData, PressedOver1);
             /* Similarly as with the press event, currentFocusedNode() isn't
                updated at this point yet. Again a second transition happens
                after, making the resulting style correct. */
             CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-            CORRADE_COMPARE(layer.style(data), InactiveOut1);
+            CORRADE_COMPARE(layer.style(layerData), InactiveOut1);
             ++called;
         });
 
@@ -1752,20 +2504,24 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), FocusedOut1);
+        /* Both animations are called once for the transitionStyle() call and
+           once for the event transition */
+        CORRADE_COMPARE(onTransitionAnimationCalled, data.transitionAnimation ? 12 : 0);
+        CORRADE_COMPARE(persistentAnimationCalled, data.persistentAnimation ? 12 : 0);
+        CORRADE_COMPARE(layer.style(layerData), FocusedOut1);
 
     /* Setting a transitioned style from the second group inside onBlur should
        pick InactiveOut2 */
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onBlurScoped(node, [&]{
-            layer.transitionStyle(data, PressedOver2);
+            layer.transitionStyle(layerData, PressedOver2);
             /* Similarly as with the release event, currentFocusedNode() isn't
                updated at this point yet. Again it *could* be, nevertheless a
                second transition happens after, making the resulting style
                correct. */
             CORRADE_COMPARE(ui.currentFocusedNode(), node);
-            CORRADE_COMPARE(layer.style(data), FocusedOut2);
+            CORRADE_COMPARE(layer.style(layerData), FocusedOut2);
             ++called;
         });
 
@@ -1775,7 +2531,11 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOut2);
+        /* Both animations are called once for the transitionStyle() call and
+           once for the event transition */
+        CORRADE_COMPARE(onTransitionAnimationCalled, data.transitionAnimation ? 14 : 0);
+        CORRADE_COMPARE(persistentAnimationCalled, data.persistentAnimation ? 14 : 0);
+        CORRADE_COMPARE(layer.style(layerData), InactiveOut2);
     }
 }
 
@@ -1800,9 +2560,164 @@ void AbstractVisualLayerTest::transitionStyleInvalid() {
     Error redirectError{&out};
     layer.transitionStyle(layerData, 2);
     layer.transitionStyle(dataHandleData(layerData), 1);
-    CORRADE_COMPARE(out,
+    layer.transitionStyle(layerData, 2, 0_nsec);
+    layer.transitionStyle(dataHandleData(layerData), 1, 0_nsec);
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractVisualLayer::transitionStyle(): layer not part of a user interface\n"
-        "Ui::AbstractVisualLayer::transitionStyle(): layer not part of a user interface\n");
+        "Ui::AbstractVisualLayer::transitionStyle(): layer not part of a user interface\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): layer not part of a user interface\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): layer not part of a user interface\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractVisualLayerTest::transitionStyleInvalidAnimation() {
+    CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
+
+    /* The same helper is used for style transition in events, which is tested
+       in eventStyleTransitionInvalidAnimation(). The concrete behavior however
+       differs slightly and thus all cases, for both transition and persistent
+       animations, are tested in both. */
+
+    StyleLayerShared shared{3, 1};
+
+    AbstractUserInterface ui{{100, 100}};
+
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    DataHandle data = layer.create(0);
+
+    Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+    layer.assignAnimator(*animatorInstance);
+    layer.setDefaultStyleAnimator(animatorInstance.get());
+    ui.setAnimatorInstance(Utility::move(animatorInstance));
+
+    /* Using a time in the past is fine, only in the future is not */
+    {
+        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, 666_nsec, 0_nsec, data);
+        }, nullptr);
+        layer.transitionStyle(data, 1, 1226_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, 666_nsec, 0_nsec, data);
+        });
+        layer.transitionStyle(data, 1, 1226_nsec);
+    }
+
+    Containers::String out;
+    Error redirectError{&out};
+    {
+        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+            return animationHandle(animator.handle(), 0xabcde, 0x123);
+        }, nullptr);
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+            return animationHandle(animator.handle(), 0xabcde, 0x123);
+        });
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(sourceStyle, 2u, time, 0_nsec, data);
+        }, nullptr);
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0, 2, time, 0_nsec, data);
+        });
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, 1226_nsec, 0_nsec, data);
+        }, nullptr);
+        layer.transitionStyle(data, 1, 666_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, 1226_nsec, 0_nsec, data);
+        });
+        layer.transitionStyle(data, 1, 666_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, layerDataHandle(0x12345, 0xabc));
+        }, nullptr);
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, layerDataHandle(0x12345, 0xabc));
+        });
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data, AnimationFlag::ReverseEveryOther|AnimationFlag::Reverse);
+        }, nullptr);
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data, AnimationFlag::ReverseEveryOther|AnimationFlag::KeepOncePlayed);
+        }, nullptr);
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data, AnimationFlag::Reverse|AnimationFlag::KeepOncePlayed);
+        }, nullptr);
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, data, AnimationFlag::ReverseEveryOther|AnimationFlag::Reverse);
+        });
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, data, AnimationFlag::ReverseEveryOther|AnimationFlag::KeepOncePlayed);
+        });
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, data, AnimationFlag::Reverse|AnimationFlag::KeepOncePlayed);
+        });
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr,
+            [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+                return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data);
+            },
+            [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+                return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, data);
+            });
+        layer.transitionStyle(data, 1, 0_nsec);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr,
+            [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+                return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data);
+            },
+            [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle animation) {
+                static_cast<StyleLayerStyleAnimator&>(animator).remove(animation);
+                return AnimationHandle::Null;
+            });
+        layer.transitionStyle(data, 1, 0_nsec);
+    }
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractVisualLayer::transitionStyle(): expected style transition animation to be either null or valid and coming from Ui::AnimatorHandle(0x0, 0x1) but got Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): expected persistent style animation to be either null or valid and coming from Ui::AnimatorHandle(0x0, 0x1) but got Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+
+        "Ui::AbstractVisualLayer::transitionStyle(): expected style transition animation to have 1 as target style but got 2\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): expected persistent style animation to have 1 as target style but got 2\n"
+
+        "Ui::AbstractVisualLayer::transitionStyle(): expected style transition animation to start at Nanoseconds(666) or earlier but got Nanoseconds(1226)\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): expected persistent style animation to start at Nanoseconds(666) or earlier but got Nanoseconds(1226)\n"
+
+        "Ui::AbstractVisualLayer::transitionStyle(): expected style transition animation to be attached to Ui::LayerDataHandle(0x0, 0x1) but got Ui::LayerDataHandle(0x12345, 0xabc)\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): expected persistent style animation to be attached to Ui::LayerDataHandle(0x0, 0x1) but got Ui::LayerDataHandle(0x12345, 0xabc)\n"
+
+        "Ui::AbstractVisualLayer::transitionStyle(): style transition animation cannot have Ui::AnimationFlag::Reverse set\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): style transition animation cannot have Ui::AnimationFlag::KeepOncePlayed set\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): style transition animation cannot have Ui::AnimationFlag::KeepOncePlayed|Ui::AnimationFlag::Reverse set\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): persistent style animation cannot have Ui::AnimationFlag::Reverse set\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): persistent style animation cannot have Ui::AnimationFlag::KeepOncePlayed set\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): persistent style animation cannot have Ui::AnimationFlag::KeepOncePlayed|Ui::AnimationFlag::Reverse set\n"
+
+        "Ui::AbstractVisualLayer::transitionStyle(): persistent style animation is expected to remove the transition animation to avoid conflicts\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): persistent style animation is only expected to remove the transition animation if replacing it\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractVisualLayerTest::invalidHandle() {
@@ -1827,13 +2742,18 @@ void AbstractVisualLayerTest::invalidHandle() {
     /* The layer isn't part of the UI but the handle assert fires first */
     layer.transitionStyle(DataHandle::Null, 0);
     layer.transitionStyle(LayerDataHandle::Null, 0);
-    CORRADE_COMPARE(out,
+    layer.transitionStyle(DataHandle::Null, 0, 0_nsec);
+    layer.transitionStyle(LayerDataHandle::Null, 0, 0_nsec);
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractVisualLayer::style(): invalid handle Ui::DataHandle::Null\n"
         "Ui::AbstractVisualLayer::style(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::AbstractVisualLayer::setStyle(): invalid handle Ui::DataHandle::Null\n"
         "Ui::AbstractVisualLayer::setStyle(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::AbstractVisualLayer::transitionStyle(): invalid handle Ui::DataHandle::Null\n"
-        "Ui::AbstractVisualLayer::transitionStyle(): invalid handle Ui::LayerDataHandle::Null\n");
+        "Ui::AbstractVisualLayer::transitionStyle(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): invalid handle Ui::LayerDataHandle::Null\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractVisualLayerTest::styleOutOfRange() {
@@ -1863,11 +2783,16 @@ void AbstractVisualLayerTest::styleOutOfRange() {
     /* The layer isn't part of the UI but the handle assert fires first */
     layer.transitionStyle(layerData, data.styleCount);
     layer.transitionStyle(dataHandleData(layerData), data.styleCount);
-    CORRADE_COMPARE(out, Utility::format(
+    layer.transitionStyle(layerData, data.styleCount, 0_nsec);
+    layer.transitionStyle(dataHandleData(layerData), data.styleCount, 0_nsec);
+    CORRADE_COMPARE_AS(out, Utility::format(
         "Ui::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
         "Ui::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
         "Ui::AbstractVisualLayer::transitionStyle(): style {0} out of range for {0} styles\n"
-        "Ui::AbstractVisualLayer::transitionStyle(): style {0} out of range for {0} styles\n", data.styleCount));
+        "Ui::AbstractVisualLayer::transitionStyle(): style {0} out of range for {0} styles\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): style {0} out of range for {0} styles\n"
+        "Ui::AbstractVisualLayer::transitionStyle(): style {0} out of range for {0} styles\n", data.styleCount),
+        TestSuite::Compare::String);
 }
 
 void AbstractVisualLayerTest::dynamicStyleAllocateRecycle() {
@@ -2207,16 +3132,6 @@ StyleIndex styleIndexTransitionPassthrough(StyleIndex index) {
     return index;
 }
 
-AnimationHandle styleIndexAnimationDoNotCall(StyleLayerStyleAnimator&, StyleIndex, StyleIndex targetStyle, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
-    CORRADE_FAIL("Called with" << UnsignedInt(targetStyle));
-    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-}
-
-AnimationHandle styleIndexPersistentAnimationDoNotCall(StyleLayerStyleAnimator&, StyleIndex style, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
-    CORRADE_FAIL("Called with" << UnsignedInt(style));
-    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-}
-
 void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     auto&& data = EventStyleTransitionNoOpData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -2248,6 +3163,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     CORRADE_VERIFY(!shared.styleAnimationOnBlur());
     CORRADE_VERIFY(!shared.styleAnimationOnPress());
     CORRADE_VERIFY(!shared.styleAnimationOnRelease());
+    CORRADE_VERIFY(!shared.styleAnimationOnTransition());
     CORRADE_VERIFY(!shared.styleAnimationPersistent());
 
     /* Set up style animation functions if desired. As all transitions are
@@ -2255,6 +3171,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
        transitions either, those should never get called. */
     if(data.transitionPersistentAnimation) {
         shared.setStyleAnimation<StyleIndex,
+            styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
@@ -2270,6 +3187,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_VERIFY(shared.styleAnimationOnBlur());
         CORRADE_VERIFY(shared.styleAnimationOnPress());
         CORRADE_VERIFY(shared.styleAnimationOnRelease());
+        CORRADE_VERIFY(shared.styleAnimationOnTransition());
         CORRADE_VERIFY(shared.styleAnimationPersistent());
     }
 
@@ -2691,18 +3609,6 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     }
 }
 
-Int onEnterNoOpAnimationCalled = 0;
-Int onLeaveNoOpAnimationCalled = 0;
-Int onFocusAnimationCalled = 0;
-Int onBlurNoOpAnimationCalled = 0;
-Int onPressNoOpAnimationCalled = 0;
-Int onReleaseNoOpAnimationCalled = 0;
-Int persistentNoOpAnimationCalled = 0;
-
-Int onEnterFocusPressAnimationCalled = 0;
-Int onLeaveBlurReleaseAnimationCalled = 0;
-Int persistentAnimationCalled = 0;
-
 /* The only purpose of no-op animators is verifying that the correct functions
    get called in all possible setStyleAnimation() variants, actual testing of
    their behavior is then done with a smaller subset */
@@ -2832,19 +3738,6 @@ AnimationHandle styleIndexAnimationPersistentReplaceAnimation(StyleLayerStyleAni
     return animator.create(StyleIndex::RedBlueDisabled, style, time, 0_nsec, data);
 }
 
-void AbstractVisualLayerTest::resetCounters() {
-    onEnterNoOpAnimationCalled =
-        onLeaveNoOpAnimationCalled =
-        onFocusAnimationCalled =
-        onBlurNoOpAnimationCalled =
-        onPressNoOpAnimationCalled =
-        onReleaseNoOpAnimationCalled =
-        persistentNoOpAnimationCalled =
-        onEnterFocusPressAnimationCalled =
-        onLeaveBlurReleaseAnimationCalled =
-        persistentAnimationCalled = 0;
-}
-
 void AbstractVisualLayerTest::eventStyleTransition() {
     auto&& data = EventStyleTransitionData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -2924,6 +3817,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             styleIndexAnimationNoOpOnBlur,
             styleIndexAnimationNoOpOnPress,
             styleIndexAnimationNoOpOnRelease,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             styleIndexAnimationNoOpPersistent>();
         else if(data.templated && data.persistentAnimation && !data.persistentAnimationNoOp) animationChaining = &shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationNoOpOnEnter,
@@ -2932,6 +3826,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             styleIndexAnimationNoOpOnBlur,
             styleIndexAnimationNoOpOnPress,
             styleIndexAnimationNoOpOnRelease,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             styleIndexAnimationPersistent>();
         else if(data.templated && !data.persistentAnimation) animationChaining = &shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationNoOpOnEnter,
@@ -2940,6 +3835,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             styleIndexAnimationNoOpOnBlur,
             styleIndexAnimationNoOpOnPress,
             styleIndexAnimationNoOpOnRelease,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             nullptr>();
         else if(!data.templated) animationChaining = &shared.setStyleAnimation(
             [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
@@ -2959,6 +3855,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             },
             [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
                 return styleIndexAnimationNoOpOnRelease(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+            },
+            /* onTransition not used in events */
+            [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                return styleIndexAnimationDoNotCall(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
             },
             data.persistentAnimation ?
                 data.persistentAnimationNoOp ?
@@ -2992,14 +3892,17 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         if(data.templated && data.persistentAnimationNoOp) animationChaining = &shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationOnEnterFocusPress,
             styleIndexAnimationOnLeaveBlurRelease,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             styleIndexAnimationNoOpPersistent>();
         else if(data.templated && data.persistentAnimation && !data.persistentAnimationNoOp) animationChaining = &shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationOnEnterFocusPress,
             styleIndexAnimationOnLeaveBlurRelease,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             styleIndexAnimationPersistentReplaceAnimation>();
         else if(data.templated && !data.persistentAnimation) animationChaining = &shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationOnEnterFocusPress,
             styleIndexAnimationOnLeaveBlurRelease,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             nullptr>();
         else if(!data.templated) animationChaining = &shared.setStyleAnimation(
             data.dynamicAnimated ?
@@ -3026,6 +3929,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
                     return styleIndexAnimationOnLeaveBlurRelease(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
                 },
+            /* onTransition not used in events */
+            [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                return styleIndexAnimationDoNotCall(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+            },
             data.persistentAnimation ?
                 data.persistentAnimationNoOp ?
                     /* MSVC workaround, see above */
@@ -3054,14 +3961,20 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             nullptr,
             nullptr,
             nullptr,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             styleIndexAnimationNoOpPersistent>();
         else if(data.templated && !data.persistentAnimationNoOp) animationChaining = &shared.setStyleAnimation<StyleIndex,
             nullptr,
             nullptr,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             styleIndexAnimationPersistent>();
         else if(!data.templated) animationChaining = &shared.setStyleAnimation(
             nullptr,
             nullptr,
+            /* onTransition not used in events */
+            [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                return styleIndexAnimationDoNotCall(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+            },
             data.persistentAnimationNoOp ?
                 /* MSVC workaround, see above */
                 /** @todo change to the + once CORRADE_MSVC2015_COMPATIBILITY
@@ -3084,6 +3997,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     CORRADE_COMPARE(shared.styleAnimationOnBlur(), data.transitionAnimation);
     CORRADE_COMPARE(shared.styleAnimationOnPress(), data.transitionAnimation);
     CORRADE_COMPARE(shared.styleAnimationOnRelease(), data.transitionAnimation);
+    CORRADE_COMPARE(shared.styleAnimationOnTransition(), data.transitionAnimation || data.persistentAnimation);
     CORRADE_COMPARE(shared.styleAnimationPersistent(), data.persistentAnimation);
 
     AbstractUserInterface ui{{100, 100}};
@@ -4754,12 +5668,14 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
             styleIndexAnimationNoOpOnBlur,
             styleIndexAnimationNoOpOnPress,
             styleIndexAnimationNoOpOnRelease,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             styleIndexAnimationNoOpPersistent>();
         else if(data.templated && !data.persistentAnimationNoOp) animationChaining = &shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationNoOpOnFocus,
             styleIndexAnimationNoOpOnBlur,
             styleIndexAnimationNoOpOnPress,
             styleIndexAnimationNoOpOnRelease,
+            styleIndexAnimationDoNotCall, /* onTransition not used in events */
             nullptr>();
         else if(!data.templated) animationChaining = &shared.setStyleAnimation(
             [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
@@ -4773,6 +5689,10 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
             },
             [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
                 return styleIndexAnimationNoOpOnRelease(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+            },
+            /* onTransition not used in events */
+            [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+                return styleIndexAnimationDoNotCall(static_cast<StyleLayerStyleAnimator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
             },
             data.persistentAnimationNoOp ?
                 [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
@@ -4793,8 +5713,10 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
             nullptr,
             nullptr,
             nullptr,
+            nullptr,
             styleIndexAnimationNoOpPersistent>();
         else animationChaining = &shared.setStyleAnimation(
+            nullptr,
             nullptr,
             nullptr,
             nullptr,
@@ -5046,6 +5968,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         layer.setDefaultStyleAnimator(animatorInstance.get());
         ui.setAnimatorInstance(Utility::move(animatorInstance));
         shared.setStyleAnimation<StyleIndex,
+            styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexPersistentAnimationDoNotCall>();
@@ -5309,6 +6232,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
         shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
+            styleIndexAnimationDoNotCall,
             styleIndexPersistentAnimationDoNotCall>();
     }
 
@@ -5355,7 +6279,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
     /* Temporarily reset the designed-to-fail animators so we can call
        events */
     if(data.transitionPersistentAnimation)
-        shared.setStyleAnimation(nullptr, nullptr, nullptr);
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, nullptr);
 
     /* Both press & hover on the green node */
     {
@@ -5373,6 +6297,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
     /* And put those back again */
     if(data.transitionPersistentAnimation)
         shared.setStyleAnimation<StyleIndex,
+            styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexPersistentAnimationDoNotCall>();
@@ -5414,7 +6339,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
     /* Temporarily reset the designed-to-fail animators so we can call
        events */
     if(data.transitionPersistentAnimation)
-        shared.setStyleAnimation(nullptr, nullptr, nullptr);
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, nullptr);
 
     /* Focus & hover on the green node but then marking it as disabled */
     {
@@ -5431,6 +6356,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
     /* And put those back again */
     if(data.transitionPersistentAnimation)
         shared.setStyleAnimation<StyleIndex,
+            styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexPersistentAnimationDoNotCall>();
@@ -5514,6 +6440,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeNoLongerFocusable() {
         layer.setDefaultStyleAnimator(animatorInstance.get());
         ui.setAnimatorInstance(Utility::move(animatorInstance));
         shared.setStyleAnimation<StyleIndex,
+            styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexPersistentAnimationDoNotCall>();
@@ -5838,11 +6765,11 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
     {
         shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, 666_nsec, 0_nsec, data);
-        }, nullptr, nullptr);
+        }, nullptr, nullptr, nullptr);
         FocusEvent event{1226_nsec};
         ui.focusEvent(node, event);
     } {
-        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, 666_nsec, 0_nsec, data);
         });
         FocusEvent event{1226_nsec};
@@ -5854,11 +6781,11 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
     {
         shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
             return animationHandle(animator.handle(), 0xabcde, 0x123);
-        }, nullptr, nullptr);
+        }, nullptr, nullptr, nullptr);
         FocusEvent event{{}};
         ui.focusEvent(node, event);
     } {
-        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
             return animationHandle(animator.handle(), 0xabcde, 0x123);
         });
         FocusEvent event{{}};
@@ -5866,11 +6793,11 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
     } {
         shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(sourceStyle, 2u, time, 0_nsec, data);
-        }, nullptr, nullptr);
+        }, nullptr, nullptr, nullptr);
         FocusEvent event{{}};
         ui.focusEvent(node, event);
     } {
-        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0, 2, time, 0_nsec, data);
         });
         FocusEvent event{{}};
@@ -5878,11 +6805,11 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
     } {
         shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, 1226_nsec, 0_nsec, data);
-        }, nullptr, nullptr);
+        }, nullptr, nullptr, nullptr);
         FocusEvent event{666_nsec};
         ui.focusEvent(node, event);
     } {
-        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, 1226_nsec, 0_nsec, data);
         });
         FocusEvent event{666_nsec};
@@ -5890,11 +6817,11 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
     } {
         shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, layerDataHandle(0x12345, 0xabc));
-        }, nullptr, nullptr);
+        }, nullptr, nullptr, nullptr);
         FocusEvent event{{}};
         ui.focusEvent(node, event);
     } {
-        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle, AnimatorDataHandle) {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, layerDataHandle(0x12345, 0xabc));
         });
         FocusEvent event{{}};
@@ -5902,35 +6829,35 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
     } {
         shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data, AnimationFlag::ReverseEveryOther|AnimationFlag::Reverse);
-        }, nullptr, nullptr);
+        }, nullptr, nullptr, nullptr);
         FocusEvent event{{}};
         ui.focusEvent(node, event);
     } {
         shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data, AnimationFlag::ReverseEveryOther|AnimationFlag::KeepOncePlayed);
-        }, nullptr, nullptr);
+        }, nullptr, nullptr, nullptr);
         FocusEvent event{{}};
         ui.focusEvent(node, event);
     } {
         shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data, AnimationFlag::Reverse|AnimationFlag::KeepOncePlayed);
-        }, nullptr, nullptr);
+        }, nullptr, nullptr, nullptr);
         FocusEvent event{{}};
         ui.focusEvent(node, event);
     } {
-        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, data, AnimationFlag::ReverseEveryOther|AnimationFlag::Reverse);
         });
         FocusEvent event{{}};
         ui.focusEvent(node, event);
     } {
-        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, data, AnimationFlag::ReverseEveryOther|AnimationFlag::KeepOncePlayed);
         });
         FocusEvent event{{}};
         ui.focusEvent(node, event);
     } {
-        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+        shared.setStyleAnimation(nullptr, nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
             return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, data, AnimationFlag::Reverse|AnimationFlag::KeepOncePlayed);
         });
         FocusEvent event{{}};
@@ -5939,7 +6866,7 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
         shared.setStyleAnimation(
             [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
                 return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data);
-            }, nullptr,
+            }, nullptr, nullptr,
             [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
                 return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, time, 0_nsec, data);
             });
@@ -5949,7 +6876,7 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
         shared.setStyleAnimation(
             [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
                 return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, time, 0_nsec, data);
-            }, nullptr,
+            }, nullptr, nullptr,
             [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle animation) {
                 static_cast<StyleLayerStyleAnimator&>(animator).remove(animation);
                 return AnimationHandle::Null;

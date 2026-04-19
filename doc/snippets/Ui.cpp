@@ -347,6 +347,9 @@ Ui::AnimationHandle styleIndexAnimationOnPress(Ui::BaseLayerStyleAnimator& anima
 Ui::AnimationHandle styleIndexAnimationOnRelease(Ui::BaseLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
     DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(sourceStyle); static_cast<void>(targetStyle); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
 }
+Ui::AnimationHandle styleIndexAnimationOnTransition(Ui::BaseLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
+    DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(sourceStyle); static_cast<void>(targetStyle); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
+}
 Ui::AnimationHandle styleIndexAnimationPersistent(Ui::BaseLayerStyleAnimator& animator, StyleIndex style, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
     DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(style); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
 }
@@ -361,6 +364,7 @@ shared.setStyleAnimation<StyleIndex,
     styleIndexAnimationOnBlur,
     styleIndexAnimationOnPress,
     styleIndexAnimationOnRelease,
+    styleIndexAnimationOnTransition,
     styleIndexAnimationPersistent>();
 /* [AbstractVisualLayer-Shared-setStyleAnimation] */
 }
@@ -506,6 +510,7 @@ DOXYGEN_ELLIPSIS(} void main3(); void main3() { struct Shared: Ui::BaseLayer::Sh
 baseLayerShared.setStyleAnimation<BaseStyle,
     styleAnimationOnEnterFocusPress,
     styleAnimationOnLeaveBlurRelease,
+    nullptr,
     nullptr>();
 /* [BaseLayer-style-animations] */
 
@@ -562,6 +567,7 @@ struct Shared: Ui::TextLayer::Shared {
 } textLayerShared{glyphCache};)
 
 textLayerShared.setStyleAnimation<TextStyle,
+    nullptr,
     nullptr,
     nullptr,
     styleAnimationPersistent>();

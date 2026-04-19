@@ -156,17 +156,22 @@ auto AbstractVisualLayer::Shared::styleAnimationOnRelease() const -> AnimationHa
     return _state->styleAnimationOnRelease;
 }
 
+auto AbstractVisualLayer::Shared::styleAnimationOnTransition() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    return _state->styleAnimationOnTransition;
+}
+
 auto AbstractVisualLayer::Shared::styleAnimationPersistent() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
     return _state->styleAnimationPersistent;
 }
 
-AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleAnimation(AnimationHandle(*onEnter)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onLeave)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onFocus)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*persistent)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)) {
+AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleAnimation(AnimationHandle(*onEnter)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onLeave)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onFocus)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onTransition)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*persistent)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)) {
     _state->styleAnimationOnEnter = onEnter;
     _state->styleAnimationOnLeave = onLeave;
     _state->styleAnimationOnFocus = onFocus;
     _state->styleAnimationOnBlur = onBlur;
     _state->styleAnimationOnPress = onPress;
     _state->styleAnimationOnRelease = onRelease;
+    _state->styleAnimationOnTransition = onTransition;
     _state->styleAnimationPersistent = persistent;
     return *this;
 }
@@ -280,6 +285,54 @@ void AbstractVisualLayer::transitionStyleInternal(const LayerDataHandle handle, 
             sharedState.styleTransitionToInactiveOut;
     }
     setStyleInternal(layerDataHandleId(handle), transition ? transition(style) : style);
+}
+
+void AbstractVisualLayer::transitionStyle(const DataHandle handle, const UnsignedInt style, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractVisualLayer::transitionStyle(): invalid handle" << handle, );
+    transitionStyleInternal(dataHandleData(handle), style, time);
+}
+
+void AbstractVisualLayer::transitionStyle(const LayerDataHandle handle, const UnsignedInt style, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractVisualLayer::transitionStyle(): invalid handle" << handle, );
+    transitionStyleInternal(handle, style, time);
+}
+
+void AbstractVisualLayer::transitionStyleInternal(const LayerDataHandle handle, const UnsignedInt style, const Nanoseconds time) {
+    State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    CORRADE_ASSERT(style < sharedState.styleCount,
+        "Ui::AbstractVisualLayer::transitionStyle(): style" << style << "out of range for" << sharedState.styleCount << "styles", );
+    CORRADE_ASSERT(hasUi(),
+        "Ui::AbstractVisualLayer::transitionStyle(): layer not part of a user interface", );
+    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
+
+    /* This logic is the same as in transitionStyleInternal(LayerDataHandle,
+       UnsignedInt) above but the function delegates elsewhere. The transition
+       function has to be passed through in this case, so the delegated-to
+       function deals with it being nullptr instead of the caller. */
+
+    const NodeHandle node = this->node(handle);
+    UnsignedInt(*transition)(UnsignedInt) = nullptr;
+    if(node != NodeHandle::Null) {
+        const AbstractUserInterface& ui = this->ui();
+        const bool hovered = ui.currentHoveredNode() == node;
+        if(ui.currentPressedNode() == node) transition = hovered ?
+            sharedState.styleTransitionToPressedOver :
+            sharedState.styleTransitionToPressedOut;
+        else if(ui.currentFocusedNode() == node) transition = hovered ?
+            sharedState.styleTransitionToFocusedOver :
+            sharedState.styleTransitionToFocusedOut;
+        else transition = hovered ?
+            sharedState.styleTransitionToInactiveOver :
+            sharedState.styleTransitionToInactiveOut;
+    }
+    transitionStyleInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::AbstractVisualLayer::transitionStyle():",
+        #endif
+        layerDataHandleId(handle), transition, time, sharedState.styleAnimationOnTransition, style);
 }
 
 UnsignedInt AbstractVisualLayer::dynamicStyleUsedCount() const {
@@ -454,25 +507,41 @@ void AbstractVisualLayer::transitionStyleInternal(
     #ifndef CORRADE_NO_ASSERT
     const char* messagePrefix,
     #endif
-    const UnsignedInt dataId, UnsignedInt(*const transition)(UnsignedInt), const Nanoseconds time, AnimationHandle(*transitionAnimation)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)
+    const UnsignedInt dataId, UnsignedInt(*const transition)(UnsignedInt), const Nanoseconds time, AnimationHandle(*transitionAnimation)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), const UnsignedInt style
 ) {
     const State& state = *_state;
     const Shared::State& sharedState = state.shared;
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
-    UnsignedInt& style = state.styles[dataId];
+    UnsignedInt& currentStyle = state.styles[dataId];
 
-    /* If the style is dynamic, maybe it has an animation with a target style
-       index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. If not, there's nothing to transition. */
-    const Containers::Pair<UnsignedInt, AnimatorDataHandle> currentStyleAnimation = styleOrAnimationTargetStyle(style);
-    if(currentStyleAnimation.first() >= sharedState.styleCount)
+    /* If the current style is dynamic, maybe it has an animation with a target
+       style index assigned, which we can use as the (soon-to-be-)current style
+       index to transition from */
+    const Containers::Pair<UnsignedInt, AnimatorDataHandle> currentStyleAnimation = styleOrAnimationTargetStyle(currentStyle);
+
+    /* If we're transitioning a style implicitly from an event and the dynamic
+       style has no animation attached, there's nothing to transition. If we're
+       inside the explicit transitionStyle() call, the style *does* get
+       transitioned, just without any onTransition animation as there's no
+       known non-dynamic style to transition from. */
+    if(style == ~UnsignedInt{} && currentStyleAnimation.first() >= sharedState.styleCount)
         return;
 
-    const UnsignedInt nextStyle = transition(currentStyleAnimation.first());
+    /* Apply the style transition, either to the current style (or, if current
+       style is dynamic, the target style of the currently running animation)
+       or the explicitly supplied target style */
+    const UnsignedInt styleToTransition = style != ~UnsignedInt{} ? style : currentStyleAnimation.first();
+    /* When called from the explicit transitionStyle() call, the transition may
+       be nullptr in case the data isn't attached to any node (and thus it
+       makes no sense to transition it based on node state). Use the original
+       style unchanged in that case. */
+    const UnsignedInt nextStyle = transition ? transition(styleToTransition) : styleToTransition;
     CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-        messagePrefix << "style transition from" << currentStyleAnimation.first() << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+        messagePrefix << "style transition from" << styleToTransition << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
 
-    /* If the next style is the same as the current, nothing left to do */
+    /* If the next style is the same as the current style (or, if current style
+       is dynamic, the next style is the same as the target style of the
+       currently running animation), nothing left to do */
     if(nextStyle == currentStyleAnimation.first())
         return;
 
@@ -480,8 +549,14 @@ void AbstractVisualLayer::transitionStyleInternal(
     AnimationHandle animation = AnimationHandle::Null;
     AnimationHandle persistentAnimation = AnimationHandle::Null;
     if(state.styleAnimator) {
-        /* Try animating the style transition first */
-        if(transitionAnimation)
+        /* Try animating the style transition first, unless the source style is
+           dynamic (which can only happen with the explicit transitionStyle()
+           call, with the implicit transition from events the function exists
+           above already). We're always animating from the current style (or,
+           if current style is dynamic, the target style of the currently
+           running animation), to either the current style transitioned or to
+           the explicitly specified style transitioned. */
+        if(transitionAnimation && currentStyleAnimation.first() < sharedState.styleCount)
             animation = transitionAnimation(*state.styleAnimator, currentStyleAnimation.first(), nextStyle, time, layerDataHandle(dataId, generations()[dataId]), currentStyleAnimation.second());
 
         /* All of those are debug-only assertions because it's quite a lot of
@@ -531,7 +606,7 @@ void AbstractVisualLayer::transitionStyleInternal(
        animation gets removed if and only if a persistent animation is created,
        so if any of them is non-null it means it's valid. */
     if(animation == AnimationHandle::Null && persistentAnimation == AnimationHandle::Null) {
-        style = nextStyle;
+        currentStyle = nextStyle;
         setNeedsUpdate(LayerState::NeedsDataUpdate);
         /* If the data is attached and this is a layout layer, the style likely
            affects layout properties. Trigger a layout update as well. If the

@@ -1897,6 +1897,7 @@ void BaseLayerStyleAnimatorTest::uiAdvanceEventTransition() {
     BaseLayer::Shared* chaining = &shared.setStyleAnimation<Enum,
         styleAnimationOnEnterFocusPress,
         nullptr,
+        nullptr,
         nullptr>();
     CORRADE_COMPARE(chaining, &shared);
 

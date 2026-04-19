@@ -358,6 +358,7 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         ui.baseLayer().shared().setStyleAnimation<BaseStyle,
             nullptr,
             Implementation::styleAnimationOnLeaveBlurRelease,
+            nullptr,
             nullptr>();
     }
 
@@ -547,9 +548,11 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             ui.textLayer().shared().setStyleAnimation<TextStyle,
                 nullptr,
                 Implementation::styleAnimationOnLeaveBlurRelease,
+                nullptr,
                 Implementation::styleAnimationPersistent<Animation::Easing::exponentialInOut>>();
         else if(_features >= Feature::EssentialAnimations)
             ui.textLayer().shared().setStyleAnimation<TextStyle,
+                nullptr,
                 nullptr,
                 nullptr,
                 Implementation::styleAnimationPersistent<Animation::Easing::step>>();

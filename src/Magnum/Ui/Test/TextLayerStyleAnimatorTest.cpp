@@ -3343,6 +3343,7 @@ void TextLayerStyleAnimatorTest::uiAdvanceEventTransition() {
     TextLayer::Shared* chaining = &shared.setStyleAnimation<Enum,
         styleAnimationOnEnterFocusPress,
         nullptr,
+        nullptr,
         nullptr>();
     CORRADE_COMPARE(chaining, &shared);
 
