@@ -34,6 +34,7 @@
 #include <Corrade/Containers/String.h>
 #include <Corrade/Containers/Triple.h>
 #include <Corrade/TestSuite/Tester.h>
+#include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/Format.h>
 
@@ -2662,6 +2663,10 @@ AnimationHandle styleIndexAnimationOnEnterFocusPress(StyleLayerStyleAnimator& an
     ++onEnterFocusPressAnimationCalled;
     CORRADE_COMPARE(time, 1773_nsec);
     CORRADE_COMPARE(currentAnimation, AnimatorDataHandle::Null);
+    CORRADE_COMPARE_AS(UnsignedInt(sourceStyle), StyleCount,
+                       TestSuite::Compare::Less);
+    CORRADE_COMPARE_AS(UnsignedInt(targetStyle), StyleCount,
+                       TestSuite::Compare::Less);
     return animator.create(sourceStyle, targetStyle, time, 0_nsec, data);
 }
 
@@ -2673,6 +2678,10 @@ AnimationHandle styleIndexAnimationOnEnterFocusPressReplaceAnimation(StyleLayerS
        attached to any data */
     CORRADE_COMPARE(animator.started(currentAnimation), 667_nsec);
     CORRADE_COMPARE(animator.data(currentAnimation), DataHandle::Null);
+    CORRADE_COMPARE_AS(UnsignedInt(sourceStyle), StyleCount,
+                       TestSuite::Compare::Less);
+    CORRADE_COMPARE_AS(UnsignedInt(targetStyle), StyleCount,
+                       TestSuite::Compare::Less);
     return animator.create(sourceStyle, targetStyle, time, 0_nsec, data);
 }
 
@@ -2680,6 +2689,10 @@ AnimationHandle styleIndexAnimationOnLeaveBlurRelease(StyleLayerStyleAnimator& a
     ++onLeaveBlurReleaseAnimationCalled;
     CORRADE_COMPARE(time, 1773_nsec);
     CORRADE_COMPARE(currentAnimation, AnimatorDataHandle::Null);
+    CORRADE_COMPARE_AS(UnsignedInt(sourceStyle), StyleCount,
+                       TestSuite::Compare::Less);
+    CORRADE_COMPARE_AS(UnsignedInt(targetStyle), StyleCount,
+                       TestSuite::Compare::Less);
     return animator.create(sourceStyle, targetStyle, time, 0_nsec, data);
 }
 
@@ -2691,6 +2704,10 @@ AnimationHandle styleIndexAnimationOnLeaveBlurReleaseReplaceAnimation(StyleLayer
        attached to any data */
     CORRADE_COMPARE(animator.started(currentAnimation), 667_nsec);
     CORRADE_COMPARE(animator.data(currentAnimation), DataHandle::Null);
+    CORRADE_COMPARE_AS(UnsignedInt(sourceStyle), StyleCount,
+                       TestSuite::Compare::Less);
+    CORRADE_COMPARE_AS(UnsignedInt(targetStyle), StyleCount,
+                       TestSuite::Compare::Less);
     return animator.create(sourceStyle, targetStyle, time, 0_nsec, data);
 }
 
@@ -2702,6 +2719,8 @@ AnimationHandle styleIndexAnimationPersistent(StyleLayerStyleAnimator& animator,
     if(time != 1337_nsec)
         CORRADE_COMPARE(time, 1773_nsec);
     CORRADE_COMPARE(currentAnimation, AnimatorDataHandle::Null);
+    CORRADE_COMPARE_AS(UnsignedInt(style), StyleCount,
+                       TestSuite::Compare::Less);
     /* Picking a style which is unlikely to be at any start of a style
        transition to differentiate from transition animations */
     return animator.create(StyleIndex::RedBlueDisabled, style, time, 0_nsec, data);
@@ -2724,6 +2743,8 @@ AnimationHandle styleIndexAnimationPersistentReplaceAnimation(StyleLayerStyleAni
         CORRADE_COMPARE(animator.styles<StyleIndex>(currentAnimation).second(), style);
         animator.remove(currentAnimation);
     }
+    CORRADE_COMPARE_AS(UnsignedInt(style), StyleCount,
+                       TestSuite::Compare::Less);
     /* Picking a style which is unlikely to be at any start of a style
        transition to differentiate from transition animations */
     return animator.create(StyleIndex::RedBlueDisabled, style, time, 0_nsec, data);
