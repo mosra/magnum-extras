@@ -1201,11 +1201,16 @@ void AbstractVisualLayerTest::transitionStyle() {
         });
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared, data.extraLayerFeatures));
 
-    /* Setting a transitioned style on a non-attached node is the same as
-       calling setStyle() directly, it also doesn't set any extra LayerState */
+    /* Setting a transitioned style on a non-attached data is the same as
+       calling setStyle() directly, it also doesn't set any extra LayerState
+       besides NeedsDataUpdate. */
     DataHandle notAttached = layer.create(InactiveOut1);
-    layer.transitionStyle(notAttached, PressedOver2);
-    CORRADE_COMPARE(layer.style(notAttached), PressedOver2);
+    layer.transitionStyle(notAttached, PressedOut2);
+    /* The following passes in this case but that's only because both are Null
+       and it shouldn't affect the style transition in any way */
+    CORRADE_COMPARE(ui.currentPressedNode(), layer.node(notAttached));
+    CORRADE_COMPARE(ui.currentHoveredNode(), layer.node(notAttached));
+    CORRADE_COMPARE(layer.style(notAttached), PressedOut2);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Node 2 is first, to avoid accidentally matching the order, Neither of
@@ -1216,7 +1221,7 @@ void AbstractVisualLayerTest::transitionStyle() {
     DataHandle data1 = layer.create(InactiveOut1, node1);
     DataHandle data2 = layer.create(InactiveOut2, node2);
 
-    /* Nothing is hovered, pressed or focused initially */
+    /* Nothing is hovered, pressed or focused still */
     CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
