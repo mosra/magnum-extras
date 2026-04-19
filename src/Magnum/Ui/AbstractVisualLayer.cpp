@@ -288,6 +288,9 @@ UnsignedInt AbstractVisualLayer::dynamicStyleUsedCount() const {
 
 Containers::Optional<UnsignedInt> AbstractVisualLayer::allocateDynamicStyle(const AnimationHandle animation) {
     State& state = *_state;
+    CORRADE_ASSERT(state.shared.dynamicStyleCount,
+        "Ui::AbstractVisualLayer::allocateDynamicStyle(): layer has zero dynamic styles", {});
+
     /** @todo some builtin "find first unset" API, tzcnt etc */
     for(std::size_t i = 0; i != state.dynamicStylesUsed.size(); ++i) {
         if(state.dynamicStylesUsed[i])

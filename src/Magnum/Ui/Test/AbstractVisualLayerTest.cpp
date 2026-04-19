@@ -75,7 +75,7 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
 
     void dynamicStyleAllocateRecycle();
     void dynamicStyleAllocateNoDynamicStyles();
-    void dynamicStyleRecycleInvalid();
+    void dynamicStyleAllocateRecycleInvalid();
 
     void resetCounters();
 
@@ -716,7 +716,7 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
 
     addTests({&AbstractVisualLayerTest::dynamicStyleAllocateRecycle,
               &AbstractVisualLayerTest::dynamicStyleAllocateNoDynamicStyles,
-              &AbstractVisualLayerTest::dynamicStyleRecycleInvalid});
+              &AbstractVisualLayerTest::dynamicStyleAllocateRecycleInvalid});
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNoOp},
         Containers::arraySize(EventStyleTransitionNoOpData));
@@ -1902,28 +1902,33 @@ void AbstractVisualLayerTest::dynamicStyleAllocateNoDynamicStyles() {
 
     CORRADE_COMPARE(shared.dynamicStyleCount(), 0);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
-    CORRADE_COMPARE(layer.allocateDynamicStyle(), Containers::NullOpt);
+    /* allocateDynamicStyle() asserts to prevent creating a layer w/o dynamic
+       styles by accident, tested in dynamicStyleAllocateRecycleInvalid() */
 }
 
-void AbstractVisualLayerTest::dynamicStyleRecycleInvalid() {
+void AbstractVisualLayerTest::dynamicStyleAllocateRecycleInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: AbstractVisualLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
-    } shared{3, 4};
+    } shared{3, 4},
+      sharedNoDynamicStyles{3, 0};
 
     struct Layer: AbstractVisualLayer {
         explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
 
         using AbstractVisualLayer::create;
-    } layer{layerHandle(0, 1), shared};
+    } layer{layerHandle(0, 1), shared},
+      layerNoDynamicStyles{layerHandle(0, 1), sharedNoDynamicStyles};
 
     Containers::String out;
     Error redirectError{&out};
+    layerNoDynamicStyles.allocateDynamicStyle();
     layer.recycleDynamicStyle(2);
     layer.dynamicStyleAnimation(4);
     layer.recycleDynamicStyle(4);
     CORRADE_COMPARE(out,
+        "Ui::AbstractVisualLayer::allocateDynamicStyle(): layer has zero dynamic styles\n"
         "Ui::AbstractVisualLayer::recycleDynamicStyle(): style 2 not allocated\n"
         "Ui::AbstractVisualLayer::dynamicStyleAnimation(): index 4 out of range for 4 dynamic styles\n"
         "Ui::AbstractVisualLayer::recycleDynamicStyle(): index 4 out of range for 4 dynamic styles\n");

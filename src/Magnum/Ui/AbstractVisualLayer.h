@@ -270,6 +270,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
         /**
          * @brief Allocate a dynamic style index
          *
+         * Expects that the layer was created with at least one dynamic style.
          * The returned index can be used to set properties of a dynamic style
          * using @ref BaseLayer::setDynamicStyle() /
          * @ref TextLayer::setDynamicStyle(). When added to
@@ -295,7 +296,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          * animation that has a hovered style as the target, and a press
          * happens, it'll trigger a transition from the hovered style to a
          * pressed one, instead of leaving the dynamic style untouched.
-         * @see @ref dynamicStyleUsedCount(), @ref Shared::dynamicStyleCount()
+         * @see @ref Shared::dynamicStyleCount(), @ref dynamicStyleUsedCount()
          */
         Containers::Optional<UnsignedInt> allocateDynamicStyle(AnimationHandle animation =
             #ifdef DOXYGEN_GENERATING_OUTPUT
