@@ -431,10 +431,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @return New data handle
          *
          * The @p function, optionally receiving a node-relative position of
-         * the press, is called when a @ref Pointer::MouseLeft, primary
-         * @ref Pointer::Finger or @ref Pointer::Pen press happens on the
-         * @p node, and it isn't a fallthrough event from a child node. Expects
-         * that the @p function is not @cpp nullptr @ce.
+         * the press and event time, is called when a @ref Pointer::MouseLeft,
+         * primary @ref Pointer::Finger or @ref Pointer::Pen press happens on
+         * the @p node, and it isn't a fallthrough event from a child node.
+         * Expects that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() for a combined press and release. The
          * returned @ref DataHandle is automatically removed once @p node or
@@ -448,6 +448,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         DataHandle onPress(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
         DataHandle onPress(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
+        /** @overload */
+        DataHandle onPress(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a finger / pen tap or left mouse press
@@ -464,16 +466,20 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onPressScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onPress(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onPressScoped(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function) {
+            return EventConnection{*this, onPress(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a finger / pen tap or left mouse release
          * @return New data handle
          *
          * The @p function, optionally receiving a node-relative position of
-         * the release, is called when a @ref Pointer::MouseLeft, primary
-         * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
-         * @p node, and it isn't a fallthrough event from a child node. Expects
-         * that the @p function is not @cpp nullptr @ce.
+         * the release and event time, is called when a @ref Pointer::MouseLeft,
+         * primary @ref Pointer::Finger or @ref Pointer::Pen release happens on
+         * the @p node, and it isn't a fallthrough event from a child node.
+         * Expects that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() for a combined press and release. The
          * returned @ref DataHandle is automatically removed once @p node or
@@ -487,6 +493,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         DataHandle onRelease(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
         DataHandle onRelease(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
+        /** @overload */
+        DataHandle onRelease(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a finger / pen tap or left mouse release
@@ -503,19 +511,24 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onRelease(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function) {
+            return EventConnection{*this, onRelease(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a finger / pen tap or left mouse click
          * @return New data handle
          *
          * The @p function, optionally receiving a node-relative position of
-         * the tap or click, is called when a @ref Pointer::MouseLeft, primary
-         * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
-         * @p node after a previous primary pointer press, and it isn't a
-         * fallthrough event from a child node. If event capture is disabled by
-         * any event handler on given node, the function is called only if the
-         * pointer didn't leave the node area between a press and a release.
-         * Expects that the @p function is not @cpp nullptr @ce.
+         * the tap or click and event time, is called when a
+         * @ref Pointer::MouseLeft, primary @ref Pointer::Finger or
+         * @ref Pointer::Pen release happens on the @p node after a previous
+         * primary pointer press, and it isn't a fallthrough event from a child
+         * node. If event capture is disabled by any event handler on given
+         * node, the function is called only if the pointer didn't leave the
+         * node area between a press and a release. Expects that the
+         * @p function is not @cpp nullptr @ce.
          *
          * Use @ref onRightClick() and @ref onMiddleClick() to handle
          * @ref Pointer::MouseRight and @ref Pointer::MouseMiddle clicks. The
@@ -530,6 +543,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         DataHandle onTapOrClick(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
         DataHandle onTapOrClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
+        /** @overload */
+        DataHandle onTapOrClick(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a finger / pen tap or left mouse click
@@ -546,17 +561,21 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onTapOrClick(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function) {
+            return EventConnection{*this, onTapOrClick(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a middle mouse click
          * @return New data handle
          *
          * The @p function, optionally receiving a node-relative position of
-         * the click, is called when a @ref Pointer::MouseMiddle release
-         * happens on the @p node after a previous pointer press, and it isn't
-         * a fallthrough event from a child node. If event capture is disabled
-         * by any event handler on given node, the function is called only if
-         * the pointer didn't leave the node area between a press and a
+         * the click and event time, is called when a @ref Pointer::MouseMiddle
+         * release happens on the @p node after a previous pointer press, and
+         * it isn't a fallthrough event from a child node. If event capture is
+         * disabled by any event handler on given node, the function is called
+         * only if the pointer didn't leave the node area between a press and a
          * release. Expects that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() and @ref onRightClick() to handle
@@ -572,6 +591,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         DataHandle onMiddleClick(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
         DataHandle onMiddleClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
+        /** @overload */
+        DataHandle onMiddleClick(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a middle mouse click
@@ -588,18 +609,22 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onMiddleClick(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function) {
+            return EventConnection{*this, onMiddleClick(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a right mouse click
          * @return New data handle
          *
          * The @p function, optionally receiving a node-relative position of
-         * the click, is called when a @ref Pointer::MouseRight release happens
-         * on the @p node after a previous pointer press, and it isn't a
-         * fallthrough event from a child node. If event capture is disabled by
-         * any event handler on given node, the function is called only if the
-         * pointer didn't leave the node area between a press and a release.
-         * Expects that the @p function is not @cpp nullptr @ce.
+         * the click and event time, is called when a @ref Pointer::MouseRight
+         * release happens on the @p node after a previous pointer press, and
+         * it isn't a fallthrough event from a child node. If event capture is
+         * disabled by any event handler on given node, the function is called
+         * only if the pointer didn't leave the node area between a press and a
+         * release. Expects that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() and @ref onRightClick() to handle
          * @ref Pointer::MouseLeft / @ref Pointer::Finger / @ref Pointer::Pen
@@ -614,6 +639,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         DataHandle onRightClick(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
         DataHandle onRightClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
+        /** @overload */
+        DataHandle onRightClick(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a right mouse click
@@ -630,15 +657,19 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onRightClick(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position)>&& function) {
+            return EventConnection{*this, onRightClick(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a drag
          * @return New data handle
          *
          * The @p function, receiving the movement delta and optionally also a
-         * node-relative position at which the move happened, is called when a
-         * @ref Pointer::MouseLeft, primary @ref Pointer::Finger or
-         * @ref Pointer::Pen move happens on the @p node. To prevent the
+         * node-relative position at which the move happened and event time, is
+         * called when a @ref Pointer::MouseLeft, primary @ref Pointer::Finger
+         * or @ref Pointer::Pen move happens on the @p node. To prevent the
          * function from being triggered by drags that originated outside of
          * @p node, it's called only if the move event is captured on given
          * node. Expects that the @p function is not @cpp nullptr @ce.
@@ -668,6 +699,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function);
         /** @overload */
         DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function);
+        /** @overload */
+        DataHandle onDrag(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position, const Vector2& offset)>&& function);
 
         /**
          * @brief Scoped connection to a drag
@@ -684,15 +717,19 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
             return EventConnection{*this, onDrag(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onDragScoped(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position, const Vector2& offset)>&& function) {
+            return EventConnection{*this, onDrag(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a scroll
          * @return New data handle
          *
          * The @p function, receiving the scroll offset and optionally also a
-         * node-relative position at which the scroll happened, is called when
-         * a scroll happens on the @p node. Expects that the @p function is not
-         * @cpp nullptr @ce.
+         * node-relative position at which the scroll happened and event time,
+         * is called when a scroll happens on the @p node. Expects that the
+         * @p function is not @cpp nullptr @ce.
          *
          * Note that unlike @ref onDrag(), the offset is not in UI units, but
          * rather scroll *steps*, where @cpp 1.0f @ce usually maps to one tick
@@ -709,6 +746,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         DataHandle onScroll(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function);
         /** @overload */
         DataHandle onScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function);
+        /** @overload */
+        DataHandle onScroll(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position, const Vector2& offset)>&& function);
 
         /**
          * @brief Scoped connection to a scroll
@@ -723,6 +762,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         }
         /** @overload */
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
+            return EventConnection{*this, onScroll(node, Utility::move(function))};
+        }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position, const Vector2& offset)>&& function) {
             return EventConnection{*this, onScroll(node, Utility::move(function))};
         }
 
@@ -751,6 +794,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function);
         /** @overload */
         DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function);
+        /** @overload */
+        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position, const Vector2& offset)>&& function);
 
         /**
          * @brief Scoped connection to a drag or scroll
@@ -767,6 +812,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
             return EventConnection{*this, onDragOrScroll(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position, const Vector2& offset)>&& function) {
+            return EventConnection{*this, onDragOrScroll(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a two-finger pinch, zoom or pan gesture
@@ -777,9 +826,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * event from a child node. It receives a node-relative centroid
          * position between the two presses, translation of the centroid
          * relative to previous state of the two fingers, their relative
-         * rotation and scaling. @ref Platform::TwoFingerGesture is used
-         * internally, see its documentation for more information. Expects that
-         * the @p function is not @cpp nullptr @ce.
+         * rotation and scaling, and optionally also event time.
+         * @ref Platform::TwoFingerGesture is used internally, see its
+         * documentation for more information. Expects that the @p function is
+         * not @cpp nullptr @ce.
          *
          * By default, the gesture is tracked as long as the primary finger is
          * pressed, even if the fingers are outside of the node area. If
@@ -802,6 +852,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref PointerMoveEvent::isFallthrough()
          */
         DataHandle onPinch(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& function);
+        /** @overload */
+        DataHandle onPinch(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& function);
 
         /**
          * @brief Scoped connection to a two-finger pinch, zoom or pan gesture
@@ -814,14 +866,19 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onPinchScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& function) {
             return EventConnection{*this, onPinch(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onPinchScoped(NodeHandle node, Containers::Function<void(Nanoseconds time, const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& function) {
+            return EventConnection{*this, onPinch(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a pointer enter
          * @return New data handle
          *
-         * The @p function is called when a primary pointer moves over the
-         * @p node area, and it isn't a fallthrough event from a child node.
-         * Expects that the @p function is not @cpp nullptr @ce.
+         * The @p function, optionally receiving also event time, is called
+         * when a primary pointer moves over the @p node area, and it isn't a
+         * fallthrough event from a child node. Expects that the @p function is
+         * not @cpp nullptr @ce.
          *
          * Use @ref onLeave() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
@@ -833,6 +890,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref PointerMoveEvent::isFallthrough()
          */
         DataHandle onEnter(NodeHandle node, Containers::Function<void()>&& function);
+        /** @overload */
+        DataHandle onEnter(NodeHandle node, Containers::Function<void(Nanoseconds time)>&& function);
 
         /**
          * @brief Scoped connection to a pointer enter
@@ -845,14 +904,19 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onEnterScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onEnter(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onEnterScoped(NodeHandle node, Containers::Function<void(Nanoseconds time)>&& function) {
+            return EventConnection{*this, onEnter(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a pointer leave
          * @return New data handle
          *
-         * The @p function is called when a primary pointer moves out of the
-         * @p node area, and it isn't a fallthrough event from a child node.
-         * Expects that the @p function is not @cpp nullptr @ce.
+         * The @p function, optionally receiving also event time, is called
+         * when a primary pointer moves out of the @p node area, and it isn't a
+         * fallthrough event from a child node. Expects that the @p function is
+         * not @cpp nullptr @ce.
          *
          * Use @ref onEnter() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
@@ -864,6 +928,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref PointerMoveEvent::isFallthrough()
          */
         DataHandle onLeave(NodeHandle node, Containers::Function<void()>&& function);
+        /** @overload */
+        DataHandle onLeave(NodeHandle node, Containers::Function<void(Nanoseconds time)>&& function);
 
         /**
          * @brief Scoped connection to a pointer leave
@@ -876,13 +942,18 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onLeaveScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onLeave(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onLeaveScoped(NodeHandle node, Containers::Function<void(Nanoseconds time)>&& function) {
+            return EventConnection{*this, onLeave(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a focus
          * @return New data handle
          *
-         * The @p function is called when a @p node is focused. Expects that
-         * the @p function is not @cpp nullptr @ce.
+         * The @p function, optionally receiving also event time, is called
+         * when a @p node is focused. Expects that the @p function is not
+         * @cpp nullptr @ce.
          *
          * Use @ref onBlur() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
@@ -892,6 +963,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur
          */
         DataHandle onFocus(NodeHandle node, Containers::Function<void()>&& function);
+        /** @overload */
+        DataHandle onFocus(NodeHandle node, Containers::Function<void(Nanoseconds time)>&& function);
 
         /**
          * @brief Scoped connection to a focus
@@ -904,13 +977,18 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onFocusScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onFocus(node, Utility::move(function))};
         }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onFocusScoped(NodeHandle node, Containers::Function<void(Nanoseconds time)>&& function) {
+            return EventConnection{*this, onFocus(node, Utility::move(function))};
+        }
 
         /**
          * @brief Connect to a blur
          * @return New data handle
          *
-         * The @p function is called when the @p node is blurred. Expects that
-         * the @p function is not @cpp nullptr @ce.
+         * The @p function, optionally receiving also event time, is called
+         * when the @p node is blurred. Expects that the @p function is not
+         * @cpp nullptr @ce.
          *
          * Use @ref onFocus() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
@@ -920,6 +998,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur
          */
         DataHandle onBlur(NodeHandle node, Containers::Function<void()>&& function);
+        /** @overload */
+        DataHandle onBlur(NodeHandle node, Containers::Function<void(Nanoseconds time)>&& function);
 
         /**
          * @brief Scoped connection to a pointer leave
@@ -930,6 +1010,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @see @ref Ui-EventLayer-create
          */
         CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onBlurScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onBlur(node, Utility::move(function))};
+        }
+        /** @overload */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onBlurScoped(NodeHandle node, Containers::Function<void(Nanoseconds time)>&& function) {
             return EventConnection{*this, onBlur(node, Utility::move(function))};
         }
 

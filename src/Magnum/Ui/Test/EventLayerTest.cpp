@@ -183,12 +183,22 @@ const struct {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
             layer.pointerPressEvent(dataId, event);
         }},
+    {_cn("onPress with a position and time", onPress, Nanoseconds, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+            layer.pointerPressEvent(dataId, event);
+        }},
     {_c(onRelease, ),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_cn("onRelease with a position", onRelease, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+            layer.pointerReleaseEvent(dataId, event);
+        }},
+    {_cn("onRelease with a position and time", onRelease, Nanoseconds, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
             layer.pointerReleaseEvent(dataId, event);
@@ -200,6 +210,12 @@ const struct {
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_cn("onTapOrClick with a position", onTapOrClick, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            /* Yes, this uses the horrific testing-only constructor */
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {}, true, {1.0f, 1.0f}};
+            layer.pointerReleaseEvent(dataId, event);
+        }},
+    {_cn("onTapOrClick with a position and time", onTapOrClick, Nanoseconds, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Yes, this uses the horrific testing-only constructor */
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {}, true, {1.0f, 1.0f}};
@@ -217,6 +233,12 @@ const struct {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {}, true, {1.0f, 1.0f}};
             layer.pointerReleaseEvent(dataId, event);
         }},
+    {_cn("onMiddleClick with a position and time", onMiddleClick, Nanoseconds, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            /* Yes, this uses the horrific testing-only constructor */
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {}, true, {1.0f, 1.0f}};
+            layer.pointerReleaseEvent(dataId, event);
+        }},
     {_c(onRightClick, ),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Yes, this uses the horrific testing-only constructor */
@@ -224,6 +246,12 @@ const struct {
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_cn("onRightClick with a position", onRightClick, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            /* Yes, this uses the horrific testing-only constructor */
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {}, true, {1.0f, 1.0f}};
+            layer.pointerReleaseEvent(dataId, event);
+        }},
+    {_cn("onRightClick with a position and time", onRightClick, Nanoseconds, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Yes, this uses the horrific testing-only constructor */
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {}, true, {1.0f, 1.0f}};
@@ -241,12 +269,23 @@ const struct {
             event.setCaptured(true); /* only captured events are considered */
             layer.pointerMoveEvent(dataId, event);
         }},
+    {_cn("onDrag with a position and time", onDrag, Nanoseconds, const Vector2&, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
+            event.setCaptured(true); /* only captured events are considered */
+            layer.pointerMoveEvent(dataId, event);
+        }},
     {_c(onScroll, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             ScrollEvent event{{}, {}, {}};
             layer.scrollEvent(dataId, event);
         }},
     {_cn("onScroll with a position", onScroll, const Vector2&, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            ScrollEvent event{{}, {}, {}};
+            layer.scrollEvent(dataId, event);
+        }},
+    {_cn("onScroll with a position and time", onScroll, Nanoseconds, const Vector2&, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             ScrollEvent event{{}, {}, {}};
             layer.scrollEvent(dataId, event);
@@ -263,12 +302,23 @@ const struct {
             event.setCaptured(true); /* only captured events are considered */
             layer.pointerMoveEvent(dataId, event);
         }},
+    {_cn("onDragOrScroll with a drag and a position & time", onDragOrScroll, Nanoseconds, const Vector2&, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
+            event.setCaptured(true); /* only captured events are considered */
+            layer.pointerMoveEvent(dataId, event);
+        }},
     {_cn("onDragOrScroll with a scroll", onDragOrScroll, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             ScrollEvent event{{}, {}, {}};
             layer.scrollEvent(dataId, event);
         }},
     {_cn("onDragOrScroll with a scroll and a position", onDragOrScroll, const Vector2&, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            ScrollEvent event{{}, {}, {}};
+            layer.scrollEvent(dataId, event);
+        }},
+    {_cn("onDragOrScroll with a scroll and a position & time", onDragOrScroll, Nanoseconds, const Vector2&, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             ScrollEvent event{{}, {}, {}};
             layer.scrollEvent(dataId, event);
@@ -284,7 +334,23 @@ const struct {
             layer.pointerPressEvent(dataId, secondary);
             layer.pointerMoveEvent(dataId, move);
         }},
+    {_cn("onPinch with time", onPinch, Nanoseconds, const Vector2&, const Vector2&, const Complex&, Float),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            /* Is triggered only if at least a primary + secondary finger is
+               pressed and one of them is moved */
+            PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 12, {}};
+            PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 34, {}};
+            PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 34, {}};
+            layer.pointerPressEvent(dataId, primary);
+            layer.pointerPressEvent(dataId, secondary);
+            layer.pointerMoveEvent(dataId, move);
+        }},
     {_c(onEnter, ),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
+            layer.pointerEnterEvent(dataId, event);
+        }},
+    {_cn("onEnter with time", onEnter, Nanoseconds),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
             layer.pointerEnterEvent(dataId, event);
@@ -294,12 +360,27 @@ const struct {
             PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
             layer.pointerLeaveEvent(dataId, event);
         }},
+    {_cn("onLeave with time", onLeave, Nanoseconds),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
+            layer.pointerLeaveEvent(dataId, event);
+        }},
     {_c(onFocus, ),
         [](EventLayer& layer, UnsignedInt dataId) {
             FocusEvent event{{}};
             layer.focusEvent(dataId, event);
         }},
+    {_cn("onFocus with time", onFocus, Nanoseconds),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            FocusEvent event{{}};
+            layer.focusEvent(dataId, event);
+        }},
     {_c(onBlur, ),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            FocusEvent event{{}};
+            layer.blurEvent(dataId, event);
+        }},
+    {_cn("onBlur with time", onBlur, Nanoseconds),
         [](EventLayer& layer, UnsignedInt dataId) {
             FocusEvent event{{}};
             layer.blurEvent(dataId, event);
@@ -311,10 +392,16 @@ const struct {
     const char* name;
     NodeFlags flags;
     bool parent;
+    bool timeFunction;
 } FromUserInterfaceData[]{
-    {"with a node below", {}, false},
+    {"with a node below",
+        {}, false, false},
+    {"with a node below, time function",
+        {}, false, true},
     {"with a fallthrough parent node",
-        NodeFlag::FallthroughPointerEvents, true}
+        NodeFlag::FallthroughPointerEvents, true, false},
+    {"with a fallthrough parent node, time function",
+        NodeFlag::FallthroughPointerEvents, true, true}
 };
 
 const struct {
@@ -342,12 +429,15 @@ const struct {
 const struct {
     const char* name;
     bool positionFunction;
+    bool timeFunction;
     bool dragOrScroll;
 } DragFromUserInterfaceFallthroughThresholdData[]{
-    {"", false, false},
-    {"with position function", true, false},
-    {"drag or scroll", false, true},
-    {"drag or scroll, with position function", true, true}
+    {"", false, false, false},
+    {"with position function", true, false, false},
+    {"with position & time function", true, true, false},
+    {"drag or scroll", false, false, true},
+    {"drag or scroll, with position function", true, false, true},
+    {"drag or scroll, with position & time function", true, true, true}
 };
 
 const struct {
@@ -832,7 +922,9 @@ void EventLayerTest::invalidFunction() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.onBlur(nodeHandle(0, 1), nullptr);
+    /* Can't pass just nullptr as all on*() handlers have overloads, at the
+       very least one taking a Nanoseconds argument */
+    layer.onBlur(nodeHandle(0, 1), Containers::Function<void()>{});
     CORRADE_COMPARE(out, "Ui::EventLayer: function is null\n");
 }
 
@@ -1364,8 +1456,8 @@ void EventLayerTest::pressReleaseFromUserInterface() {
         ++belowCalled;
     });
 
-    Int pressCalled = 0, pressPositionCalled = 0,
-        releaseCalled = 0, releasePositionCalled = 0;
+    Int pressCalled = 0, pressPositionCalled = 0, pressPositionTimeCalled = 0,
+        releaseCalled = 0, releasePositionCalled = 0, releasePositionTimeCalled = 0;
     NodeHandle node = ui.createNode(
         data.parent ? nodeBelow : NodeHandle::Null,
         {25, 50}, {50, 25});
@@ -1376,6 +1468,11 @@ void EventLayerTest::pressReleaseFromUserInterface() {
         CORRADE_COMPARE(position, (Vector2{25.0f, 20.0f}));
         ++pressPositionCalled;
     });
+    layer.onPress(node, [&pressPositionTimeCalled](Nanoseconds time, const Vector2& position) {
+        CORRADE_COMPARE(time, 42069_nsec);
+        CORRADE_COMPARE(position, (Vector2{25.0f, 20.0f}));
+        ++pressPositionTimeCalled;
+    });
     layer.onRelease(node, [&releaseCalled]{
         ++releaseCalled;
     });
@@ -1383,31 +1480,40 @@ void EventLayerTest::pressReleaseFromUserInterface() {
         CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
         ++releasePositionCalled;
     });
+    layer.onRelease(node, [&releasePositionTimeCalled](Nanoseconds time, const Vector2& position) {
+        CORRADE_COMPARE(time, 69420_nsec);
+        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+        ++releasePositionTimeCalled;
+    });
 
     /* A press should be accepted and resulting in the press handler being
        called */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent event{42069_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(pressCalled, 1);
         CORRADE_COMPARE(pressPositionCalled, 1);
+        CORRADE_COMPARE(pressPositionTimeCalled, 1);
         CORRADE_COMPARE(releaseCalled, 0);
         CORRADE_COMPARE(releasePositionCalled, 0);
+        CORRADE_COMPARE(releasePositionTimeCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A release should be accepted and resulting in the release handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent event{69420_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(pressCalled, 1);
         CORRADE_COMPARE(pressPositionCalled, 1);
+        CORRADE_COMPARE(pressPositionTimeCalled, 1);
         CORRADE_COMPARE(releaseCalled, 1);
         CORRADE_COMPARE(releasePositionCalled, 1);
+        CORRADE_COMPARE(releasePositionTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -1602,7 +1708,7 @@ void EventLayerTest::tapOrClickFromUserInterface() {
         ++belowCalled;
     });
 
-    Int called = 0, positionCalled = 0;
+    Int called = 0, positionCalled = 0, positionTimeCalled = 0;
     NodeHandle node = ui.createNode(
         data.parent ? nodeBelow : NodeHandle::Null,
         {25, 50}, {50, 25});
@@ -1613,50 +1719,60 @@ void EventLayerTest::tapOrClickFromUserInterface() {
         CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
         ++positionCalled;
     });
+    layer.onTapOrClick(node, [&positionTimeCalled](Nanoseconds time, const Vector2& position) {
+        /* It should get the release time, not the press */
+        CORRADE_COMPARE(time, 69420_nsec);
+        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+        ++positionTimeCalled;
+    });
 
     /* A press should be accepted but not resulting in the handler being
        called */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent event{42069_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(positionCalled, 0);
+        CORRADE_COMPARE(positionTimeCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A release should be accepted as well, resulting in the handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent event{69420_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
+        CORRADE_COMPARE(positionTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* The press and release pointer type or source doesn't have to match,
        currently */
     } {
-        PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
-        PointerEvent release{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
+        PointerEvent press{42069_nsec, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        PointerEvent release{69420_nsec, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, release));
         CORRADE_COMPARE(called, 2);
         CORRADE_COMPARE(positionCalled, 2);
+        CORRADE_COMPARE(positionTimeCalled, 2);
         CORRADE_COMPARE(belowCalled, 0);
 
-    /* Press with release outside shouldn't cause a tap or click */
+    /* Press with release outside shouldn't cause a click */
     } {
-        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent press{42069_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent release{69420_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_VERIFY(!ui.pointerReleaseEvent({100, 65}, release));
         CORRADE_COMPARE(called, 2);
         CORRADE_COMPARE(positionCalled, 2);
+        CORRADE_COMPARE(positionTimeCalled, 2);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -1842,7 +1958,7 @@ void EventLayerTest::middleClickFromUserInterface() {
         ++belowCalled;
     });
 
-    Int called = 0, positionCalled = 0;
+    Int called = 0, positionCalled = 0, positionTimeCalled = 0;
     NodeHandle node = ui.createNode(
         data.parent ? nodeBelow : NodeHandle::Null,
         {25, 50}, {50, 25});
@@ -1853,39 +1969,48 @@ void EventLayerTest::middleClickFromUserInterface() {
         CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
         ++positionCalled;
     });
+    layer.onMiddleClick(node, [&positionTimeCalled](Nanoseconds time, const Vector2& position) {
+        /* It should get the release time, not the press */
+        CORRADE_COMPARE(time, 69420_nsec);
+        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+        ++positionTimeCalled;
+    });
 
     /* A press should be accepted but not resulting in the handler being
        called */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
+        PointerEvent event{42069_nsec, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(positionCalled, 0);
+        CORRADE_COMPARE(positionTimeCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A release should be accepted as well, resulting in the handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
+        PointerEvent event{69420_nsec, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
+        CORRADE_COMPARE(positionTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
-    /* Press with release outside shouldn't cause a tap or click */
+    /* Press with release outside shouldn't cause a click */
     } {
-        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
-        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
+        PointerEvent press{42069_nsec, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
+        PointerEvent release{69420_nsec, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_VERIFY(!ui.pointerReleaseEvent({100, 65}, release));
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
+        CORRADE_COMPARE(positionTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -2075,7 +2200,7 @@ void EventLayerTest::rightClickFromUserInterface() {
         ++belowCalled;
     });
 
-    Int called = 0, positionCalled = 0;
+    Int called = 0, positionCalled = 0, positionTimeCalled = 0;
     NodeHandle node = ui.createNode(
         data.parent ? nodeBelow : NodeHandle::Null,
         {25, 50}, {50, 25});
@@ -2086,39 +2211,48 @@ void EventLayerTest::rightClickFromUserInterface() {
         CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
         ++positionCalled;
     });
+    layer.onRightClick(node, [&positionTimeCalled](Nanoseconds time, const Vector2& position) {
+        /* It should get the release time, not the press */
+        CORRADE_COMPARE(time, 69420_nsec);
+        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+        ++positionTimeCalled;
+    });
 
     /* A press should be accepted but not resulting in the handler being
        called */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
+        PointerEvent event{42069_nsec, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(positionCalled, 0);
+        CORRADE_COMPARE(positionTimeCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A release should be accepted as well, resulting in the handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
+        PointerEvent event{69420_nsec, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
+        CORRADE_COMPARE(positionTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* Press with release outside shouldn't cause a tap or click */
     } {
-        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
-        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
+        PointerEvent press{42069_nsec, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
+        PointerEvent release{69420_nsec, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_VERIFY(!ui.pointerReleaseEvent({100, 65}, release));
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
+        CORRADE_COMPARE(positionTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -2461,54 +2595,69 @@ void EventLayerTest::dragFromUserInterface() {
         layer.onDragOrScroll(node, positionFunction) :
         layer.onDrag(node, positionFunction);
 
+    Int positionTimeCalled = 0;
+    auto positionTimeFunction = [&positionTimeCalled](Nanoseconds time, const Vector2& position, const Vector2& offset) {
+        CORRADE_COMPARE(time, 69420_nsec);
+        CORRADE_COMPARE(position, (Vector2{20.0f, 5.0f}));
+        CORRADE_COMPARE(offset, (Vector2{-5.0f, -10.0f}));
+        ++positionTimeCalled;
+    };
+    data.dragOrScroll ?
+        layer.onDragOrScroll(node, positionTimeFunction) :
+        layer.onDrag(node, positionTimeFunction);
+
     /* A move alone with a button pressed but no captured node shouldn't be
        accepted because it means it originates outside of the UI, and such
        events shouldn't lead to things being dragged. */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 0, {}};
+        PointerMoveEvent event{69420_nsec, PointerEventSource::Touch, {}, Pointer::Finger, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(positionCalled, 0);
+        CORRADE_COMPARE(positionTimeCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A press should be accepted but not resulting in the handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        PointerEvent event{42069_nsec, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(positionCalled, 0);
+        CORRADE_COMPARE(positionTimeCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A move with a node captured but without any pointer pressed should be
        ignored. This isn't likely to happen unless the application drops the
        release events somehow. */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
+        PointerMoveEvent event{69420_nsec, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(positionCalled, 0);
+        CORRADE_COMPARE(positionTimeCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A move with a pointer pressed with a node captured should be treated as
        a drag */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Pen, true, 0, {}};
+        PointerMoveEvent event{69420_nsec, PointerEventSource::Pen, {}, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({45, 55}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
+        CORRADE_COMPARE(positionTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -2528,26 +2677,32 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
 
     Vector2 belowCalled;
     NodeHandle nodeBelow = ui.createNode({}, {100, 100}, NodeFlag::FallthroughPointerEvents);
-    /* Verify that both variants of the function get the same data for the
+    /* Verify that all variants of the function get the same data for the
        initial jump */
     /** @todo once it's possible to have multiple fallback onDrag handlers for
-        the same node, add them both instead of having an instanced test
-        case */
-    if(data.positionFunction) {
+        the same node, add them all instead of having an instanced test case */
+    if(data.positionFunction && data.timeFunction) {
+        auto function = [&belowCalled](Nanoseconds, const Vector2&, const Vector2& offset) {
+            belowCalled += offset;
+        };
+        data.dragOrScroll ?
+            layer.onDragOrScroll(nodeBelow, function) :
+            layer.onDrag(nodeBelow, function);
+    } else if(data.positionFunction && !data.timeFunction) {
         auto function = [&belowCalled](const Vector2&, const Vector2& offset) {
             belowCalled += offset;
         };
         data.dragOrScroll ?
             layer.onDragOrScroll(nodeBelow, function) :
             layer.onDrag(nodeBelow, function);
-    } else {
+    } else if(!data.positionFunction && !data.timeFunction) {
         auto function = [&belowCalled](const Vector2& offset) {
             belowCalled += offset;
         };
         data.dragOrScroll ?
             layer.onDragOrScroll(nodeBelow, function) :
             layer.onDrag(nodeBelow, function);
-    }
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
     Int betweenCalled = 0;
     NodeHandle nodeBetween = ui.createNode(nodeBelow, {}, {100, 100});
@@ -2825,9 +2980,24 @@ void EventLayerTest::scrollFromUserInterface() {
             ++positionCalled;
         });
 
+    Int positionTimeCalled = 0;
+    data.dragOrScroll ?
+        layer.onDragOrScroll(node, [&positionTimeCalled, &data](Nanoseconds time, const Vector2& position, const Vector2& offset) {
+            CORRADE_COMPARE(time, 42069_nsec);
+            CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+            CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}*data.offsetMultiplier));
+            ++positionTimeCalled;
+        }) :
+        layer.onScroll(node, [&positionTimeCalled](Nanoseconds time, const Vector2& position, const Vector2& offset) {
+            CORRADE_COMPARE(time, 42069_nsec);
+            CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+            CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}));
+            ++positionTimeCalled;
+        });
+
     /* A scroll should be accepted and resulting in the handler being called */
     {
-        ScrollEvent event{{}, {2.3f, -4.7f}, {}};
+        ScrollEvent event{42069_nsec, {2.3f, -4.7f}, {}};
         CORRADE_VERIFY(ui.scrollEvent({50, 65}, event));
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
@@ -3284,19 +3454,31 @@ void EventLayerTest::pinchFromUserInterface() {
         Complex relativeRotation;
         Float relativeScaling;
     } expected;
-    DataHandle nodeData = layer.onPinch(node, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling) {
-        CORRADE_COMPARE(position, expected.position);
-        CORRADE_COMPARE(relativeTranslation, expected.relativeTranslation);
-        CORRADE_COMPARE(relativeRotation, expected.relativeRotation);
-        CORRADE_COMPARE(relativeScaling, expected.relativeScaling);
-        ++called;
-    });
+    /** @todo once it's possible to have multiple onPinch handlers for the same
+        node, add them all instead of having an instanced test case */
+    DataHandle nodeData = data.timeFunction ?
+        layer.onPinch(node, [&called, &expected](Nanoseconds time, const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling) {
+            /* It should get the move time, not the presses or releases */
+            CORRADE_COMPARE(time, 69420_nsec);
+            CORRADE_COMPARE(position, expected.position);
+            CORRADE_COMPARE(relativeTranslation, expected.relativeTranslation);
+            CORRADE_COMPARE(relativeRotation, expected.relativeRotation);
+            CORRADE_COMPARE(relativeScaling, expected.relativeScaling);
+            ++called;
+        }) :
+        layer.onPinch(node, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling) {
+            CORRADE_COMPARE(position, expected.position);
+            CORRADE_COMPARE(relativeTranslation, expected.relativeTranslation);
+            CORRADE_COMPARE(relativeRotation, expected.relativeRotation);
+            CORRADE_COMPARE(relativeScaling, expected.relativeScaling);
+            ++called;
+        });
 
     /* Presses for the two tracked fingers should be accepted but not resulting
        in the handler being called */
     {
-        PointerEvent event1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
-        PointerEvent event2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
+        PointerEvent event1{42069_nsec, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
+        PointerEvent event2{42069_nsec, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event1));
         CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, event2));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -3313,7 +3495,7 @@ void EventLayerTest::pinchFromUserInterface() {
         expected.relativeRotation = Complex::rotation(180.0_degf);
         expected.relativeScaling = 1.0f;
 
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
+        PointerMoveEvent event{69420_nsec, PointerEventSource::Touch, {}, {}, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3324,7 +3506,7 @@ void EventLayerTest::pinchFromUserInterface() {
     /* A press of another finger should be ignored, and since there's a
        capture, it shouldn't fall through either */
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 1226, {}};
+        PointerEvent event{42069_nsec, PointerEventSource::Touch, Pointer::Finger, false, 1226, {}};
         CORRADE_VERIFY(!ui.pointerPressEvent({50, 75}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3335,7 +3517,7 @@ void EventLayerTest::pinchFromUserInterface() {
     /* A release of one of the fingers should be accepted. Move of that finger
        then doesn't get accepted. */
     } {
-        PointerEvent release{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
+        PointerEvent release{69420_nsec, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 55}, release));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3343,7 +3525,7 @@ void EventLayerTest::pinchFromUserInterface() {
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
-        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
+        PointerMoveEvent move{69420_nsec, PointerEventSource::Touch, {}, {}, false, 3371, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, move));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3354,7 +3536,7 @@ void EventLayerTest::pinchFromUserInterface() {
     /* A press of another finger from above is accepted now, and a subsequent
        move of even the primary finger generates another pinch. */
     } {
-        PointerEvent press{{}, PointerEventSource::Touch, Pointer::Finger, false, 1226, {}};
+        PointerEvent press{69420_nsec, PointerEventSource::Touch, Pointer::Finger, false, 1226, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 65}, press));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3367,7 +3549,7 @@ void EventLayerTest::pinchFromUserInterface() {
         expected.relativeRotation = Complex::rotation(180.0_degf);
         expected.relativeScaling = 1.0f;
 
-        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, true, 633, {}};
+        PointerMoveEvent move{69420_nsec, PointerEventSource::Touch, {}, {}, true, 633, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 60}, move));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3386,7 +3568,7 @@ void EventLayerTest::pinchFromUserInterface() {
 
         /* Move of the primary finger isn't even accepted now because the
            gesture recognizer doesn't track it as pressed */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, {}, true, 633, {}};
+        PointerMoveEvent move1{69420_nsec, PointerEventSource::Touch, {}, {}, true, 633, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, move1));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
@@ -3400,9 +3582,9 @@ void EventLayerTest::pinchFromUserInterface() {
         expected.relativeRotation = Complex::rotation(180.0_degf);
         expected.relativeScaling = 1.0f;
 
-        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
-        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
+        PointerEvent press1{42069_nsec, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
+        PointerEvent press2{42069_nsec, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
+        PointerMoveEvent move2{69420_nsec, PointerEventSource::Touch, {}, {}, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
         CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move2));
@@ -3431,7 +3613,7 @@ void EventLayerTest::pinchFromUserInterface() {
 
         /* Move of the primary finger isn't even accepted now because the
            gesture recognizer doesn't track it as pressed */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, {}, true, 633, {}};
+        PointerMoveEvent move1{69420_nsec, PointerEventSource::Touch, {}, {}, true, 633, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, move1));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
@@ -3445,9 +3627,9 @@ void EventLayerTest::pinchFromUserInterface() {
         expected.relativeRotation = Complex::rotation(180.0_degf);
         expected.relativeScaling = 1.0f;
 
-        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
-        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
+        PointerEvent press1{42069_nsec, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
+        PointerEvent press2{42069_nsec, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
+        PointerMoveEvent move2{69420_nsec, PointerEventSource::Touch, {}, {}, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
         CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move2));
@@ -3903,35 +4085,48 @@ void EventLayerTest::enterLeaveFromUserInterface() {
         ++belowCalled;
     });
 
-    Int enterCalled = 0, leaveCalled = 0;
+    Int enterCalled = 0, enterTimeCalled = 0,
+        leaveCalled = 0, leaveTimeCalled = 0;
     NodeHandle node = ui.createNode(
         data.parent ? nodeBelow : NodeHandle::Null,
         {25, 50}, {50, 25});
     layer.onEnter(node, [&enterCalled]{
         ++enterCalled;
     });
+    layer.onEnter(node, [&enterTimeCalled](Nanoseconds time) {
+        CORRADE_COMPARE(time, 42069_nsec);
+        ++enterTimeCalled;
+    });
     layer.onLeave(node, [&leaveCalled]{
         ++leaveCalled;
+    });
+    layer.onLeave(node, [&leaveTimeCalled](Nanoseconds time) {
+        CORRADE_COMPARE(time, 69420_nsec);
+        ++leaveTimeCalled;
     });
 
     /* A move onto the node should result in the enter handler being called */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
+        PointerMoveEvent event{42069_nsec, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(enterCalled, 1);
+        CORRADE_COMPARE(enterTimeCalled, 1);
         CORRADE_COMPARE(leaveCalled, 0);
+        CORRADE_COMPARE(leaveTimeCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A move out (and out of the below node as well) should result in the
        leave handler being called */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
+        PointerMoveEvent event{69420_nsec, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         /* There's no node underneath, so this didn't get accepted */
         CORRADE_VERIFY(!ui.pointerMoveEvent({150, 150}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(enterCalled, 1);
+        CORRADE_COMPARE(enterTimeCalled, 1);
         CORRADE_COMPARE(leaveCalled, 1);
+        CORRADE_COMPARE(leaveTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -4054,52 +4249,69 @@ void EventLayerTest::focusBlurFromUserInterface() {
         ++belowCalled;
     });
 
-    Int focusCalled = 0, blurCalled = 0;
+    Int focusCalled = 0, focusTimeCalled = 0,
+        blurCalled = 0, blurTimeCalled = 0;
     NodeHandle node = ui.createNode(
         data.parent ? nodeBelow : NodeHandle::Null,
         {25, 50}, {50, 25}, NodeFlag::Focusable);
     layer.onFocus(node, [&focusCalled]{
         ++focusCalled;
     });
+    layer.onFocus(node, [&focusTimeCalled](Nanoseconds time) {
+        CORRADE_COMPARE(time, 42069_nsec);
+        ++focusTimeCalled;
+    });
     layer.onBlur(node, [&blurCalled]{
         ++blurCalled;
+    });
+    layer.onBlur(node, [&blurTimeCalled](Nanoseconds time) {
+        CORRADE_COMPARE(time, 69420_nsec);
+        ++blurTimeCalled;
     });
 
     /* Focusing and blurring the node directly should work */
     {
-        FocusEvent event{{}};
+        FocusEvent event{42069_nsec};
         CORRADE_VERIFY(ui.focusEvent(node, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
         CORRADE_COMPARE(focusCalled, 1);
+        CORRADE_COMPARE(focusTimeCalled, 1);
         CORRADE_COMPARE(blurCalled, 0);
+        CORRADE_COMPARE(blurTimeCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
     } {
-        FocusEvent event{{}};
+        FocusEvent event{69420_nsec};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(focusCalled, 1);
+        CORRADE_COMPARE(focusTimeCalled, 1);
         CORRADE_COMPARE(blurCalled, 1);
+        CORRADE_COMPARE(blurTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A press on the node result in the focus handler being called as well,
        i.e. it should accept the event here as well */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent event{42069_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
         CORRADE_COMPARE(focusCalled, 2);
+        CORRADE_COMPARE(focusTimeCalled, 2);
         CORRADE_COMPARE(blurCalled, 1);
+        CORRADE_COMPARE(blurTimeCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A press outside (and out of the below node as well) should result in the
        blur handler being called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent event{69420_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         /* There's no node underneath, so this didn't get accepted */
         CORRADE_VERIFY(!ui.pointerPressEvent({150, 150}, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(focusCalled, 2);
+        CORRADE_COMPARE(focusTimeCalled, 2);
         CORRADE_COMPARE(blurCalled, 2);
+        CORRADE_COMPARE(blurTimeCalled, 2);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
