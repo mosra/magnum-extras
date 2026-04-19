@@ -3446,7 +3446,7 @@ void TextLayerGLTest::eventStyleTransition() {
 
     PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
     CORRADE_VERIFY(ui.pointerPressEvent({64.0f, 24.0f}, event));
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
 
     /* We have blending enabled, which means a subsequent draw would try to
        blend with the previous, causing unwanted difference */

@@ -236,8 +236,8 @@ void AbstractVisualLayer::setStyleInternal(const UnsignedInt id, const UnsignedI
     /** @todo this is too broad, LayerFeature::Layout may be used also by
         layers where the style doesn't necessarily (or always) affect the
         layout, or two styles may affect the layout the same way and thus this
-        isn't needed, etc; see also a todo in transitionStyleInternal() below;
-        plus the virtual call is rather nasty... */
+        isn't needed, etc; see similar in transitionStyleInternal() below; plus
+        the virtual call is rather nasty... */
     if(nodes()[id] != NodeHandle::Null && features() >= LayerFeature::Layout)
         setNeedsUpdate(LayerState::NeedsLayoutUpdate);
 }
@@ -530,13 +530,18 @@ void AbstractVisualLayer::transitionStyleInternal(
     if(animation == AnimationHandle::Null && persistentAnimation == AnimationHandle::Null) {
         style = nextStyle;
         setNeedsUpdate(LayerState::NeedsDataUpdate);
-        /** @todo might want to trigger also NeedsLayoutUpdate if the layer
-            exposes LayerFeature::Layout -- so far not doing this as it would
-            mean a lot of style triggers on hover and such even though nothing
-            actually may cause the layout to change (such as padding or text
-            size); similar nasty case is with style transitioning to disabled
-            which is done too late to trigger a layout change; here it'd also
-            mean calling the virtual doFeatures() every time :( */
+        /* If the data is attached and this is a layout layer, the style likely
+           affects layout properties. Trigger a layout update as well. If the
+           style transition is done by an animation, the animator may or may
+           not trigger a layout update depending on which exact properties get
+           animated. */
+        /** @todo this is too broad, LayerFeature::Layout may be used also by
+            layers where the style doesn't necessarily (or always) affect the
+            layout, or two styles may affect the layout the same way and thus
+            this isn't needed, etc; see similar in setStyleInternal() above;
+            plus the virtual call is rather nasty... */
+        if(nodes()[dataId] != NodeHandle::Null && features() >= LayerFeature::Layout)
+            setNeedsUpdate(LayerState::NeedsLayoutUpdate);
     }
 }
 
