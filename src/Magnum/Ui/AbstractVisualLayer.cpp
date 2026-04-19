@@ -263,20 +263,23 @@ void AbstractVisualLayer::transitionStyleInternal(const LayerDataHandle handle, 
         "Ui::AbstractVisualLayer::transitionStyle(): layer not part of a user interface", );
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
 
+    /* Perform the transition only if the data is attached */
     const NodeHandle node = this->node(handle);
-    const AbstractUserInterface& ui = this->ui();
-    const bool hovered = ui.currentHoveredNode() == node;
-    UnsignedInt(*transition)(UnsignedInt);
-    if(ui.currentPressedNode() == node) transition = hovered ?
-        sharedState.styleTransitionToPressedOver :
-        sharedState.styleTransitionToPressedOut;
-    else if(ui.currentFocusedNode() == node) transition = hovered ?
-        sharedState.styleTransitionToFocusedOver :
-        sharedState.styleTransitionToFocusedOut;
-    else transition = hovered ?
-        sharedState.styleTransitionToInactiveOver :
-        sharedState.styleTransitionToInactiveOut;
-    setStyleInternal(layerDataHandleId(handle), transition(style));
+    UnsignedInt(*transition)(UnsignedInt) = nullptr;
+    if(node != NodeHandle::Null) {
+        const AbstractUserInterface& ui = this->ui();
+        const bool hovered = ui.currentHoveredNode() == node;
+        if(ui.currentPressedNode() == node) transition = hovered ?
+            sharedState.styleTransitionToPressedOver :
+            sharedState.styleTransitionToPressedOut;
+        else if(ui.currentFocusedNode() == node) transition = hovered ?
+            sharedState.styleTransitionToFocusedOver :
+            sharedState.styleTransitionToFocusedOut;
+        else transition = hovered ?
+            sharedState.styleTransitionToInactiveOver :
+            sharedState.styleTransitionToInactiveOut;
+    }
+    setStyleInternal(layerDataHandleId(handle), transition ? transition(style) : style);
 }
 
 UnsignedInt AbstractVisualLayer::dynamicStyleUsedCount() const {
