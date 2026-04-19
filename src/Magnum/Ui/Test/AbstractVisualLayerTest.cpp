@@ -228,145 +228,154 @@ const struct {
     bool transitionAnimation, transitionAnimationNoOp;
     bool persistentAnimation, persistentAnimationNoOp;
     bool expectAnimation;
+    LayerFeatures extraLayerFeatures;
     AnimationFlags animationFlags;
     Modifiers modifiers;
 } EventStyleTransitionData[]{
     {"update before",
         true, false, false, false,
         false, false, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"",
         false, false, false, false,
         false, false, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
+    {"layout layer",
+        false, false, false, false,
+        false, false, false, false,
+        false, LayerFeature::Layout, {}, {}},
     {"default animator set but no animators",
         false, false, false, true,
         false, false, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"default animator set and no-op transition animations",
         false, false, false, true,
         true, true, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"default animator set and no-op persistent animations",
         false, false, false, true,
         false, false, true, true,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"default animator set and transition animations",
         false, false, false, true,
         true, false, false, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"default animator set and persistent animations",
         false, false, false, true,
         false, false, true, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"default animator set and no-op transition & persistent animations",
         false, false, false, true,
         true, true, true, true,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"default animator set, no-op transition animations and persistent animations",
         false, false, false, true,
         true, true, true, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"default animator set, transition animations and no-op persistent animations",
         false, false, false, true,
         true, false, true, true,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"default animator set and transition & persistent animations",
         false, false, false, true,
         true, false, true, false,
-        true, {}, {}},
+        true, {}, {}, {}},
+    {"default animator set and transition & persistent animations, layout layer",
+        false, false, false, true,
+        true, false, true, false,
+        true, LayerFeature::Layout, {}, {}},
     {"no default animator set but transition & persistent animations",
         false, false, false, false,
         true, false, true, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"with keyboard modifiers",
         false, false, false, false,
         false, false, false, false,
-        false, {}, Modifier::Shift|Modifier::Ctrl},
+        false, {}, {}, Modifier::Shift|Modifier::Ctrl},
     {"templated, update before",
         true, true, false, false,
         false, false, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"templated",
         false, true, false, false,
         false, false, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"templated, default animator set and no-op transition animations",
         false, true, false, true,
         true, true, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"templated, default animator set and no-op persistent animations",
         false, true, false, true,
         false, false, true, true,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"templated, default animator set and transition animations",
         false, true, false, true,
         true, false, false, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"templated, default animator set and persistent animations",
         false, true, false, true,
         false, false, true, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"templated, default animator set and no-op transition & persistent animations",
         false, true, false, true,
         true, true, true, true,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"templated, default animator set, no-op transition animations and persistent animations",
         false, true, false, true,
         true, true, true, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"templated, default animator set, transition animations and no-op persistent animations",
         false, true, false, true,
         true, false, true, true,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"templated, default animator set and transition & persistent animations",
         false, true, false, true,
         true, false, true, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"dynamic animated style with target style being set, update before",
         true, false, true, true,
         false, false, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"dynamic animated style with target style being set",
         false, false, true, true,
         false, false, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"dynamic animated style with target style being set, reverse",
         false, false, true, true,
         false, false, false, false,
-        false, AnimationFlag::Reverse, {}},
+        false, {}, AnimationFlag::Reverse, {}},
     {"dynamic animated style with target style being set, no-op transition animations",
         false, false, true, true,
         true, true, false, false,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"dynamic animated style with target style being set, no-op persistent animations",
         false, false, true, true,
         false, false, true, true,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"dynamic animated style with target style being set, transition animations",
         false, false, true, true,
         true, false, false, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"dynamic animated style with target style being set, persistent animations",
         false, false, true, true,
         false, false, true, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"dynamic animated style with target style being set, no-op transition & persistent animations",
         false, false, true, true,
         true, true, true, true,
-        false, {}, {}},
+        false, {}, {}, {}},
     {"dynamic animated style with target style being set, no-op transition animations and persistent animations",
         false, false, true, true,
         true, true, true, false,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"dynamic animated style with target style being set, transition animations and no-op persistent animations",
         false, false, true, true,
         true, false, true, true,
-        true, {}, {}},
+        true, {}, {}, {}},
     {"dynamic animated style with target style being set, transition & persistent animations",
         false, false, true, true,
         true, false, true, false,
-        true, {}, {}},
+        true, {}, {}, {}},
 };
 
 const struct {
@@ -1012,6 +1021,13 @@ struct StyleLayer: AbstractVisualLayer {
         }
 
         setNeedsUpdate(LayerState::NeedsDataUpdate);
+        /* Trigger also a layout update if it's a layout layer. In practice the
+           animators may set this only if actually changing properties that
+           affect layouts, do it here always to uncover cases where e.g. using
+           and not using an animator to switch a style would lead to LayerState
+           being set inconsistently. */
+        if(_extraFeatures >= LayerFeature::Layout)
+            setNeedsUpdate(LayerState::NeedsLayoutUpdate);
     }
 
     Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> data;
@@ -3029,7 +3045,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     NodeHandle nodeBlue = ui.createNode(nodeFallthrough, {1.0f, 5.0f}, {2.0f, 2.0f});
     NodeHandle nodeWhite = ui.createNode(nodeFallthrough, {4.0f, 5.0f}, {2.0f, 2.0f});
 
-    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared, data.extraLayerFeatures));
     /* One extra data to verify it's mapping from nodes to data correctly */
     layer.create(StyleIndex::Green);
     DataHandle dataFallthrough = layer.create(StyleIndex::Green, nodeFallthrough);
@@ -3103,7 +3119,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenPressed));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3128,7 +3144,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 1 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     /* Presence (or not) of the update call tests two things -- that the
@@ -3171,7 +3187,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::Green));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3196,7 +3212,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 2 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3235,7 +3251,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::RedHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataRed);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3260,7 +3276,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 3 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3299,7 +3315,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::RedPressedHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataRed);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3324,7 +3340,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 4 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3364,7 +3380,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::RedPressed));
             CORRADE_COMPARE(animator->data(createdAnimation), dataRed);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressed);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3389,7 +3405,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 5 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3428,7 +3444,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::RedPressedHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataRed);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3453,7 +3469,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 6 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3492,7 +3508,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::RedHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataRed);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3517,7 +3533,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 7 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3556,7 +3572,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::Red));
             CORRADE_COMPARE(animator->data(createdAnimation), dataRed);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3581,7 +3597,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 8 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3626,7 +3642,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenFocused));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocused);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3651,7 +3667,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 9 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3690,7 +3706,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenFocusedHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3715,7 +3731,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 10 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3755,7 +3771,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenPressedHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3780,7 +3796,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 11 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3820,7 +3836,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenPressed));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3845,7 +3861,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 12 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3885,7 +3901,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenPressedHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3910,7 +3926,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 13 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -3949,7 +3965,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenFocusedHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -3974,7 +3990,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 14 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -4013,7 +4029,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -4038,7 +4054,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 15 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -4077,7 +4093,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenFocusedHover));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -4102,7 +4118,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 16 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -4141,7 +4157,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenFocused));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocused);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -4166,7 +4182,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 17 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -4206,7 +4222,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenPressed));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -4231,7 +4247,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 18 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -4270,7 +4286,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::GreenFocused));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocused);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -4295,7 +4311,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 19 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
@@ -4334,7 +4350,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 StyleIndex::Green));
             CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
             ui.advanceAnimations(1773_nsec);
-            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
         CORRADE_COMPARE(onEnterNoOpAnimationCalled,
@@ -4359,7 +4375,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 20 : 0);
         /* No change to the fallthrough node */
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     /* The following cases should cause no style changes, and thus no
@@ -4585,7 +4601,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
                 CORRADE_COMPARE(animator->styles<StyleIndex>(createdAnimation), Containers::pair(StyleIndex::RedBlueDisabled, StyleIndex::Green));
                 CORRADE_COMPARE(animator->data(createdAnimation), dataGreen);
                 ui.advanceAnimations(1773_nsec);
-                CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+                CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? UserInterfaceState::NeedsLayoutUpdate : UserInterfaceStates{}));
             } else CORRADE_COMPARE(animator->usedCount(), data.dynamicAnimated ? 1 : 0);
         }
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
@@ -4604,7 +4620,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(persistentAnimationCalled,
             data.expectAnimation && data.persistentAnimation && !data.persistentAnimationNoOp ? 1 : 0);
         /* No fallthrough happening in this case */
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.extraLayerFeatures >= LayerFeature::Layout ? LayerState::NeedsLayoutUpdate : LayerStates{}));
     }
 
     if(data.update) {
