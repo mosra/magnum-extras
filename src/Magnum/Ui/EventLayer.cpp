@@ -370,8 +370,6 @@ DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(c
             static_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>
             #endif
         ([](Containers::FunctionData& function, const PointerMoveEvent& event, const Vector2& relativePosition) {
-            /* The relative position is supplied custom in case of drag event
-               fallthrough so it cannot be event.relativePosition() */
             static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(function)(event.position(), relativePosition);
         })));
 }

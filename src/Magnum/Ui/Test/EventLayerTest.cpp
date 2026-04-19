@@ -169,6 +169,10 @@ const struct {
             return layer.function ## Scoped(node, functor);                 \
         }
     #define _c(name, ...) _cn(#name, name, __VA_ARGS__)
+    /* All these verify just that the functors get correctly copied / moved /
+       destructed and the *Scoped() overloads work as they should. Correctness
+       of passed arguments is verified in event-specific test cases. The
+       *Scoped() variants are tested only here though. */
     {_c(onPress, ),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
