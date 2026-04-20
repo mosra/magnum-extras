@@ -204,8 +204,9 @@ struct TextLayerEditData {
     /* Text edit callback. Is reset back to a default-constructed instance when
        the edit data are put on the free list (i.e., when the text is removed
        or when setText() / setGlyph() is called that removes the Editable
-       flag). */
-    Containers::Function<void(Containers::StringView)> textEditCallback;
+       flag). The actual Function type is distinguished by the value of
+       TextLayerData::textEditCallbackTimeOverload. */
+    Containers::FunctionData textEditCallback;
 };
 
 struct TextLayerTextRun {
@@ -252,7 +253,12 @@ struct TextLayerData {
        it's easier to have it saved directly after shaping. */
     Text::ShapeDirection usedDirection;
     TextDataFlags flags;
-    /* 1 byte free */
+    /* Distinguishes whether the TextLayerEditData::textEditCallback is
+       void(Containers::StringView) or void(Nanoseconds, Containers::StringView).
+       Left uninitialized and not used if no callback is set. Put here instead
+       of inside TextLayerEditData because here was a free space and there
+       isn't. */
+    bool textEditCallbackTimeOverload;
     Color4 color;
 };
 

@@ -1635,16 +1635,16 @@ void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringVi
 void TextLayer::updateText(const DataHandle handle, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor, const UnsignedInt selection) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::updateText(): invalid handle" << handle, );
-    updateTextInternal(dataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor, selection);
+    updateTextInternal(dataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor, selection, {});
 }
 
 void TextLayer::updateText(const LayerDataHandle handle, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor, const UnsignedInt selection) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::updateText(): invalid handle" << handle, );
-    updateTextInternal(layerDataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor, selection);
+    updateTextInternal(layerDataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor, selection, {});
 }
 
-void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor, const UnsignedInt selection) {
+void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor, const UnsignedInt selection, const Nanoseconds time) {
     State& state = static_cast<State&>(*_state);
     Implementation::TextLayerData& data = state.data[id];
     CORRADE_ASSERT(data.textRun != ~UnsignedInt{} && data.editData != ~UnsignedInt{},
@@ -1795,23 +1795,27 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
     }
 
     /* If there's a text edit callback, call it with the new text */
-    if(editData.textEditCallback)
-        editData.textEditCallback(text);
+    if(editData.textEditCallback) {
+        if(data.textEditCallbackTimeOverload)
+            static_cast<Containers::Function<void(Nanoseconds, Containers::StringView)>&>( editData.textEditCallback)(time, text);
+        else
+            static_cast<Containers::Function<void(Containers::StringView)>&>( editData.textEditCallback)(text);
+    }
 }
 
 void TextLayer::editText(const DataHandle handle, const TextEdit edit, const Containers::StringView insert) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::editText(): invalid handle" << handle, );
-    return editTextInternal(dataHandleId(handle), edit, insert);
+    return editTextInternal(dataHandleId(handle), edit, insert, {});
 }
 
 void TextLayer::editText(const LayerDataHandle handle, const TextEdit edit, const Containers::StringView insert) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::editText(): invalid handle" << handle, );
-    return editTextInternal(layerDataHandleId(handle), edit, insert);
+    return editTextInternal(layerDataHandleId(handle), edit, insert, {});
 }
 
-void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, const Containers::StringView insert) {
+void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, const Containers::StringView insert, const Nanoseconds time) {
     CORRADE_ASSERT(!insert ||
         edit == TextEdit::InsertBeforeCursor ||
         edit == TextEdit::InsertAfterCursor,
@@ -1942,7 +1946,7 @@ void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, cons
         }
 
         /* All edit operations discard the selection */
-        updateTextInternal(id, removeOffset, removeSize, insertOffset, insert, cursor, cursor);
+        updateTextInternal(id, removeOffset, removeSize, insertOffset, insert, cursor, cursor, time);
 
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
@@ -1970,21 +1974,42 @@ bool TextLayer::hasTextEditCallbackInternal(const UnsignedInt id) const {
 void TextLayer::setTextEditCallback(const DataHandle handle, Containers::Function<void(Containers::StringView)>&& function) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::setTextEditCallback(): invalid handle" << handle, );
-    setTextEditCallbackInternal(dataHandleId(handle), Utility::move(function));
+    setTextEditCallbackInternal(dataHandleId(handle), Utility::move(function), false);
+}
+
+void TextLayer::setTextEditCallback(const DataHandle handle, Containers::Function<void(Nanoseconds, Containers::StringView)>&& function) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::setTextEditCallback(): invalid handle" << handle, );
+    setTextEditCallbackInternal(dataHandleId(handle), Utility::move(function), true);
+}
+
+void TextLayer::setTextEditCallback(const DataHandle handle, std::nullptr_t) {
+    return setTextEditCallback(handle, Containers::Function<void(Containers::StringView)>{});
 }
 
 void TextLayer::setTextEditCallback(const LayerDataHandle handle, Containers::Function<void(Containers::StringView)>&& function) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::setTextEditCallback(): invalid handle" << handle, );
-    setTextEditCallbackInternal(layerDataHandleId(handle), Utility::move(function));
+    setTextEditCallbackInternal(layerDataHandleId(handle), Utility::move(function), false);
 }
 
-void TextLayer::setTextEditCallbackInternal(const UnsignedInt id, Containers::Function<void(Containers::StringView)>&& function) {
+void TextLayer::setTextEditCallback(const LayerDataHandle handle, Containers::Function<void(Nanoseconds, Containers::StringView)>&& function) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::setTextEditCallback(): invalid handle" << handle, );
+    setTextEditCallbackInternal(layerDataHandleId(handle), Utility::move(function), true);
+}
+
+void TextLayer::setTextEditCallback(const LayerDataHandle handle, std::nullptr_t) {
+    return setTextEditCallback(handle, Containers::Function<void(Containers::StringView)>{});
+}
+
+void TextLayer::setTextEditCallbackInternal(const UnsignedInt id, Containers::FunctionData&& function, bool timeOverload) {
     auto& state = static_cast<State&>(*_state);
     Implementation::TextLayerData& data = state.data[id];
     CORRADE_ASSERT(data.editData != ~UnsignedInt{},
         "Ui::TextLayer::setTextEditCallback(): text doesn't have" << TextDataFlag::Editable << "set", );
    state.editData[data.editData].textEditCallback = Utility::move(function);
+   state.data[id].textEditCallbackTimeOverload = timeOverload;
 }
 
 void TextLayer::setGlyph(const DataHandle handle, const UnsignedInt glyph, const TextProperties& properties) {
@@ -2939,27 +2964,27 @@ void TextLayer::doKeyPressEvent(const UnsignedInt dataId, KeyEvent& event) {
     if(event.isNodeFocused()) {
         if(!event.modifiers()) {
             if(event.key() == Key::Backspace) {
-                editTextInternal(dataId, TextEdit::RemoveBeforeCursor, {});
+                editTextInternal(dataId, TextEdit::RemoveBeforeCursor, {}, event.time());
             } else if(event.key() == Key::Delete) {
-                editTextInternal(dataId, TextEdit::RemoveAfterCursor, {});
+                editTextInternal(dataId, TextEdit::RemoveAfterCursor, {}, event.time());
             } else if(event.key() == Key::Home) {
-                editTextInternal(dataId, TextEdit::MoveCursorLineBegin, {});
+                editTextInternal(dataId, TextEdit::MoveCursorLineBegin, {}, event.time());
             } else if(event.key() == Key::End) {
-                editTextInternal(dataId, TextEdit::MoveCursorLineEnd, {});
+                editTextInternal(dataId, TextEdit::MoveCursorLineEnd, {}, event.time());
             } else if(event.key() == Key::Left) {
-                editTextInternal(dataId, TextEdit::MoveCursorLeft, {});
+                editTextInternal(dataId, TextEdit::MoveCursorLeft, {}, event.time());
             } else if(event.key() == Key::Right) {
-                editTextInternal(dataId, TextEdit::MoveCursorRight, {});
+                editTextInternal(dataId, TextEdit::MoveCursorRight, {}, event.time());
             } else return;
         } else if(event.modifiers() == Modifier::Shift) {
             if(event.key() == Key::Home) {
-                editTextInternal(dataId, TextEdit::ExtendSelectionLineBegin, {});
+                editTextInternal(dataId, TextEdit::ExtendSelectionLineBegin, {}, event.time());
             } else if(event.key() == Key::End) {
-                editTextInternal(dataId, TextEdit::ExtendSelectionLineEnd, {});
+                editTextInternal(dataId, TextEdit::ExtendSelectionLineEnd, {}, event.time());
             } else if(event.key() == Key::Left) {
-                editTextInternal(dataId, TextEdit::ExtendSelectionLeft, {});
+                editTextInternal(dataId, TextEdit::ExtendSelectionLeft, {}, event.time());
             } else if(event.key() == Key::Right) {
-                editTextInternal(dataId, TextEdit::ExtendSelectionRight, {});
+                editTextInternal(dataId, TextEdit::ExtendSelectionRight, {}, event.time());
             } else return;
         } else return;
 
@@ -2973,7 +2998,7 @@ void TextLayer::doTextInputEvent(const UnsignedInt dataId, TextInputEvent& event
     if(!(data.flags >= TextDataFlag::Editable))
         return;
 
-    editTextInternal(dataId, TextEdit::InsertBeforeCursor, event.text());
+    editTextInternal(dataId, TextEdit::InsertBeforeCursor, event.text(), event.time());
 
     event.setAccepted();
 }

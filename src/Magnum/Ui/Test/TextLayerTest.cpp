@@ -1037,6 +1037,14 @@ const struct {
 
 const struct {
     const char* name;
+    bool timeOverload;
+} TextEditCallbackData[]{
+    {"", false},
+    {"time overload", true}
+};
+
+const struct {
+    const char* name;
     bool emptyLayout;
     UnsignedInt styleCount, dynamicStyleCount;
     Vector4 paddingFromStyle;
@@ -1696,10 +1704,12 @@ TextLayerTest::TextLayerTest() {
     addInstancedTests({&TextLayerTest::editText},
         Containers::arraySize(EditData));
 
-    addTests({&TextLayerTest::editTextInvalid,
-              &TextLayerTest::textEditCallback,
+    addTests({&TextLayerTest::editTextInvalid});
 
-              &TextLayerTest::cycleGlyphEditableNonEditableText});
+    addInstancedTests({&TextLayerTest::textEditCallback},
+        Containers::arraySize(TextEditCallbackData));
+
+    addTests({&TextLayerTest::cycleGlyphEditableNonEditableText});
 
     addInstancedTests({&TextLayerTest::createSetTextTextProperties},
         Containers::arraySize(CreateSetTextTextPropertiesData));
@@ -7982,6 +7992,9 @@ void TextLayerTest::editTextInvalid() {
 }
 
 void TextLayerTest::textEditCallback() {
+    auto&& data = TextEditCallbackData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return true; }
@@ -8037,6 +8050,7 @@ void TextLayerTest::textEditCallback() {
         Int destructed = 0;
         Int called = 0;
         const char* expected = nullptr;
+        Nanoseconds expectedTime;
     } state;
     struct Callback {
         explicit Callback(State& state): _state{&state} {
@@ -8061,14 +8075,25 @@ void TextLayerTest::textEditCallback() {
             ++_state->called;
         }
 
-        private:
+        protected:
             State* _state;
+    };
+    struct TimeCallback: Callback {
+        using Callback::Callback;
+
+        void operator()(Nanoseconds time, Containers::StringView text) const {
+            CORRADE_COMPARE(time, _state->expectedTime);
+            Callback::operator()(text);
+        }
     };
 
     /* Data with a callback. A temporary instance gets constructed, moved out
        and then destructed. */
     DataHandle withCallback = layer.create(0, "hello!!", {}, TextDataFlag::Editable, node);
-    layer.setTextEditCallback(withCallback, Callback{state});
+    if(data.timeOverload)
+        layer.setTextEditCallback(withCallback, TimeCallback{state});
+    else
+        layer.setTextEditCallback(withCallback, Callback{state});
     CORRADE_VERIFY(layer.hasTextEditCallback(withCallback));
     CORRADE_COMPARE(state.constructed, 2);
     CORRADE_COMPARE(state.moved, 1);
@@ -8080,6 +8105,7 @@ void TextLayerTest::textEditCallback() {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         state.expected = "hello!?!";
+        state.expectedTime = {};
         layer.updateText(withCallback, 0, 0, 6, "?", 5, 5);
         CORRADE_COMPARE(layer.text(withCallback), "hello!?!");
         CORRADE_COMPARE(state.called, 1);
@@ -8089,6 +8115,7 @@ void TextLayerTest::textEditCallback() {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         state.expected = "hell!?!";
+        state.expectedTime = {};
         layer.editText(withCallback, TextEdit::RemoveBeforeCursor, {});
         CORRADE_COMPARE(layer.text(withCallback), "hell!?!");
         CORRADE_COMPARE(state.called, 2);
@@ -8098,11 +8125,12 @@ void TextLayerTest::textEditCallback() {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         state.expected = "hell?!";
+        state.expectedTime = 42069_nsec;
 
         FocusEvent focusEvent{{}};
         CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
 
-        KeyEvent event{{}, Key::Delete, {}};
+        KeyEvent event{42069_nsec, Key::Delete, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(withCallback), "hell?!");
         CORRADE_COMPARE(state.called, 3);
@@ -8115,11 +8143,12 @@ void TextLayerTest::textEditCallback() {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         state.expected = "helloo?!";
+        state.expectedTime = 69420_nsec;
 
         FocusEvent focusEvent{{}};
         CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
 
-        TextInputEvent event{{}, "oo"};
+        TextInputEvent event{69420_nsec, "oo"};
         CORRADE_VERIFY(ui.textInputEvent(event));
         CORRADE_COMPARE(layer.text(withCallback), "helloo?!");
         CORRADE_COMPARE(state.called, 4);
@@ -8190,7 +8219,10 @@ void TextLayerTest::textEditCallback() {
        The new one again has a temporary instance that's moved out and
        destructed. LayerDataHandle overloads. */
     State state2;
-    layer.setTextEditCallback(dataHandleData(withCallback), Callback{state2});
+    if(data.timeOverload)
+        layer.setTextEditCallback(dataHandleData(withCallback), TimeCallback{state2});
+    else
+        layer.setTextEditCallback(dataHandleData(withCallback), Callback{state2});
     CORRADE_VERIFY(layer.hasTextEditCallback(dataHandleData(withCallback)));
     CORRADE_COMPARE(state.constructed, 2);
     CORRADE_COMPARE(state.moved, 1);
@@ -8206,6 +8238,7 @@ void TextLayerTest::textEditCallback() {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         state2.expected = "hey, what?";
+        state2.expectedTime = {};
         layer.updateText(withCallback, 9, 4, 9, "?", 0, 0);
         CORRADE_COMPARE(layer.text(withCallback), "hey, what?");
         CORRADE_COMPARE(state.called, 4);
@@ -8227,8 +8260,13 @@ void TextLayerTest::textEditCallback() {
 
     /* Set new callbacks for both */
     State anotherState, thirdState;
-    layer.setTextEditCallback(another, Callback{anotherState});
-    layer.setTextEditCallback(third, Callback{thirdState});
+    if(data.timeOverload) {
+        layer.setTextEditCallback(another, TimeCallback{anotherState});
+        layer.setTextEditCallback(third, TimeCallback{thirdState});
+    } else {
+        layer.setTextEditCallback(another, Callback{anotherState});
+        layer.setTextEditCallback(third, Callback{thirdState});
+    }
     CORRADE_VERIFY(layer.hasTextEditCallback(another));
     CORRADE_VERIFY(layer.hasTextEditCallback(third));
     CORRADE_COMPARE(anotherState.constructed, 2);
@@ -8251,7 +8289,10 @@ void TextLayerTest::textEditCallback() {
        destruct the previous again */
     DataHandle another2 = layer.create(0, "hallo", {}, TextDataFlag::Editable);
     State another2State;
-    layer.setTextEditCallback(another2, Callback{another2State});
+    if(data.timeOverload)
+        layer.setTextEditCallback(another2, TimeCallback{another2State});
+    else
+        layer.setTextEditCallback(another2, Callback{another2State});
     CORRADE_COMPARE(dataHandleId(another2), dataHandleId(another));
     CORRADE_VERIFY(layer.hasTextEditCallback(another2));
     CORRADE_COMPARE(anotherState.constructed, 2);

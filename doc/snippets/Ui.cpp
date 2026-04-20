@@ -2234,6 +2234,30 @@ DOXYGEN_ELLIPSIS()
 }
 
 {
+struct {
+    void setValue(Float) {}
+} thingy;
+Ui::DataHandle text{};
+enum class TextStyle {
+    InputDefault,
+    InputError
+};
+/* [TextLayer-editing-callback] */
+textLayer.setTextEditCallback(text, [&, text](Nanoseconds time,
+                                              Containers::StringView value) {
+    char* end;
+    Float parsed = std::strtof(value.begin(), &end);
+    if(value && end == value.end()) {
+        textLayer.transitionStyle(text, TextStyle::InputDefault, time);
+        thingy.setValue(parsed);
+    } else {
+        textLayer.transitionStyle(text, TextStyle::InputError, time);
+    }
+});
+/* [TextLayer-editing-callback] */
+}
+
+{
 PluginManager::Manager<Text::AbstractFont> fontManager;
 Containers::Pointer<Text::AbstractFont> font =
     fontManager.loadAndInstantiate("TrueTypeFont");

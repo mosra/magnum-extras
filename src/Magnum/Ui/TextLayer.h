@@ -1521,6 +1521,24 @@ visual layers used in given widget, in addition to the basic inactive, pressed
 and disabled transitions shown in the
 @ref Ui-BaseLayer-style-transitions "BaseLayer documentation for style transitions".
 
+@subsection Ui-TextLayer-editing-callback Text editing callbacks
+
+To get notified when a text is edited, for example to parse the value and/or
+provide validation feedback, a callback can be attached to a particular
+editable text data using @ref setTextEditCallback(). The following snippet
+parses a floating-point number each time the text is edited. If the parsing
+succeeds, the value is passed further, and if not, the the text style is
+switched to visually indicate an error:
+
+@snippet Ui.cpp TextLayer-editing-callback
+
+The string view passed to the callback is guaranteed to be null-terminated,
+which means it can be safely passed to @ref std::strtof() and similar as-is.
+In this snippet the callback also receives a time value coming from the input
+event and passes it further to @ref transitionStyle(DataHandle, UnsignedInt, Nanoseconds) "transitionStyle()",
+which plays appropriate transition and blinking cursor animations if the style
+defines them.
+
 @subsection Ui-TextLayer-editing-virtual-keyboards Implementing virtual keyboards
 
 Besides key and text input events coming from the OS, it's possible to
@@ -2731,9 +2749,11 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @ref updateText(), @ref editText() or in response to input events
          * every time the text changes (i.e., when a non-empty string is
          * inserted or removed), receiving the current @p text, guaranteed to
-         * be @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
-         * The @p function is *not* called in response to @ref setText() or
-         * when just cursor or selection changes.
+         * be @relativeref{Corrade,Containers::StringViewFlag::NullTerminated},
+         * and optionally also event @p time. The @p function is *not* called
+         * in response to @ref setText() or when just cursor or selection
+         * changes, the @p time is default-constructed when not coming from an
+         * input event.
          *
          * Note that unlike e.g. the @ref EventLayer, calling this function
          * again for the same @p handle *replaces* the previous callback.
@@ -2746,6 +2766,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
            layer to not falsely suggest that one can attach multiple callbacks
            to a single data */
         void setTextEditCallback(DataHandle handle, Containers::Function<void(Containers::StringView text)>&& function);
+        /** @overload */
+        void setTextEditCallback(DataHandle handle, Containers::Function<void(Nanoseconds time, Containers::StringView text)>&& function);
+        /** @overload */
+        void setTextEditCallback(DataHandle handle, std::nullptr_t);
 
         /**
          * @brief Set a text edit callback assuming it belongs to this layer
@@ -2757,6 +2781,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *      @ref dataHandleData()
          */
         void setTextEditCallback(LayerDataHandle handle, Containers::Function<void(Containers::StringView text)>&& function);
+        /** @overload */
+        void setTextEditCallback(LayerDataHandle handle, Containers::Function<void(Nanoseconds time, Containers::StringView text)>&& function);
+        /** @overload */
+        void setTextEditCallback(LayerDataHandle handle, std::nullptr_t);
 
         /**
          * @brief Set a single glyph
@@ -3219,10 +3247,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL TextProperties textPropertiesInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL Containers::StringView textInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void setTextInternal(UnsignedInt id, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
-        MAGNUM_UI_LOCAL void updateTextInternal(UnsignedInt id, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView text, UnsignedInt cursor, UnsignedInt selection);
-        MAGNUM_UI_LOCAL void editTextInternal(UnsignedInt id, TextEdit edit, Containers::StringView text);
+        MAGNUM_UI_LOCAL void updateTextInternal(UnsignedInt id, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView text, UnsignedInt cursor, UnsignedInt selection, Nanoseconds time);
+        MAGNUM_UI_LOCAL void editTextInternal(UnsignedInt id, TextEdit edit, Containers::StringView text, Nanoseconds time);
         MAGNUM_UI_LOCAL bool hasTextEditCallbackInternal(UnsignedInt id) const;
-        MAGNUM_UI_LOCAL void setTextEditCallbackInternal(UnsignedInt id, Containers::Function<void(Containers::StringView)>&& function);
+        MAGNUM_UI_LOCAL void setTextEditCallbackInternal(UnsignedInt id, Containers::FunctionData&& function, bool timeOverload);
         MAGNUM_UI_LOCAL void setGlyphInternal(UnsignedInt id, UnsignedInt glyph, const TextProperties& properties);
         MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color4& color);
         MAGNUM_UI_LOCAL Vector4 paddingInternal(UnsignedInt id) const;
