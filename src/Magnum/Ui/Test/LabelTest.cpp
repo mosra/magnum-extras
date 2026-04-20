@@ -27,6 +27,7 @@
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
+#include <Magnum/Math/Time.h>
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Formatter.h"
@@ -82,27 +83,45 @@ struct LabelTest: WidgetTester {
     void setIconTextInvalid();
 };
 
+using namespace Math::Literals;
+
 const struct {
     const char* name;
+    bool timeOverload;
     Icon icon;
     const char* text;
     LabelStyle originalStyle, changedStyle;
     bool expectLayoutStyleChange;
 } SetStyleData[]{
     {"empty",
-        Icon::None, nullptr,
+        false, Icon::None, nullptr,
         LabelStyle::Dim, LabelStyle::Success, false},
     {"icon",
-        Icon::No, nullptr,
+        false, Icon::No, nullptr,
         LabelStyle::Dim, LabelStyle::Success, false},
     {"text",
-        Icon::None, "hello",
+        false, Icon::None, "hello",
         LabelStyle::Dim, LabelStyle::Success, false},
     {"text, from title style",
-        Icon::None, "hello",
+        false, Icon::None, "hello",
         LabelStyle::Title, LabelStyle::Success, true},
     {"text, to title style",
-        Icon::None, "hello",
+        false, Icon::None, "hello",
+        LabelStyle::Dim, LabelStyle::Title, true},
+    {"time overload, empty",
+        true, Icon::None, nullptr,
+        LabelStyle::Dim, LabelStyle::Success, false},
+    {"time overload, icon",
+        true, Icon::No, nullptr,
+        LabelStyle::Dim, LabelStyle::Success, false},
+    {"time overload, text",
+        true, Icon::None, "hello",
+        LabelStyle::Dim, LabelStyle::Success, false},
+    {"time overload, text, from title style",
+        true, Icon::None, "hello",
+        LabelStyle::Title, LabelStyle::Success, true},
+    {"time overload, text, to title style",
+        true, Icon::None, "hello",
         LabelStyle::Dim, LabelStyle::Title, true},
 };
 
@@ -642,8 +661,13 @@ void LabelTest::setStyle() {
     else CORRADE_COMPARE(label.data(), DataHandle::Null);
 
     /* The style change should result in different text layer style being
-       used */
-    label.setStyle(data.changedStyle);
+       used. The time overload should behave exactly the same assuming no
+       animations are set up. Behavior with style-supplied animations tested in
+       InputGLTest. */
+    if(data.timeOverload)
+        label.setStyle(data.changedStyle, 123456_nsec);
+    else
+        label.setStyle(data.changedStyle);
     CORRADE_COMPARE(label.style(), data.changedStyle);
     if(data.text || data.icon != Icon::None)
         CORRADE_COMPARE_AS(ui.textLayer().style(label.data()),

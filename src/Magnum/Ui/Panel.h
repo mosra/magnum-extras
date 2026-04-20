@@ -90,6 +90,16 @@ class MAGNUM_UI_EXPORT Panel: public Widget {
         Panel& setStyle(PanelStyle style);
 
         /**
+         * @brief Set style at given time
+         * @return Reference to self (for method chaining)
+         *
+         * Compared to @ref setStyle(PanelStyle) may animate the style
+         * transition if the theme defines an animation for it. The
+         * @ref style() getter is however updated immediately always.
+         */
+        Panel& setStyle(PanelStyle style, Nanoseconds time);
+
+        /**
          * @brief Contents
          *
          * Use the returned anchor to put widgets inside the panel.
@@ -109,6 +119,8 @@ class MAGNUM_UI_EXPORT Panel: public Widget {
         #endif
 
     private:
+        template<class ...Args> MAGNUM_UI_LOCAL Panel& setStyleInternal(PanelStyle style, Args... args);
+
         PanelStyle _style;
         /* 2 bytes free (_style fits into padding of Widget) */
         LayerDataHandle _backgroundData;

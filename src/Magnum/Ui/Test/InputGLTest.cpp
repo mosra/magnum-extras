@@ -81,6 +81,16 @@ const struct {
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();
         }},
+    {"setStyle(), time overload",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            Input input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
+            /** @todo may need an explicit advanceAnimations() once the style
+                actually has transition animations */
+            input.setStyle(InputStyle(style), 123456_nsec);
+            /** @todo use a cursor setting API once it exists */
+            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
+            return input.release();
+        }},
 };
 
 const struct {
@@ -106,6 +116,16 @@ const struct {
         [](UserInterface& ui, Int style, Flags, Int counter) {
             PasswordInput input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
             input.setStyle(InputStyle(style));
+            /** @todo use a cursor setting API once it exists */
+            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
+            return input.release();
+        }},
+    {"setStyle(), time overload",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            PasswordInput input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
+            /** @todo may need an explicit advanceAnimations() once the style
+                actually has transition animations */
+            input.setStyle(InputStyle(style), 123456_nsec);
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();

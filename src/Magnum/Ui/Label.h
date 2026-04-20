@@ -419,9 +419,20 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * style uses a different one, you have to call @ref setText()
          * afterwards to make it pick it up. This is the case especially when
          * switching to or from @ref LabelStyle::Title.
-         * @see @ref setIcon(), @ref setText()
+         * @see @ref setStyle(LabelStyle, Nanoseconds), @ref setIcon(),
+         *      @ref setText()
          */
         Label& setStyle(LabelStyle style);
+
+        /**
+         * @brief Set style at given time
+         * @return Reference to self (for method chaining)
+         *
+         * Compared to @ref setStyle(LabelStyle) may animate the style
+         * transition if the theme defines an animation for it. The
+         * @ref style() getter is however updated immediately always.
+         */
+        Label& setStyle(LabelStyle style, Nanoseconds time);
 
         /**
          * @brief Icon
@@ -502,6 +513,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         /* The nullptr is just to avoid accidental conflicts with public
            constructors */
         template<class T, class Formatter> MAGNUM_UI_LOCAL Label(std::nullptr_t, Anchor anchor, const StorageQuery<T>& query, const Formatter& formatter, LabelStyle style);
+        template<class ...Args> MAGNUM_UI_LOCAL Label& setStyleInternal(LabelStyle style, Args... args);
 
         LabelStyle _style;
         /* 2 bytes free (_style fits into padding of Widget) */

@@ -25,6 +25,7 @@
 */
 
 #include <Corrade/Containers/String.h>
+#include <Magnum/Math/Time.h>
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Panel.h"
@@ -55,6 +56,16 @@ const struct {
     {"filled", PanelStyle::Filled, true}
 };
 
+using namespace Math::Literals;
+
+const struct {
+    const char* name;
+    bool timeOverload;
+} SetStyleData[]{
+    {"", false},
+    {"time overload", true}
+};
+
 PanelTest::PanelTest() {
     addTests({&PanelTest::debugStyle});
 
@@ -71,11 +82,12 @@ PanelTest::PanelTest() {
         &WidgetTester::setupNoCreate,
         &WidgetTester::teardownNoCreate);
 
-    addTests<PanelTest>({
+    addInstancedTests<PanelTest>({
         &PanelTest::setStyleNoOp,
         &PanelTest::setStyleFromNoBackground,
         &PanelTest::setStyleToNoBackground,
-    }, &WidgetTester::setup,
+    }, Containers::arraySize(SetStyleData),
+       &WidgetTester::setup,
        &WidgetTester::teardown);
 }
 
@@ -129,6 +141,9 @@ void PanelTest::constructNoCreate() {
 }
 
 void PanelTest::setStyleNoOp() {
+    auto&& data = SetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     Panel a{Anchor{root, {}, {32, 16}}, PanelStyle::Default};
     Panel b{Anchor{root, {}, {32, 16}}, PanelStyle::Filled};
     CORRADE_COMPARE(a.style(), PanelStyle::Default);
@@ -138,9 +153,16 @@ void PanelTest::setStyleNoOp() {
     CORRADE_VERIFY(ui.isHandleValid(b.backgroundData()));
 
     /* The style change should result in no change, not even the data being
-       recreated */
-    a.setStyle(PanelStyle::Default);
-    b.setStyle(PanelStyle::Filled);
+       recreated. The time overload should behave exactly the same assuming no
+       animations are set up. Behavior with style-supplied animations tested in
+       PanelGLTest. */
+    if(data.timeOverload) {
+        a.setStyle(PanelStyle::Default, 123456_nsec);
+        b.setStyle(PanelStyle::Filled, 123456_nsec);
+    } else {
+        a.setStyle(PanelStyle::Default);
+        b.setStyle(PanelStyle::Filled);
+    }
     CORRADE_COMPARE(a.style(), PanelStyle::Default);
     CORRADE_COMPARE(b.style(), PanelStyle::Filled);
     CORRADE_COMPARE(a.backgroundData(), DataHandle::Null);
@@ -149,24 +171,40 @@ void PanelTest::setStyleNoOp() {
 }
 
 void PanelTest::setStyleFromNoBackground() {
+    auto&& data = SetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Default style is ... the default */
     Panel panel{Anchor{root, {}, {32, 16}}};
     CORRADE_COMPARE(panel.style(), PanelStyle::Default);
     CORRADE_COMPARE(panel.backgroundData(), DataHandle::Null);
 
-    /* The style change should result in the data newly created */
-    panel.setStyle(PanelStyle::Filled);
+    /* The style change should result in the data newly created. The time
+       overload should behave exactly the same assuming no animations are set
+       up. Behavior with style-supplied animations tested in PanelGLTest. */
+    if(data.timeOverload)
+        panel.setStyle(PanelStyle::Filled, 123456_nsec);
+    else
+        panel.setStyle(PanelStyle::Filled);
     CORRADE_COMPARE(panel.style(), PanelStyle::Filled);
     CORRADE_VERIFY(ui.isHandleValid(panel.backgroundData()));
 }
 
 void PanelTest::setStyleToNoBackground() {
+    auto&& data = SetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     Panel panel{Anchor{root, {}, {32, 16}}, PanelStyle::Filled};
     CORRADE_COMPARE(panel.style(), PanelStyle::Filled);
     CORRADE_VERIFY(ui.isHandleValid(panel.backgroundData()));
 
-    /* The style change should result in the data removed */
-    panel.setStyle(PanelStyle::Default);
+    /* The style change should result in the data removed. The time
+       overload should behave exactly the same assuming no animations are set
+       up. Behavior with style-supplied animations tested in PanelGLTest. */
+    if(data.timeOverload)
+        panel.setStyle(PanelStyle::Default, 123456_nsec);
+    else
+        panel.setStyle(PanelStyle::Default);
     CORRADE_COMPARE(panel.style(), PanelStyle::Default);
     CORRADE_COMPARE(panel.backgroundData(), DataHandle::Null);
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);

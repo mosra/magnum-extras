@@ -29,6 +29,7 @@
 #include <Corrade/Containers/StringView.h>
 #include <Corrade/Containers/Function.h> /* for DataLayer::onUpdate() */
 #include <Corrade/Utility/Assert.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Text/Alignment.h>
 
@@ -255,10 +256,18 @@ Label::Label(NonOwnedT, const Anchor anchor, const Containers::StringView text, 
 }
 
 Label& Label::setStyle(const LabelStyle style) {
+    return setStyleInternal(style);
+}
+
+Label& Label::setStyle(const LabelStyle style, const Nanoseconds time) {
+    return setStyleInternal(style, time);
+}
+
+template<class ...Args> Label& Label::setStyleInternal(const LabelStyle style, Args... args) {
     _style = style;
     ui().layoutLayer().setStyle(_layoutData, layoutStyle(style));
     if(_data != LayerDataHandle::Null)
-        ui().textLayer().transitionStyle(_data, (_icon == Icon::None ? textStyleText : textStyleIcon)(style));
+        ui().textLayer().transitionStyle(_data, (_icon == Icon::None ? textStyleText : textStyleIcon)(style), args...);
     return *this;
 }
 

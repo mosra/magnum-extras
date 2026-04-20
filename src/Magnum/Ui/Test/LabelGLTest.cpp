@@ -83,6 +83,18 @@ const struct {
                 label.setText(counter % 3 ? "Bye" : "Hello!");
             return label.node();
         }},
+    {"setStyle(), time overload",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            Label label{NonOwned, Anchor{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style == 0 ? 1 : 0)};
+            /** @todo may need an explicit advanceAnimations() once the style
+                actually has transition animations */
+            label.setStyle(LabelStyle(style), 123456_nsec);
+            /* The title style uses a different font and thus the text has to
+               be reset to make it use the new font */
+            if(label.style() == LabelStyle::Title)
+                label.setText(counter % 3 ? "Bye" : "Hello!");
+            return label.node();
+        }},
     {"setStyle() on empty, setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
             Label label{NonOwned, Anchor{ui, {}, {52, 36}}, "", LabelStyle(style == 0 ? 1 : 0)};
@@ -153,6 +165,18 @@ const struct {
         [](UserInterface& ui, Int style, Flags, Int counter) {
             Label label{NonOwned, Anchor{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
+            /* The title style uses a different font and thus the icon has to
+               be reset to make it use the new font */
+            if(label.style() == LabelStyle::Title)
+                label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
+            return label.node();
+        }},
+    {"setStyle(), time overload",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            Label label{NonOwned, Anchor{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style == 0 ? 1 : 0)};
+            /** @todo may need an explicit advanceAnimations() once the style
+                actually has transition animations */
+            label.setStyle(LabelStyle(style), 123456_nsec);
             /* The title style uses a different font and thus the icon has to
                be reset to make it use the new font */
             if(label.style() == LabelStyle::Title)

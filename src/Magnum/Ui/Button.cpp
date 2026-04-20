@@ -29,6 +29,7 @@
 #include <Corrade/Containers/StringView.h>
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Utility/Assert.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Text/Alignment.h>
 
@@ -238,14 +239,22 @@ EventConnection Button::onTriggerScoped(Containers::Function<void()>&& function)
 }
 
 Button& Button::setStyle(const ButtonStyle style) {
+    return setStyleInternal(style);
+}
+
+Button& Button::setStyle(const ButtonStyle style, const Nanoseconds time) {
+    return setStyleInternal(style, time);
+}
+
+template<class ...Args> Button& Button::setStyleInternal(const ButtonStyle style, Args... args) {
     _style = style;
-    ui().baseLayer().transitionStyle(_backgroundData, baseStyle(style));
+    ui().baseLayer().transitionStyle(_backgroundData, baseStyle(style), args...);
     if(_textData != LayerDataHandle::Null)
         ui().textLayer().transitionStyle(_textData,
-            (_iconData == LayerDataHandle::Null ? textStyleTextOnly : textStyleText)(style));
+            (_iconData == LayerDataHandle::Null ? textStyleTextOnly : textStyleText)(style), args...);
     if(_iconData != LayerDataHandle::Null)
         ui().textLayer().transitionStyle(_iconData,
-            (_textData == LayerDataHandle::Null ? textStyleIconOnly : textStyleIcon)(style));
+            (_textData == LayerDataHandle::Null ? textStyleIconOnly : textStyleIcon)(style), args...);
     return *this;
 }
 

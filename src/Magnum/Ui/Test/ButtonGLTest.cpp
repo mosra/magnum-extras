@@ -94,6 +94,14 @@ const struct {
             button.setStyle(ButtonStyle(style));
             return button.node();
         }},
+    {"setStyle(), time overload",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            Button button{NonOwned, Anchor{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
+            /** @todo may need an explicit advanceAnimations() once the style
+                actually has transition animations */
+            button.setStyle(ButtonStyle(style), 123456_nsec);
+            return button.node();
+        }},
     {"setStyle() on empty, setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
             Button button{NonOwned, Anchor{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style == 0 ? 1 : 0)};
@@ -134,6 +142,14 @@ const struct {
             button.setStyle(ButtonStyle(style));
             return button.node();
         }},
+    {"setStyle(), time overload",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            Button button{NonOwned, Anchor{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
+            /** @todo may need an explicit advanceAnimations() once the style
+                actually has transition animations */
+            button.setStyle(ButtonStyle(style), 123456_nsec);
+            return button.node();
+        }},
     {"setStyle() on empty, setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
             Button button{NonOwned, Anchor{ui, {}, {64, 36}}, "", ButtonStyle(style == 0 ? 1 : 0)};
@@ -172,6 +188,14 @@ const struct {
         [](UserInterface& ui, Int style, Flags, Int counter) {
             Button button{NonOwned, Anchor{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
+            return button.node();
+        }},
+    {"setStyle(), time overload",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            Button button{NonOwned, Anchor{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style == 0 ? 1 : 0)};
+            /** @todo may need an explicit advanceAnimations() once the style
+                actually has transition animations */
+            button.setStyle(ButtonStyle(style), 123456_nsec);
             return button.node();
         }},
     {"setStyle() on empty, setters",

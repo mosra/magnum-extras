@@ -89,9 +89,22 @@ class MAGNUM_UI_EXPORT Input: public Widget {
          * Note that calling this function doesn't change the font if the new
          * style uses a different one, you have to call @ref setText()
          * afterwards to make it pick it up.
-         * @see @ref setText()
+         * @see @ref setStyle(InputStyle, Nanoseconds), @ref setText()
          */
         Input& setStyle(InputStyle style);
+
+        /**
+         * @brief Set style at given time
+         * @return Reference to self (for method chaining)
+         *
+         * Compared to @ref setStyle(InputStyle) may animate the style
+         * transition if the theme defines an animation for it. The
+         * @ref style() getter is however updated immediately always.
+         * Additionally, if the function is called while the @ref Input is
+         * focused, ensures that a blinking cursor animation is playing for the
+         * new style as well.
+         */
+        Input& setStyle(InputStyle style, Nanoseconds time);
 
         /**
          * @brief Text
@@ -141,7 +154,7 @@ class MAGNUM_UI_EXPORT Input: public Widget {
     protected:
     #endif
         explicit MAGNUM_UI_LOCAL Input(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, InputStyle style, Implementation::TextStyle(*textStyle)(InputStyle));
-        MAGNUM_UI_LOCAL Input& setStyleInternal(InputStyle, Implementation::TextStyle(*textStyle)(InputStyle));
+        template<class ...Args> MAGNUM_UI_LOCAL Input& setStyleInternal(InputStyle style, Implementation::TextStyle(*textStyle)(InputStyle), Args... args);
 
     private:
         InputStyle _style;
@@ -177,6 +190,7 @@ class MAGNUM_UI_EXPORT PasswordInput: public Input {
            order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
         PasswordInput& setStyle(InputStyle style);
+        PasswordInput& setStyle(InputStyle style, Nanoseconds time);
         PasswordInput& setText(Containers::StringView text, const TextProperties& textProperties);
         PasswordInput& setText(Containers::StringView text);
         #endif

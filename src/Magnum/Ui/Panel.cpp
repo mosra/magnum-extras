@@ -27,6 +27,7 @@
 #include "Panel.h"
 
 #include <Corrade/Utility/Assert.h>
+#include <Magnum/Math/Time.h>
 
 #include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/Anchor.h"
@@ -69,6 +70,17 @@ Panel::Panel(NonOwnedT, const Anchor anchor, const PanelStyle style): Panel{anch
 }
 
 Panel& Panel::setStyle(const PanelStyle style) {
+    return setStyleInternal(style);
+}
+
+Panel& Panel::setStyle(const PanelStyle style, const Nanoseconds time) {
+    return setStyleInternal(style, time);
+}
+
+template<class ...Args> Panel& Panel::setStyleInternal(const PanelStyle style, Args...) {
+    /** @todo use the `args` once there's actually any transitionStyle() done
+        besides just creating or removing data */
+
     /* Create a data for the background, if switching from an empty
        background */
     if(_style == PanelStyle::Default && style == PanelStyle::Filled) {

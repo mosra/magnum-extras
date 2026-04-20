@@ -169,9 +169,20 @@ class MAGNUM_UI_EXPORT Button: public Widget {
          * Note that calling this function doesn't change the font if the new
          * style uses a different one, you have to call @ref setText()
          * afterwards to make it pick it up.
-         * @see @ref setIcon(), @ref setText()
+         * @see @ref setStyle(ButtonStyle, Nanoseconds), @ref setIcon(),
+         *      @ref setText()
          */
         Button& setStyle(ButtonStyle style);
+
+        /**
+         * @brief Set style at given time
+         * @return Reference to self (for method chaining)
+         *
+         * Compared to @ref setStyle(ButtonStyle) may animate the style
+         * transition if the theme defines an animation for it. The
+         * @ref style() getter is however updated immediately always.
+         */
+        Button& setStyle(ButtonStyle style, Nanoseconds time);
 
         /** @brief Icon */
         Icon icon() const { return _icon; }
@@ -257,6 +268,8 @@ class MAGNUM_UI_EXPORT Button: public Widget {
         #endif
 
     private:
+        template<class ...Args> MAGNUM_UI_LOCAL Button& setStyleInternal(ButtonStyle style, Args... args);
+
         ButtonStyle _style;
         /* 2 bytes free (_style fits into padding of Widget) */
         Icon _icon;

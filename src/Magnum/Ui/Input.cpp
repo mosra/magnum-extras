@@ -28,6 +28,7 @@
 
 #include <Corrade/Containers/StringView.h>
 #include <Corrade/Utility/Assert.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Text/Alignment.h>
 
@@ -111,16 +112,21 @@ Input::Input(const Anchor anchor, const Containers::StringView text, const Input
 
 Input::Input(const Anchor anchor, const InputStyle style): Input{anchor, {}, style} {}
 
-Input& Input::setStyleInternal(const InputStyle style, Implementation::TextStyle(*const textStyle)(InputStyle)) {
+template<class ...Args> Input& Input::setStyleInternal(const InputStyle style, Implementation::TextStyle(*const textStyle)(InputStyle), Args... args) {
     _style = style;
-    ui().baseLayer().transitionStyle(_backgroundData, baseStyle(style));
-    ui().textLayer().transitionStyle(_textData, textStyle(style));
+    ui().baseLayer().transitionStyle(_backgroundData, baseStyle(style), args...);
+    ui().textLayer().transitionStyle(_textData, textStyle(style), args...);
     /** @todo re-set the text if font / alignment ... changed */
     return *this;
 }
 
 Input& Input::setStyle(const InputStyle style) {
     setStyleInternal(style, textStyle);
+    return *this;
+}
+
+Input& Input::setStyle(const InputStyle style, Nanoseconds time) {
+    setStyleInternal(style, textStyle, time);
     return *this;
 }
 
@@ -177,6 +183,11 @@ PasswordInput::PasswordInput(const Anchor anchor, const InputStyle style): Passw
 
 PasswordInput& PasswordInput::setStyle(const InputStyle style) {
     setStyleInternal(style, passwordTextStyle);
+    return *this;
+}
+
+PasswordInput& PasswordInput::setStyle(const InputStyle style, const Nanoseconds time) {
+    setStyleInternal(style, passwordTextStyle, time);
     return *this;
 }
 

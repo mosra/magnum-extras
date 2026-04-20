@@ -54,6 +54,16 @@ struct InputTest: WidgetTester {
     template<class T> void edit();
 };
 
+using namespace Math::Literals;
+
+const struct {
+    const char* name;
+    bool timeOverload;
+} SetStyleData[]{
+    {"", false},
+    {"time overload", true}
+};
+
 InputTest::InputTest() {
     addTests({&InputTest::debugStyle});
 
@@ -67,10 +77,14 @@ InputTest::InputTest() {
         &WidgetTester::setupNoCreate,
         &WidgetTester::teardownNoCreate);
 
-    addTests<InputTest>({
+    addInstancedTests<InputTest>({
         &InputTest::setStyle,
-        &InputTest::setStyleWhileActive,
+        &InputTest::setStyleWhileActive
+    }, Containers::arraySize(SetStyleData),
+       &WidgetTester::setup,
+       &WidgetTester::teardown);
 
+    addTests<InputTest>({
         &InputTest::setText<Input>,
         &InputTest::setText<PasswordInput>,
         &InputTest::setTextTextProperties<Input>,
@@ -198,15 +212,25 @@ void InputTest::constructNoCreate() {
 }
 
 void InputTest::setStyle() {
+    auto&& data = SetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     Input input{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Danger};
     PasswordInput inputPassword{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Danger};
     CORRADE_COMPARE(input.style(), InputStyle::Danger);
     CORRADE_COMPARE(inputPassword.style(), InputStyle::Danger);
 
     /* The password inputs should have different text style to choose a
-       different font */
-    input.setStyle(InputStyle::Success);
-    inputPassword.setStyle(InputStyle::Success);
+       different font. The time overload should behave exactly the same
+       assuming no animations are set up. Behavior with style-supplied
+       animations tested in InputGLTest. */
+    if(data.timeOverload) {
+        input.setStyle(InputStyle::Success, 12345_nsec);
+        inputPassword.setStyle(InputStyle::Success, 12345_nsec);
+    } else {
+        input.setStyle(InputStyle::Success);
+        inputPassword.setStyle(InputStyle::Success);
+    }
     CORRADE_COMPARE(input.style(), InputStyle::Success);
     CORRADE_COMPARE(inputPassword.style(), InputStyle::Success);
     CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()),
@@ -220,6 +244,9 @@ void InputTest::setStyle() {
 }
 
 void InputTest::setStyleWhileActive() {
+    auto&& data = SetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     Input input{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Success};
     PasswordInput inputPassword{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Success};
     CORRADE_COMPARE(input.style(), InputStyle::Success);
@@ -241,7 +268,13 @@ void InputTest::setStyleWhileActive() {
         CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(BaseStyle::InputSuccessFocused));
         CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(TextStyle::InputSuccessFocused));
 
-        input.setStyle(InputStyle::Default);
+        /* The time overload should behave exactly the same assuming no
+           animations are set up. Behavior with style-supplied animations
+           tested in InputGLTest. */
+        if(data.timeOverload)
+            input.setStyle(InputStyle::Default, 12345_nsec);
+        else
+            input.setStyle(InputStyle::Default);
         CORRADE_COMPARE(input.style(), InputStyle::Default);
 
         /* All styles should now be changed in a way that preserves the current
@@ -258,7 +291,10 @@ void InputTest::setStyleWhileActive() {
         CORRADE_COMPARE(ui.baseLayer().style(inputPassword.backgroundData()), UnsignedInt(BaseStyle::InputSuccessFocused));
         CORRADE_COMPARE(ui.textLayer().style(inputPassword.textData()), UnsignedInt(TextStyle::InputSuccessPasswordFocused));
 
-        inputPassword.setStyle(InputStyle::Default);
+        if(data.timeOverload)
+            inputPassword.setStyle(InputStyle::Default, 12345_nsec);
+        else
+            inputPassword.setStyle(InputStyle::Default);
         CORRADE_COMPARE(inputPassword.style(), InputStyle::Default);
 
         CORRADE_COMPARE(ui.baseLayer().style(inputPassword.backgroundData()), UnsignedInt(BaseStyle::InputDefaultFocused));

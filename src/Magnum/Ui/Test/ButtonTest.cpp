@@ -84,6 +84,8 @@ struct ButtonTest: WidgetTester {
     void setTextEmptyFromIconOnly();
 };
 
+using namespace Math::Literals;
+
 const struct {
     const char* name;
     /* Three different function so we can distinguish which button was
@@ -103,13 +105,26 @@ const struct {
 
 const struct {
     const char* name;
+    bool timeOverload;
     Icon icon;
     const char* text;
 } SetStyleData[]{
-    {"empty", Icon::None, nullptr},
-    {"icon only", Icon::No, nullptr},
-    {"text only", Icon::None, "hello"},
-    {"icon + text", Icon::No, "hello"},
+    {"empty", false, Icon::None, nullptr},
+    {"icon only", false, Icon::No, nullptr},
+    {"text only", false, Icon::None, "hello"},
+    {"icon + text", false, Icon::No, "hello"},
+    {"time overload, empty", true, Icon::None, nullptr},
+    {"time overload, icon only", true, Icon::No, nullptr},
+    {"time overload, text only", true, Icon::None, "hello"},
+    {"time overload, icon + text", true, Icon::No, "hello"},
+};
+
+const struct {
+    const char* name;
+    bool timeOverload;
+} SetStyleWhileActiveData[]{
+    {"", false},
+    {"time overload", true}
 };
 
 ButtonTest::ButtonTest() {
@@ -189,9 +204,12 @@ ButtonTest::ButtonTest() {
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
-    addTests<ButtonTest>({
-        &ButtonTest::setStyleWhileActive,
+    addInstancedTests<ButtonTest>({&ButtonTest::setStyleWhileActive},
+        Containers::arraySize(SetStyleWhileActiveData),
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
 
+    addTests<ButtonTest>({
         &ButtonTest::setIcon,
         &ButtonTest::setIconFromTextOnly,
         &ButtonTest::setIconEmpty,
@@ -833,8 +851,14 @@ void ButtonTest::setStyle() {
     if(data.text)
         previousStyleText = ui.textLayer().style(button.textData());
 
-    /* The style change should result in different layer style being used */
-    button.setStyle(ButtonStyle::Success);
+    /* The style change should result in different layer style being used. The
+       time overload should behave exactly the same assuming no animations are
+       set up. Behavior with style-supplied animations tested in
+       ButtonGLTest. */
+    if(data.timeOverload)
+        button.setStyle(ButtonStyle::Success, 12345_nsec);
+    else
+        button.setStyle(ButtonStyle::Success);
     CORRADE_COMPARE(button.style(), ButtonStyle::Success);
     CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()),
         UnsignedInt(BaseStyle::ButtonSuccess));
@@ -852,6 +876,9 @@ void ButtonTest::setStyle() {
 }
 
 void ButtonTest::setStyleWhileActive() {
+    auto&& data = SetStyleWhileActiveData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     Button button{Anchor{root, {}, {32, 16}}, Icon::No, "yes", ButtonStyle::Primary};
     CORRADE_COMPARE(button.style(), ButtonStyle::Primary);
 
@@ -868,7 +895,13 @@ void ButtonTest::setStyleWhileActive() {
     CORRADE_COMPARE(ui.textLayer().style(button.iconData()), UnsignedInt(TextStyle::ButtonPressedIcon));
     CORRADE_COMPARE(ui.textLayer().style(button.textData()), UnsignedInt(TextStyle::ButtonPressedText));
 
-    button.setStyle(ButtonStyle::Flat);
+    /* The time overload should behave exactly the same assuming no animations
+       are set up. Behavior with style-supplied animations tested in
+       ButtonGLTest. */
+    if(data.timeOverload)
+        button.setStyle(ButtonStyle::Flat, 12345_nsec);
+    else
+        button.setStyle(ButtonStyle::Flat);
     CORRADE_COMPARE(button.style(), ButtonStyle::Flat);
 
     /* All styles should now be changed in a way that preserves the current
