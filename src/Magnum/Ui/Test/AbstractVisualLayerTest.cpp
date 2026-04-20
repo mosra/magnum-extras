@@ -1458,12 +1458,19 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
     AbstractUserInterface ui{{100, 100}};
 
     enum Style {
-        InactiveOut,
-        InactiveOver,
-        FocusedOut,
-        FocusedOver,
-        PressedOut,
-        PressedOver,
+        /* 2 is first, to avoid accidentally matching the order */
+        InactiveOut2,
+        InactiveOut1,
+        InactiveOver2,
+        InactiveOver1,
+        FocusedOut2,
+        FocusedOut1,
+        FocusedOver2,
+        FocusedOver1,
+        PressedOut2,
+        PressedOut1,
+        PressedOver2,
+        PressedOver1,
     };
 
     /* Style transition isn't allowed to use dynamic styles so the dynamic
@@ -1472,73 +1479,115 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
     shared.setStyleTransition(
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveOut:
-                case InactiveOver:
-                case FocusedOut:
-                case FocusedOver:
-                case PressedOut:
-                case PressedOver:
-                    return InactiveOut;
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return InactiveOut1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return InactiveOut2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveOut:
-                case InactiveOver:
-                case FocusedOut:
-                case FocusedOver:
-                case PressedOut:
-                case PressedOver:
-                    return InactiveOver;
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return InactiveOver1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return InactiveOver2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveOut:
-                case InactiveOver:
-                case FocusedOut:
-                case FocusedOver:
-                case PressedOut:
-                case PressedOver:
-                    return FocusedOut;
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return FocusedOut1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return FocusedOut2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveOut:
-                case InactiveOver:
-                case FocusedOut:
-                case FocusedOver:
-                case PressedOut:
-                case PressedOver:
-                    return FocusedOver;
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return FocusedOver1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return FocusedOver2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveOut:
-                case InactiveOver:
-                case FocusedOut:
-                case FocusedOver:
-                case PressedOut:
-                case PressedOver:
-                    return PressedOut;
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return PressedOut1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return PressedOut2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveOut:
-                case InactiveOver:
-                case FocusedOut:
-                case FocusedOver:
-                case PressedOut:
-                case PressedOver:
-                    return PressedOver;
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return PressedOver1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return PressedOver2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
@@ -1551,24 +1600,25 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
     EventLayer& eventLayer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
     NodeHandle node = ui.createNode({}, {100, 50});
-    DataHandle data = layer.create(InactiveOut, node);
+    DataHandle data = layer.create(InactiveOut1, node);
 
     /* Nothing is hovered, pressed or focused initially */
     CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
-    /* Setting a transitioned style inside onEnter should pick InactiveOver */
+    /* Setting a transitioned style from the second group inside onEnter should
+       pick InactiveOver2 */
     {
         Int called = 0;
         EventConnection connection = eventLayer.onEnterScoped(node, [&]{
-            layer.transitionStyle(data, FocusedOut);
+            layer.transitionStyle(data, FocusedOut2);
             /* At this point, currentHoveredNode() is already updated and thus
                the style is already transitioned to the final one. This is
                because pointerEnterEvent() is called after pointerMoveEvent()
                that updated the hovered node information. */
             CORRADE_COMPARE(ui.currentHoveredNode(), node);
-            CORRADE_COMPARE(layer.style(data), InactiveOver);
+            CORRADE_COMPARE(layer.style(data), InactiveOver2);
             ++called;
         });
 
@@ -1578,19 +1628,21 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOver);
+        CORRADE_COMPARE(layer.style(data), InactiveOver2);
 
-    /* Setting a transitioned style inside onLeave should pick InactiveOut */
+    /* Setting a transitioned style from the first group inside onLeave should
+       pick InactiveOut1. Switching the group every time to ensure it doesn't
+       get ignored by accident. */
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onLeaveScoped(node, [&]{
-            layer.transitionStyle(data, FocusedOver);
+            layer.transitionStyle(data, FocusedOver1);
             /* At this point, currentHoveredNode() is again already updated and
                thus the style is already transitioned to the final one. This is
                because pointerLeaveEvent() is called after pointerMoveEvent()
                that updated the hovered node information. */
             CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-            CORRADE_COMPARE(layer.style(data), InactiveOut);
+            CORRADE_COMPARE(layer.style(data), InactiveOut1);
             ++called;
         });
 
@@ -1600,20 +1652,21 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOut);
+        CORRADE_COMPARE(layer.style(data), InactiveOut1);
 
-    /* Setting a transitioned style inside onPress should pick PressedOut */
+    /* Setting a transitioned style from the second group inside onPress should
+       pick PressedOut2 */
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onPressScoped(node, [&]{
-            layer.transitionStyle(data, FocusedOver);
+            layer.transitionStyle(data, FocusedOver2);
             /* At this point, currentPressedNode() is not updated yet because
                we don't yet know if the press events will actually be accepted.
                Which means the transition doesn't take the press into account,
                and what makes the style correct is a transition that only
                happens after, once the currentPressedNode() is updated. */
             CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-            CORRADE_COMPARE(layer.style(data), InactiveOut);
+            CORRADE_COMPARE(layer.style(data), InactiveOut2);
             ++called;
         });
 
@@ -1623,13 +1676,14 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), PressedOut);
+        CORRADE_COMPARE(layer.style(data), PressedOut2);
 
-    /* Setting a transitioned style inside onRelease should pick InactiveOut */
+    /* Setting a transitioned style from the first group inside onRelease
+       should pick InactiveOut1 */
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onReleaseScoped(node, [&]{
-            layer.transitionStyle(data, FocusedOver);
+            layer.transitionStyle(data, FocusedOver1);
             /* At this point, currentPressedNode() is not updated yet because
                certain other functionality such as generation of tap/click
                events relies on the knowledge of whether given node is pressed.
@@ -1638,7 +1692,7 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
                that only happens after, once the currentPressedNode() is
                updated. */
             CORRADE_COMPARE(ui.currentPressedNode(), node);
-            CORRADE_COMPARE(layer.style(data), PressedOut);
+            CORRADE_COMPARE(layer.style(data), PressedOut1);
             ++called;
         });
 
@@ -1648,19 +1702,19 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOut);
+        CORRADE_COMPARE(layer.style(data), InactiveOut1);
 
-    /* Setting a transitioned style inside onTapOrClick should pick
-       InactiveOut */
+    /* Setting a transitioned style from the second group inside onTapOrClick
+       should pick InactiveOut2 */
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onTapOrClickScoped(node, [&]{
-            layer.transitionStyle(data, PressedOver);
+            layer.transitionStyle(data, PressedOver2);
             /* As this is fired from a release event, currentPressedNode() is
                not updated yet same as with onRelease() above, and it's done
                only after all release events are fired. */
             CORRADE_COMPARE(ui.currentPressedNode(), node);
-            CORRADE_COMPARE(layer.style(data), PressedOut);
+            CORRADE_COMPARE(layer.style(data), PressedOut2);
             ++called;
         });
 
@@ -1672,22 +1726,23 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOut);
+        CORRADE_COMPARE(layer.style(data), InactiveOut2);
     }
 
     /* Make the node focusable for the rest of the test */
     ui.setNodeFlags(node, NodeFlag::Focusable);
 
-    /* Setting a transitioned style inside onFocus should pick FocusedOut */
+    /* Setting a transitioned style from the first group inside onFocus should
+       pick FocusedOut1 */
     {
         Int called = 0;
         EventConnection connection = eventLayer.onFocusScoped(node, [&]{
-            layer.transitionStyle(data, PressedOver);
+            layer.transitionStyle(data, PressedOver1);
             /* Similarly as with the press event, currentFocusedNode() isn't
                updated at this point yet. Again a second transition happens
                after, making the resulting style correct. */
             CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-            CORRADE_COMPARE(layer.style(data), InactiveOut);
+            CORRADE_COMPARE(layer.style(data), InactiveOut1);
             ++called;
         });
 
@@ -1697,19 +1752,20 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), FocusedOut);
+        CORRADE_COMPARE(layer.style(data), FocusedOut1);
 
-    /* Setting a transitioned style inside onBlur should pick InactiveOut */
+    /* Setting a transitioned style from the second group inside onBlur should
+       pick InactiveOut2 */
     } {
         Int called = 0;
         EventConnection connection = eventLayer.onBlurScoped(node, [&]{
-            layer.transitionStyle(data, PressedOver);
+            layer.transitionStyle(data, PressedOver2);
             /* Similarly as with the release event, currentFocusedNode() isn't
                updated at this point yet. Again it *could* be, nevertheless a
                second transition happens after, making the resulting style
                correct. */
             CORRADE_COMPARE(ui.currentFocusedNode(), node);
-            CORRADE_COMPARE(layer.style(data), FocusedOut);
+            CORRADE_COMPARE(layer.style(data), FocusedOut2);
             ++called;
         });
 
@@ -1719,7 +1775,7 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(layer.style(data), InactiveOut);
+        CORRADE_COMPARE(layer.style(data), InactiveOut2);
     }
 }
 
