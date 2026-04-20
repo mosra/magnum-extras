@@ -258,7 +258,7 @@ Label& Label::setStyle(const LabelStyle style) {
     _style = style;
     ui().layoutLayer().setStyle(_layoutData, layoutStyle(style));
     if(_data != LayerDataHandle::Null)
-        ui().textLayer().setStyle(_data, (_icon == Icon::None ? textStyleText : textStyleIcon)(style));
+        ui().textLayer().transitionStyle(_data, (_icon == Icon::None ? textStyleText : textStyleIcon)(style));
     return *this;
 }
 
