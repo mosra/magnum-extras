@@ -960,4 +960,16 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
     }
 }
 
+AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _index{index}, _callReference{callReference}, _callValue{callValue} {
+    /* The class is always constructed through the StorageQuery subclass, so
+       make the assertions mention that to reduce confusion */
+    CORRADE_ASSERT(_layer->isHandleValid(_storage),
+        "Ui::StorageQuery: invalid handle" << storageHandle(_layer->handle(), _storage), );
+    #ifndef CORRADE_NO_ASSERT
+    const Containers::Size3D& size = storage.size();
+    #endif
+    CORRADE_ASSERT(index[0] < size[0] && index[1] < size[1] && index[2] < size[2],
+        "Ui::StorageQuery: index" << index << "out of range for" << size << "elements", );
+}
+
 }}

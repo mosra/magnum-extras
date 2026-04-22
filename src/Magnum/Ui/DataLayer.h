@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::DataLayer, @ref Magnum::Ui::AbstractStorage, @ref Magnum::Ui::StorageQuery, handle @ref Magnum::Ui::DataLayerStorageHandle, @ref Magnum::Ui::StorageHandle, enum @ref Magnum::Ui::StorageFlag, enum set @ref Magnum::Ui::StorageFlags, function @ref Magnum::Ui::dataLayerStorageHandle(), @ref Magnum::Ui::dataLayerStorageHandleId(), @ref Magnum::Ui::dataLayerStorageHandleGeneration(), @ref Magnum::Ui::storageHandle(), @ref Magnum::Ui::storageHandleLayer(), @ref Magnum::Ui::storageHandleStorage(), @ref Magnum::Ui::storageHandleLayerId(), @ref Magnum::Ui::storageHandleLayerGeneration(), @ref Magnum::Ui::storageHandleId(), @ref Magnum::Ui::storageHandleGeneration()
+ * @brief Class @ref Magnum::Ui::DataLayer, @ref Magnum::Ui::AbstractStorage, @ref Magnum::Ui::AbstractStorageQuery, @ref Magnum::Ui::StorageQuery, handle @ref Magnum::Ui::DataLayerStorageHandle, @ref Magnum::Ui::StorageHandle, enum @ref Magnum::Ui::StorageFlag, enum set @ref Magnum::Ui::StorageFlags, function @ref Magnum::Ui::dataLayerStorageHandle(), @ref Magnum::Ui::dataLayerStorageHandleId(), @ref Magnum::Ui::dataLayerStorageHandleGeneration(), @ref Magnum::Ui::storageHandle(), @ref Magnum::Ui::storageHandleLayer(), @ref Magnum::Ui::storageHandleStorage(), @ref Magnum::Ui::storageHandleLayerId(), @ref Magnum::Ui::storageHandleLayerGeneration(), @ref Magnum::Ui::storageHandleId(), @ref Magnum::Ui::storageHandleGeneration()
  * @m_since_latest_{extras}
  */
 
@@ -1287,9 +1287,7 @@ class MAGNUM_UI_EXPORT AbstractStorage {
            storage<T>() then just casts to a subtype which doesn't need a
            friend on the derived type anymore */
         friend DataLayer;
-        /* So StorageQuery can call the queryCall() helpers below, and the
-           constructor can access the _layer and _handle without going through
-           getters and having to extract the small handle back */
+        /* So StorageQuery can call the queryCall() helpers below */
         template<class> friend class StorageQuery;
 
         /* Used by StorageQuery constructors. Put here instead of being
@@ -1348,13 +1346,58 @@ class MAGNUM_UI_EXPORT AbstractStorage {
 };
 
 /**
+@brief Base for @ref DataLayer storage queries
+@m_since_latest_{extras}
+
+Used through the @ref StorageQuery subclass which is returned from
+@ref AbstractStorage implementations and is meant to be passed to
+@ref DataLayer::onUpdate() along with an update function.
+*/
+class MAGNUM_UI_EXPORT AbstractStorageQuery {
+    public:
+        /** @brief Data layer reference */
+        DataLayer& layer() const { return *_layer; }
+
+        /**
+         * @brief Storage handle
+         *
+         * Guaranteed to be associated with @ref layer() and never
+         * @ref StorageHandle::Null.
+         */
+        StorageHandle storage() const {
+            return storageHandle(_layer->handle(), _storage);
+        }
+
+        /** @brief Data index */
+        Containers::Size3D index() const { return _index; }
+
+    #ifdef DOXYGEN_GENERATING_OUTPUT
+    private:
+    #else
+    protected:
+    #endif
+        /* So it can access the _call etc without having to expose those via
+           getters */
+        friend DataLayer;
+
+        explicit AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&));
+
+        DataLayer* _layer;
+        DataLayerStorageHandle _storage;
+        /* 0/4 bytes free */
+        Containers::Size3D _index;
+        void(*_callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
+        void(*_callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
+};
+
+/**
 @brief @ref DataLayer storage query
 @m_since_latest_{extras}
 
 Returned from @ref AbstractStorage implementations, meant to be passed to
 @ref DataLayer::onUpdate() along with an update function.
 */
-template<class T> class StorageQuery {
+template<class T> class StorageQuery: public AbstractStorageQuery {
     public:
         /**
          * @brief Create a query to a single-item storage
@@ -1471,22 +1514,6 @@ template<class T> class StorageQuery {
             #endif
         );
 
-        /** @brief Data layer reference */
-        DataLayer& layer() const { return *_layer; }
-
-        /**
-         * @brief Storage handle
-         *
-         * Guaranteed to be associated with @ref layer() and never
-         * @ref StorageHandle::Null.
-         */
-        StorageHandle storage() const {
-            return storageHandle(_layer->handle(), _storage);
-        }
-
-        /** @brief Data index */
-        Containers::Size3D index() const { return _index; }
-
         /**
          * @brief Storage value
          *
@@ -1496,20 +1523,6 @@ template<class T> class StorageQuery {
          * the storage data directly.
          */
         /*implicit*/ operator T() const;
-
-    private:
-        /* So it can access the _call etc without having to expose those via
-           getters */
-        friend DataLayer;
-
-        explicit StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&));
-
-        DataLayer* _layer;
-        DataLayerStorageHandle _storage;
-        /* 0/4 bytes free */
-        Containers::Size3D _index;
-        void(*_callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
-        void(*_callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
 };
 
 template<class Storage> Storage DataLayer::storage(const StorageHandle handle) {
@@ -1535,7 +1548,7 @@ template<class Storage> Storage DataLayer::storage(const DataLayerStorageHandle 
 }
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, F): StorageQuery{storage, {},
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, F): AbstractStorageQuery{storage, {},
     AbstractStorage::queryCall<const T&, Storage, F>,
     AbstractStorage::queryCall<T, Storage, F>
 } {
@@ -1558,7 +1571,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "expected query to be a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, F): StorageQuery{storage, {0, 0, index},
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, F): AbstractStorageQuery{storage, {0, 0, index},
     AbstractStorage::queryCall1D<const T&, Storage, F>,
     AbstractStorage::queryCall1D<T, Storage, F>
 } {
@@ -1578,7 +1591,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "expected query to be a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, F): StorageQuery{storage, {0, 0, index},
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, F): AbstractStorageQuery{storage, {0, 0, index},
     AbstractStorage::queryCall1D<const T&, Storage, F>,
     AbstractStorage::queryCall1D<T, Storage, F>
 } {
@@ -1598,7 +1611,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "expected query to be a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, F): StorageQuery{storage, {0, index[0], index[1]},
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, F): AbstractStorageQuery{storage, {0, index[0], index[1]},
     AbstractStorage::queryCall2D<const T&, Storage, F>,
     AbstractStorage::queryCall2D<T, Storage, F>
 } {
@@ -1618,7 +1631,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "expected query to be a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, F): StorageQuery{storage, index,
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, F): AbstractStorageQuery{storage, index,
     AbstractStorage::queryCall3D<const T&, Storage, F>,
     AbstractStorage::queryCall3D<T, Storage, F>
 } {
@@ -1630,16 +1643,6 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "AbstractStorage subclasses expected to be trivially copyable with no extra members");
     static_assert(std::is_empty<F>::value,
         "expected query to be a non-capturing lambda");
-}
-
-template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&)): _layer{storage._layer}, _storage{storage._handle}, _index{index}, _callReference{callReference}, _callValue{callValue} {
-    CORRADE_ASSERT(_layer->isHandleValid(_storage),
-        "Ui::StorageQuery: invalid handle" << storageHandle(_layer->handle(), _storage), );
-    #ifndef CORRADE_NO_ASSERT
-    const Containers::Size3D& size = storage.size();
-    #endif
-    CORRADE_ASSERT(index[0] < size[0] && index[1] < size[1] && index[2] < size[2],
-        "Ui::StorageQuery: index" << index << "out of range for" << size << "elements", );
 }
 
 template<class T> StorageQuery<T>::operator T() const {
