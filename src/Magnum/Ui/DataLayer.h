@@ -985,7 +985,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
            it cannot be wrapped in #ifdef CORRADE_NO_ASSERT because it'd cause
            linker errors if the library is built with assertions but the user
            project not and vice versa. */
-        DataHandle onUpdateInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& function, NodeHandle node);
+        DataHandle onUpdateInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& function, NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL StorageHandle storageInternal(const UnsignedInt id) const;
         MAGNUM_UI_LOCAL Containers::Size3D indexInternal(const UnsignedInt id) const;
@@ -1287,16 +1287,46 @@ class MAGNUM_UI_EXPORT AbstractStorage {
            storage<T>() then just casts to a subtype which doesn't need a
            friend on the derived type anymore */
         friend DataLayer;
-        /* So StorageQuery constructor can access the _layer and _handle
-           without going through getters and having to extract the small handle
-           back, and also that it can create the storage from a layer + handle
-           in its operator T() implementation */
+        /* So StorageQuery can call the queryCall() helpers below, and the
+           constructor can access the _layer and _handle without going through
+           getters and having to extract the small handle back */
         template<class> friend class StorageQuery;
 
-        /* Used by DataLayer::storageInternal() as well as doPreUpdate() for
-           creating temporary instances to pass to the update functions */
-        explicit AbstractStorage(DataLayer& layer, DataLayerStorageHandle handle):
-        _layer{&layer}, _handle{handle} {}
+        /* Used by StorageQuery constructors. Put here instead of being
+           free functions in the Implementation namespace so they can call the
+           private layer + handle constructor from below without having to
+           explicitly list all these as friends. */
+        template<class T, class Storage, class F> static void queryCall(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D&, Containers::FunctionData& result) {
+            /* With a non-capturing lambda, all we need for calling it is the F
+               type, there's no point in storing the (empty) `query` instance
+               itself. Could also do `*reinterpret_cast<F*>(nullptr)` but
+               casting from an empty struct doesn't break the "`this` pointer
+               is never null" rule and avoids compiler warnings. */
+            struct {} empty;
+            const AbstractStorage storage{layer, handle};
+            reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage)));
+        }
+        template<class T, class Storage, class F> static void queryCall1D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
+            /* See above for why we're casting from an empty struct */
+            struct {} empty;
+            const AbstractStorage storage{layer, handle};
+            reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index[2]));
+        }
+        template<class T, class Storage, class F> static void queryCall2D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
+            /* See above for why we're casting from an empty struct */
+            struct {} empty;
+            const AbstractStorage storage{layer, handle};
+            reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), {index[1], index[2]}));
+        }
+        template<class T, class Storage, class F> static void queryCall3D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
+            /* See above for why we're casting from an empty struct */
+            struct {} empty;
+            const AbstractStorage storage{layer, handle};
+            reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index));
+        }
+
+        /* Used by DataLayer::storageInternal() */
+        explicit AbstractStorage(DataLayer& layer, DataLayerStorageHandle handle): _layer{&layer}, _handle{handle} {}
 
         DataLayer* _layer;
         DataLayerStorageHandle _handle;
@@ -1472,14 +1502,14 @@ template<class T> class StorageQuery {
            getters */
         friend DataLayer;
 
-        explicit StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&));
+        explicit StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&));
 
         DataLayer* _layer;
         DataLayerStorageHandle _storage;
         /* 0/4 bytes free */
         Containers::Size3D _index;
-        void(*_callReference)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
-        void(*_callValue)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
+        void(*_callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
+        void(*_callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
 };
 
 template<class Storage> Storage DataLayer::storage(const StorageHandle handle) {
@@ -1504,37 +1534,10 @@ template<class Storage> Storage DataLayer::storage(const DataLayerStorageHandle 
     return static_cast<const Storage&>(storage);
 }
 
-namespace Implementation {
-    template<class T, class Storage, class F> void storageQueryUpdateCall(const AbstractStorage& storage, const Containers::Size3D&, Containers::FunctionData& result) {
-        /* With a non-capturing lambda, all we need for calling it is the F
-           type, there's no point in storing the (empty) `query` instance
-           itself. Could also do `*reinterpret_cast<F*>(nullptr)` but casting
-           from an empty struct doesn't break the "`this` pointer is never
-           null" rule and avoids compiler warnings. */
-        struct {} empty;
-        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage)));
-    }
-    template<class T, class Storage, class F> void storageQueryUpdateCall1D(const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
-        /* See above for why we're casting from an empty struct */
-        struct {} empty;
-        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index[2]));
-    }
-    template<class T, class Storage, class F> void storageQueryUpdateCall2D(const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
-        /* See above for why we're casting from an empty struct */
-        struct {} empty;
-        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), {index[1], index[2]}));
-    }
-    template<class T, class Storage, class F> void storageQueryUpdateCall3D(const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
-        /* See above for why we're casting from an empty struct */
-        struct {} empty;
-        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index));
-    }
-}
-
 #ifndef DOXYGEN_GENERATING_OUTPUT
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, F): StorageQuery{storage, {},
-    Implementation::storageQueryUpdateCall<const T&, Storage, F>,
-    Implementation::storageQueryUpdateCall<T, Storage, F>
+    AbstractStorage::queryCall<const T&, Storage, F>,
+    AbstractStorage::queryCall<T, Storage, F>
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1556,8 +1559,8 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, F): StorageQuery{storage, {0, 0, index},
-    Implementation::storageQueryUpdateCall1D<const T&, Storage, F>,
-    Implementation::storageQueryUpdateCall1D<T, Storage, F>
+    AbstractStorage::queryCall1D<const T&, Storage, F>,
+    AbstractStorage::queryCall1D<T, Storage, F>
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1576,8 +1579,8 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, F): StorageQuery{storage, {0, 0, index},
-    Implementation::storageQueryUpdateCall1D<const T&, Storage, F>,
-    Implementation::storageQueryUpdateCall1D<T, Storage, F>
+    AbstractStorage::queryCall1D<const T&, Storage, F>,
+    AbstractStorage::queryCall1D<T, Storage, F>
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1596,8 +1599,8 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, F): StorageQuery{storage, {0, index[0], index[1]},
-    Implementation::storageQueryUpdateCall2D<const T&, Storage, F>,
-    Implementation::storageQueryUpdateCall2D<T, Storage, F>
+    AbstractStorage::queryCall2D<const T&, Storage, F>,
+    AbstractStorage::queryCall2D<T, Storage, F>
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1616,8 +1619,8 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, F): StorageQuery{storage, index,
-    Implementation::storageQueryUpdateCall3D<const T&, Storage, F>,
-    Implementation::storageQueryUpdateCall3D<T, Storage, F>
+    AbstractStorage::queryCall3D<const T&, Storage, F>,
+    AbstractStorage::queryCall3D<T, Storage, F>
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1629,7 +1632,7 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "expected query to be a non-capturing lambda");
 }
 
-template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&)): _layer{storage._layer}, _storage{storage._handle}, _index{index}, _callReference{callReference}, _callValue{callValue} {
+template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&)): _layer{storage._layer}, _storage{storage._handle}, _index{index}, _callReference{callReference}, _callValue{callValue} {
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
         "Ui::StorageQuery: invalid handle" << storageHandle(_layer->handle(), _storage), );
     #ifndef CORRADE_NO_ASSERT
@@ -1654,7 +1657,7 @@ template<class T> StorageQuery<T>::operator T() const {
     Containers::Function<void(const T&)> update{[&out](const T& value) {
         new(&out.value) T{value};
     }};
-    _callReference(AbstractStorage{*_layer, _storage}, _index, update);
+    _callReference(*_layer, _storage, _index, update);
     return out.value;
 }
 #endif

@@ -250,7 +250,7 @@ struct Data {
     UnsignedLong storageIdDirtyLinearizedIndex;
 
     Containers::FunctionData function;
-    void(*call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
+    void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
 };
 
 }
@@ -665,7 +665,7 @@ DataHandle DataLayer::onUpdateInternal(const DataLayer&
     #ifndef CORRADE_NO_ASSERT
     layer
     #endif
-    , const DataLayerStorageHandle storage, const Containers::Size3D& index, void(*const call)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& function, const NodeHandle node)
+    , const DataLayerStorageHandle storage, const Containers::Size3D& index, void(*const call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& function, const NodeHandle node)
 {
     State& state = *_state;
     CORRADE_ASSERT(&layer == this,
@@ -925,13 +925,16 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
            !(storage.used.flags >= StorageFlagDirty))
             continue;
 
-        /** @todo to avoid too many nested function calls, the AbstractStorage
-            instance could optionally cache the data pointer -- in the regular
-            case it'd be created with it being null and so it calls into
-            _layer->storageData() from AbstractStorage::data(), but the
-            temporary instance here could get it directly and skip that call */
+        /** @todo to avoid too many nested function calls, we could also pass
+            the data pointer directly to the call function instead of it having
+            to go through AbstractStorage::data() -> DataLayer::storageData()
+            each time. In other words, AbstractStorage would have an ability to
+            use a cached data member pointer, by default a storage instantiated
+            through DataLayer::storage<T>() would query it from the layer every
+            time (as in-place pointers can change on reallocation), but here
+            it'd use the cached value. */
         data.call(
-            AbstractStorage{*this, dataLayerStorageHandle(storageId, storage.used.generation)},
+            *this, dataLayerStorageHandle(storageId, storage.used.generation),
             delinearizeIndex(storage.used.size, data.storageIdDirtyLinearizedIndex),
             data.function);
 
