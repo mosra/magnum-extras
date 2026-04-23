@@ -1001,6 +1001,19 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         Containers::Pointer<State> _state;
 };
 
+namespace Implementation {
+    template<UnsignedInt dimensions> inline Containers::Size<dimensions> indexFor(const Containers::Size3D& index);
+    template<> inline Containers::Size1D indexFor<1>(const Containers::Size3D& index) {
+        return index[2];
+    }
+    template<> inline Containers::Size2D indexFor<2>(const Containers::Size3D& index) {
+        return {index[1], index[2]};
+    }
+    template<> inline Containers::Size3D indexFor<3>(const Containers::Size3D& index) {
+        return index;
+    }
+}
+
 /**
 @brief Base for @ref DataLayer storage implementations
 @m_since_latest_{extras}
@@ -1304,23 +1317,11 @@ class MAGNUM_UI_EXPORT AbstractStorage {
             const AbstractStorage storage{layer, handle};
             reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage)));
         }
-        template<class T, class Storage, class F> static void queryCall1D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
+        template<UnsignedInt dimensions, class T, class Storage, class F> static void queryCallND(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
             /* See above for why we're casting from an empty struct */
             struct {} empty;
             const AbstractStorage storage{layer, handle};
-            reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index[2]));
-        }
-        template<class T, class Storage, class F> static void queryCall2D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
-            /* See above for why we're casting from an empty struct */
-            struct {} empty;
-            const AbstractStorage storage{layer, handle};
-            reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), {index[1], index[2]}));
-        }
-        template<class T, class Storage, class F> static void queryCall3D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
-            /* See above for why we're casting from an empty struct */
-            struct {} empty;
-            const AbstractStorage storage{layer, handle};
-            reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index));
+            reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index)));
         }
 
         /* Used by DataLayer::storageInternal() */
@@ -1572,8 +1573,8 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, F): AbstractStorageQuery{storage, {0, 0, index},
-    AbstractStorage::queryCall1D<const T&, Storage, F>,
-    AbstractStorage::queryCall1D<T, Storage, F>
+    AbstractStorage::queryCallND<1, const T&, Storage, F>,
+    AbstractStorage::queryCallND<1, T, Storage, F>
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1592,8 +1593,8 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, F): AbstractStorageQuery{storage, {0, 0, index},
-    AbstractStorage::queryCall1D<const T&, Storage, F>,
-    AbstractStorage::queryCall1D<T, Storage, F>
+    AbstractStorage::queryCallND<1, const T&, Storage, F>,
+    AbstractStorage::queryCallND<1, T, Storage, F>
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1612,8 +1613,8 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, F): AbstractStorageQuery{storage, {0, index[0], index[1]},
-    AbstractStorage::queryCall2D<const T&, Storage, F>,
-    AbstractStorage::queryCall2D<T, Storage, F>
+    AbstractStorage::queryCallND<2, const T&, Storage, F>,
+    AbstractStorage::queryCallND<2, T, Storage, F>
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1632,8 +1633,8 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
 }
 
 template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, F): AbstractStorageQuery{storage, index,
-    AbstractStorage::queryCall3D<const T&, Storage, F>,
-    AbstractStorage::queryCall3D<T, Storage, F>
+    AbstractStorage::queryCallND<3, const T&, Storage, F>,
+    AbstractStorage::queryCallND<3, T, Storage, F>
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
