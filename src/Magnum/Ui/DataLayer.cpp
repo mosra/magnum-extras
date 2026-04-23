@@ -1009,7 +1009,7 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
     }
 }
 
-AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const StorageOperations operations, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _operations{operations}, _index{index}, _callReference{callReference}, _callValue{callValue} {
+AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const StorageOperations operations, const Containers::Size3D& index, void(*(*call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _operations{operations}, _index{index}, _call{call} {
     /* The class is always constructed through the StorageQuery subclass, so
        make the assertions mention that to reduce confusion */
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
