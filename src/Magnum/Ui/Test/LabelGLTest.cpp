@@ -111,7 +111,7 @@ const struct {
                     *createInPlace<const char*>() = counter % 3 ? "Bye" : "Hello!";
                 }
                 operator StorageQuery<Containers::StringView>() const {
-                    return {*this, {}, [](const Storage& storage) {
+                    return {*this, {}, [](const Storage& storage, StorageOperation) {
                         return Containers::StringView{*storage.data<const char*>()};
                     }};
                 }
@@ -127,7 +127,7 @@ const struct {
                     *createInPlace<const char*>() = counter % 3 ? "Bye" : "Hello!";
                 }
                 operator StorageQuery<Containers::StringView>() const {
-                    return {*this, {}, [](const Storage& storage) {
+                    return {*this, {}, [](const Storage& storage, StorageOperation) {
                         return Containers::StringView{*storage.data<const char*>()};
                     }};
                 }
@@ -199,7 +199,7 @@ const struct {
                     *createInPlace<Icon>() = counter % 3 ? Icon::Yes : Icon::No;
                 }
                 operator StorageQuery<Icon>() const {
-                    return {*this, {}, [](const Storage& storage) {
+                    return {*this, {}, [](const Storage& storage, StorageOperation) {
                         return *storage.data<Icon>();
                     }};
                 }
@@ -215,7 +215,7 @@ const struct {
                     *createInPlace<Icon>() = counter % 3 ? Icon::Yes : Icon::No;
                 }
                 operator StorageQuery<Icon>() const {
-                    return {*this, {}, [](const Storage& storage) {
+                    return {*this, {}, [](const Storage& storage, StorageOperation) {
                         return *storage.data<Icon>();
                     }};
                 }

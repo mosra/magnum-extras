@@ -93,7 +93,7 @@ struct DataLayerTest: TestSuite::Tester {
     void queryConstructCopy();
     void queryConstructInvalid();
     void queryValueNoDefaultConstructor();
-    void queryUpdateInvalid();
+    void queryValueUpdateInvalid();
     void queryInvalidHandle();
 
     /* Tests onUpdate() and remove() */
@@ -246,7 +246,7 @@ DataLayerTest::DataLayerTest() {
 
     addTests({&DataLayerTest::queryConstructInvalid,
               &DataLayerTest::queryValueNoDefaultConstructor,
-              &DataLayerTest::queryUpdateInvalid,
+              &DataLayerTest::queryValueUpdateInvalid,
               &DataLayerTest::queryInvalidHandle});
 
     addTests({&DataLayerTest::createRemove,
@@ -1310,7 +1310,7 @@ void DataLayerTest::removeStorageInvalid() {
         explicit DummyStorage(DataLayer& layer, StorageFlags flags = {}): AbstractStorage{layer, flags} {}
 
         operator StorageQuery<Int>() const {
-            return {*this, {}, [](const DummyStorage&) {
+            return {*this, {}, [](const DummyStorage&, StorageOperation) {
                 return 3;
             }};
         }
@@ -1446,7 +1446,7 @@ void DataLayerTest::setStorageDirty() {
         explicit DummyStorage(DataLayer& layer, StorageFlags flags): AbstractStorage{layer, flags} {}
 
         operator StorageQuery<Int>() const {
-            return {*this, {}, [](const DummyStorage&) {
+            return {*this, {}, [](const DummyStorage&, StorageOperation) {
                 return 3371;
             }};
         }
@@ -1639,7 +1639,7 @@ void DataLayerTest::invalidStorageHandle() {
 
 Int queryCalled = 0;
 Int query1DSizeTCalled = 0;
-Int query1DSize1DCalled = 0;
+Int query1DSize1DCalled = 1;
 Int query2DCalled = 0;
 Int query3DCalled = 0;
 Int updaterCalled = 1;
@@ -1647,12 +1647,12 @@ Int updaterCalled = 1;
 void DataLayerTest::queryConstructSetupTeardown() {
     queryCalled =
         query1DSizeTCalled =
-        query1DSize1DCalled =
         query2DCalled =
         query3DCalled = 0;
     /* These are reused by multiple lambdas and each multiplies with a
        different prime so they have to be 1 and not 0 */
-    updaterCalled = 1;
+    query1DSize1DCalled =
+        updaterCalled = 1;
 }
 
 void DataLayerTest::queryConstruct() {
@@ -1712,7 +1712,7 @@ void DataLayerTest::queryConstruct() {
        Don't want to create a NoCreate StorageQuery constructor as that'd be
        likely too dangerous (and don't want to litter the API with assertions
        for "createdness"). Might reconsider that in the future tho. */
-    auto dummy = [](const DummyStorage&) -> Int {
+    auto dummy = [](const DummyStorage&, StorageOperation) -> Int {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     };
 
@@ -1721,7 +1721,8 @@ void DataLayerTest::queryConstruct() {
        which is tested in createRemove() below. */
     StorageQuery<Int> single{storage, {}, dummy};
     {
-        auto query = [](const DummyStorage& storage) {
+        auto query = [](const DummyStorage& storage, StorageOperation operation) {
+            CORRADE_COMPARE(operation, StorageOperation{});
             CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x2, 0x5));
             ++queryCalled;
             return 0x333;
@@ -1746,12 +1747,14 @@ void DataLayerTest::queryConstruct() {
     CORRADE_COMPARE(&single.layer(), &layer);
     CORRADE_COMPARE(single.storage(), storage.handle());
     CORRADE_COMPARE(single.index(), Containers::Size3D{});
+    CORRADE_VERIFY(single.query());
     CORRADE_COMPARE(single.updater(), data.updater);
 
     /* 1D query with a size_t index */
     StorageQuery<Int> oneDimensionSizeT{storage, {}, dummy};
     {
-        auto query = [](const DummyStorage& storage, std::size_t index) {
+        auto query = [](const DummyStorage& storage, std::size_t index, StorageOperation operation) {
+            CORRADE_COMPARE(operation, StorageOperation{});
             CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x3, 0x2));
             CORRADE_COMPARE(index, 13);
             ++query1DSizeTCalled;
@@ -1779,15 +1782,27 @@ void DataLayerTest::queryConstruct() {
     CORRADE_COMPARE(&oneDimensionSizeT.layer(), &layer);
     CORRADE_COMPARE(oneDimensionSizeT.storage(), storage1D.handle());
     CORRADE_COMPARE(oneDimensionSizeT.index(), (Containers::Size3D{0, 0, 13}));
+    CORRADE_VERIFY(oneDimensionSizeT.query());
     CORRADE_COMPARE(oneDimensionSizeT.updater(), data.updater);
 
     /* 1D query with a Size1D index */
     StorageQuery<Int> oneDimensionSize1D{storage, {}, dummy};
     {
-        auto query = [](const DummyStorage& storage, const Containers::Size1D& index) {
+        auto query = [](const DummyStorage& storage, const Containers::Size1D& index, StorageOperation operation) {
+            CORRADE_COMPARE_AS(operation,
+                StorageOperation::Min|StorageOperation::Max,
+                TestSuite::Compare::LessOrEqual);
             CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x3, 0x2));
             CORRADE_COMPARE(index, 11);
-            ++query1DSize1DCalled;
+            if(operation == StorageOperation::Min) {
+                query1DSize1DCalled *= 2;
+                return 0xbadfeed;
+            }
+            if(operation == StorageOperation::Max) {
+                query1DSize1DCalled *= 3;
+                return 0xfeedbee;
+            }
+            query1DSize1DCalled *= 5;
             return 0x55555;
         };
         auto updater = [](const DummyStorage& storage, const Containers::Size1D& index, StorageOperation operation, const Int* value) {
@@ -1804,7 +1819,7 @@ void DataLayerTest::queryConstruct() {
         if(data.updater)
             oneDimensionSize1D = {storage1D, 11, StorageOperation::Min|StorageOperation::Max, query, updater};
         else
-            oneDimensionSize1D = {storage1D, 11, {}, query};
+            oneDimensionSize1D = {storage1D, 11, StorageOperation::Min|StorageOperation::Max, query};
     }
     CORRADE_COMPARE(layer.storageReferenceCount(storage), 0);
     CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 0);
@@ -1814,12 +1829,14 @@ void DataLayerTest::queryConstruct() {
     CORRADE_COMPARE(&oneDimensionSize1D.layer(), &layer);
     CORRADE_COMPARE(oneDimensionSize1D.storage(), storage1D.handle());
     CORRADE_COMPARE(oneDimensionSize1D.index(), (Containers::Size3D{0, 0, 11}));
+    CORRADE_VERIFY(oneDimensionSize1D.query());
     CORRADE_COMPARE(oneDimensionSize1D.updater(), data.updater);
 
     /* 2D query */
     StorageQuery<Int> twoDimensions{storage, {}, dummy};
     {
-        auto query = [](const DummyStorage& storage, const Containers::Size2D& index) {
+        auto query = [](const DummyStorage& storage, const Containers::Size2D& index, StorageOperation operation) {
+            CORRADE_COMPARE(operation, StorageOperation{});
             CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x4, 0x3));
             CORRADE_COMPARE(index, (Containers::Size2D{2, 5}));
             ++query2DCalled;
@@ -1849,12 +1866,14 @@ void DataLayerTest::queryConstruct() {
     CORRADE_COMPARE(&twoDimensions.layer(), &layer);
     CORRADE_COMPARE(twoDimensions.storage(), storage2D.handle());
     CORRADE_COMPARE(twoDimensions.index(), (Containers::Size3D{0, 2, 5}));
+    CORRADE_VERIFY(twoDimensions.query());
     CORRADE_COMPARE(twoDimensions.updater(), data.updater);
 
     /* 3D query */
     StorageQuery<Int> threeDimensions{storage, {}, dummy};
     {
-        auto query = [](const DummyStorage& storage, const Containers::Size3D& index) {
+        auto query = [](const DummyStorage& storage, const Containers::Size3D& index, StorageOperation operation) {
+            CORRADE_COMPARE(operation, StorageOperation{});
             CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x5, 0x4));
             CORRADE_COMPARE(index, (Containers::Size3D{1, 3, 2}));
             ++query3DCalled;
@@ -1881,12 +1900,14 @@ void DataLayerTest::queryConstruct() {
     CORRADE_COMPARE(&threeDimensions.layer(), &layer);
     CORRADE_COMPARE(threeDimensions.storage(), storage3D.handle());
     CORRADE_COMPARE(threeDimensions.index(), (Containers::Size3D{1, 3, 2}));
+    CORRADE_VERIFY(threeDimensions.query());
     CORRADE_COMPARE(threeDimensions.updater(), data.updater);
 
     /* None of the storage queries should be called until now */
     CORRADE_COMPARE(queryCalled, 0);
     CORRADE_COMPARE(query1DSizeTCalled, 0);
-    CORRADE_COMPARE(query1DSize1DCalled, 0);
+    /* This one is multiplied instead of incremented */
+    CORRADE_COMPARE(query1DSize1DCalled, 1);
     CORRADE_COMPARE(query2DCalled, 0);
     CORRADE_COMPARE(query3DCalled, 0);
     /* These are multiplied instead of incremented */
@@ -1898,35 +1919,37 @@ void DataLayerTest::queryConstruct() {
     CORRADE_COMPARE(Int(single), 0x333);
     CORRADE_COMPARE(queryCalled, 1);
     CORRADE_COMPARE(query1DSizeTCalled, 0);
-    CORRADE_COMPARE(query1DSize1DCalled, 0);
+    CORRADE_COMPARE(query1DSize1DCalled, 1);
     CORRADE_COMPARE(query2DCalled, 0);
     CORRADE_COMPARE(query3DCalled, 0);
 
     CORRADE_COMPARE(Int(oneDimensionSizeT), 0x4444);
     CORRADE_COMPARE(queryCalled, 1);
     CORRADE_COMPARE(query1DSizeTCalled, 1);
-    CORRADE_COMPARE(query1DSize1DCalled, 0);
+    CORRADE_COMPARE(query1DSize1DCalled, 1);
     CORRADE_COMPARE(query2DCalled, 0);
     CORRADE_COMPARE(query3DCalled, 0);
 
     CORRADE_COMPARE(Int(oneDimensionSize1D), 0x55555);
+    CORRADE_COMPARE(oneDimensionSize1D.min(), 0xbadfeed);
+    CORRADE_COMPARE(oneDimensionSize1D.max(), 0xfeedbee);
     CORRADE_COMPARE(queryCalled, 1);
     CORRADE_COMPARE(query1DSizeTCalled, 1);
-    CORRADE_COMPARE(query1DSize1DCalled, 1);
+    CORRADE_COMPARE(query1DSize1DCalled, 2*3*5);
     CORRADE_COMPARE(query2DCalled, 0);
     CORRADE_COMPARE(query3DCalled, 0);
 
     CORRADE_COMPARE(Int(twoDimensions), 0x666666);
     CORRADE_COMPARE(queryCalled, 1);
     CORRADE_COMPARE(query1DSizeTCalled, 1);
-    CORRADE_COMPARE(query1DSize1DCalled, 1);
+    CORRADE_COMPARE(query1DSize1DCalled, 2*3*5);
     CORRADE_COMPARE(query2DCalled, 1);
     CORRADE_COMPARE(query3DCalled, 0);
 
     CORRADE_COMPARE(Int(threeDimensions), 0x7777777);
     CORRADE_COMPARE(queryCalled, 1);
     CORRADE_COMPARE(query1DSizeTCalled, 1);
-    CORRADE_COMPARE(query1DSize1DCalled, 1);
+    CORRADE_COMPARE(query1DSize1DCalled, 2*3*5);
     CORRADE_COMPARE(query2DCalled, 1);
     CORRADE_COMPARE(query3DCalled, 1);
 
@@ -1952,7 +1975,8 @@ void DataLayerTest::queryConstructCopy() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer, {3, 5, 17}} {}
     } storage{layer};
 
-    StorageQuery<Int> a{storage, {2, 4, 13}, StorageOperation::Set|StorageOperation::Reset, [](const DummyStorage&, const Containers::Size3D& index) {
+    StorageQuery<Int> a{storage, {2, 4, 13}, StorageOperation::Set|StorageOperation::Reset, [](const DummyStorage&, const Containers::Size3D& index, StorageOperation operation) {
+        CORRADE_COMPARE(operation, StorageOperation{});
         CORRADE_COMPARE(index, (Containers::Size3D{2, 4, 13}));
         ++queryCalled;
         return 0x333;
@@ -2019,11 +2043,11 @@ void DataLayerTest::queryConstructInvalid() {
     layer.removeStorage(removedStorage);
 
     /* Indices exactly at the end shouldn't trigger an assert */
-    StorageQuery<Int>{storage, {}, [](const DummyStorage&) { return 13; }};
-    StorageQuery<Int>{storage1D, 14, {}, [](const DummyStorage&, std::size_t) { return 13; }};
-    StorageQuery<Int>{storage1D, 14, {}, [](const DummyStorage&, const Containers::Size1D&) { return 13; }};
-    StorageQuery<Int>{storage2D, {2, 6}, {}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
-    StorageQuery<Int>{storage3D, {3, 1, 4}, {}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
+    StorageQuery<Int>{storage, {}, [](const DummyStorage&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage1D, 14, {}, [](const DummyStorage&, std::size_t, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage1D, 14, {}, [](const DummyStorage&, const Containers::Size1D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage2D, {2, 6}, {}, [](const DummyStorage&, const Containers::Size2D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage3D, {3, 1, 4}, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) { return 13; }};
 
     /* These should all fail at compile time */
     #if 0
@@ -2044,66 +2068,68 @@ void DataLayerTest::queryConstructInvalid() {
     } storageWithMember{layer};
 
     /* Non-trivially copyable storage type */
-    StorageQuery<Int>{storageNotTriviallyCopyable, {}, [](const StorageNotTriviallyCopyable&) { return 0; }};
-    StorageQuery<Int>{storageNotTriviallyCopyable, 0, {}, [](const StorageNotTriviallyCopyable&, std::size_t) { return 0; }};
-    StorageQuery<Int>{storageNotTriviallyCopyable, 0, {}, [](const StorageNotTriviallyCopyable&, const Containers::Size1D&) { return 0; }};
-    StorageQuery<Int>{storageNotTriviallyCopyable, {0, 0}, {}, [](const StorageNotTriviallyCopyable&, const Containers::Size2D&) { return 0; }};
-    StorageQuery<Int>{storageNotTriviallyCopyable, {0, 0, 0}, {}, [](const StorageNotTriviallyCopyable&, const Containers::Size3D&) { return 0; }};
+    StorageQuery<Int>{storageNotTriviallyCopyable, {}, [](const StorageNotTriviallyCopyable&, StorageOperation) { return 0; }};
+    StorageQuery<Int>{storageNotTriviallyCopyable, 0, {}, [](const StorageNotTriviallyCopyable&, std::size_t, StorageOperation) { return 0; }};
+    StorageQuery<Int>{storageNotTriviallyCopyable, 0, {}, [](const StorageNotTriviallyCopyable&, const Containers::Size1D&, StorageOperation) { return 0; }};
+    StorageQuery<Int>{storageNotTriviallyCopyable, {0, 0}, {}, [](const StorageNotTriviallyCopyable&, const Containers::Size2D&, StorageOperation) { return 0; }};
+    StorageQuery<Int>{storageNotTriviallyCopyable, {0, 0, 0}, {}, [](const StorageNotTriviallyCopyable&, const Containers::Size3D&, StorageOperation) { return 0; }};
 
     /* Storage type with extra members */
-    StorageQuery<Int>{storageWithMember, {}, [](const StorageWithMember&) { return 0; }};
-    StorageQuery<Int>{storageWithMember, 0, {}, [](const StorageWithMember&, std::size_t) { return 0; }};
-    StorageQuery<Int>{storageWithMember, 0, {}, [](const StorageWithMember&, const Containers::Size1D&) { return 0; }};
-    StorageQuery<Int>{storageWithMember, {0, 0}, {}, [](const StorageWithMember&, const Containers::Size2D&) { return 0; }};
-    StorageQuery<Int>{storageWithMember, {0, 0, 0}, {}, [](const StorageWithMember&, const Containers::Size3D&) { return 0; }};
+    StorageQuery<Int>{storageWithMember, {}, [](const StorageWithMember&, StorageOperation) { return 0; }};
+    StorageQuery<Int>{storageWithMember, 0, {}, [](const StorageWithMember&, std::size_t, StorageOperation) { return 0; }};
+    StorageQuery<Int>{storageWithMember, 0, {}, [](const StorageWithMember&, const Containers::Size1D&, StorageOperation) { return 0; }};
+    StorageQuery<Int>{storageWithMember, {0, 0}, {}, [](const StorageWithMember&, const Containers::Size2D&, StorageOperation) { return 0; }};
+    StorageQuery<Int>{storageWithMember, {0, 0, 0}, {}, [](const StorageWithMember&, const Containers::Size3D&, StorageOperation) { return 0; }};
 
     /* Query is not a lambda */
-    StorageQuery<Int>{storage, {}, static_cast<Int(*)(const DummyStorage&)>(nullptr)};
-    StorageQuery<Int>{storage, 0, {}, static_cast<Int(*)(const DummyStorage&, std::size_t)>(nullptr)};
-    StorageQuery<Int>{storage, 0, {}, static_cast<Int(*)(const DummyStorage&, const Containers::Size1D&)>(nullptr)};
-    StorageQuery<Int>{storage, {0, 0}, {}, static_cast<Int(*)(const DummyStorage&, const Containers::Size2D&)>(nullptr)};
-    StorageQuery<Int>{storage, {0, 0, 0}, {}, static_cast<Int(*)(const DummyStorage&, const Containers::Size3D&)>(nullptr)};
+    StorageQuery<Int>{storage, {}, static_cast<Int(*)(const DummyStorage&, StorageOperation)>(nullptr)};
+    StorageQuery<Int>{storage, 0, {}, static_cast<Int(*)(const DummyStorage&, std::size_t, StorageOperation)>(nullptr)};
+    StorageQuery<Int>{storage, 0, {}, static_cast<Int(*)(const DummyStorage&, const Containers::Size1D&, StorageOperation)>(nullptr)};
+    StorageQuery<Int>{storage, {0, 0}, {}, static_cast<Int(*)(const DummyStorage&, const Containers::Size2D&, StorageOperation)>(nullptr)};
+    StorageQuery<Int>{storage, {0, 0, 0}, {}, static_cast<Int(*)(const DummyStorage&, const Containers::Size3D&, StorageOperation)>(nullptr)};
 
     /* Updater is not a lambda */
-    StorageQuery<Int>{storage, {}, [](const DummyStorage&) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, StorageOperation, const Int*)>(nullptr)};
-    StorageQuery<Int>{storage, 0, {}, [](const DummyStorage&, std::size_t) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, std::size_t, StorageOperation, const Int*)>(nullptr)};
-    StorageQuery<Int>{storage, 0, {}, [](const DummyStorage&, const Containers::Size1D&) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, const Containers::Size1D&, StorageOperation, const Int*)>(nullptr)};
-    StorageQuery<Int>{storage, {0, 0}, {}, [](const DummyStorage&, const Containers::Size2D&) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, const Containers::Size2D&, StorageOperation, const Int*)>(nullptr)};
-    StorageQuery<Int>{storage, {0, 0, 0}, {}, [](const DummyStorage&, const Containers::Size3D&) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, const Containers::Size3D&, StorageOperation, const Int*)>(nullptr)};
+    StorageQuery<Int>{storage, {}, [](const DummyStorage&, StorageOperation) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, StorageOperation, const Int*)>(nullptr)};
+    StorageQuery<Int>{storage, 0, {}, [](const DummyStorage&, std::size_t, StorageOperation) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, std::size_t, StorageOperation, const Int*)>(nullptr)};
+    StorageQuery<Int>{storage, 0, {}, [](const DummyStorage&, const Containers::Size1D&, StorageOperation) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, const Containers::Size1D&, StorageOperation, const Int*)>(nullptr)};
+    StorageQuery<Int>{storage, {0, 0}, {}, [](const DummyStorage&, const Containers::Size2D&, StorageOperation) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, const Containers::Size2D&, StorageOperation, const Int*)>(nullptr)};
+    StorageQuery<Int>{storage, {0, 0, 0}, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) { return 0; }, static_cast<StorageUpdateState(*)(const DummyStorage&, const Containers::Size3D&, StorageOperation, const Int*)>(nullptr)};
     #endif
 
     Containers::String out;
     Error redirectError{&out};
-    StorageQuery<Int>{removedStorage, {}, [](const DummyStorage&) { return 13; }};
-    StorageQuery<Int>{removedStorage, 0, {}, [](const DummyStorage&, std::size_t) { return 13; }};
-    StorageQuery<Int>{removedStorage, 0, {}, [](const DummyStorage&, const Containers::Size1D&) { return 13; }};
-    StorageQuery<Int>{removedStorage, {0, 0}, {}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
-    StorageQuery<Int>{removedStorage, {0, 0, 0}, {}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
+    StorageQuery<Int>{removedStorage, {}, [](const DummyStorage&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{removedStorage, 0, {}, [](const DummyStorage&, std::size_t, StorageOperation) { return 13; }};
+    StorageQuery<Int>{removedStorage, 0, {}, [](const DummyStorage&, const Containers::Size1D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{removedStorage, {0, 0}, {}, [](const DummyStorage&, const Containers::Size2D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{removedStorage, {0, 0, 0}, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) { return 13; }};
     /* Index out of bounds in 1D, 2D and 3D */
-    StorageQuery<Int>{storage1D, 15, {}, [](const DummyStorage&, std::size_t) { return 13; }};
-    StorageQuery<Int>{storage1D, 15, {}, [](const DummyStorage&, const Containers::Size1D&) { return 13; }};
-    StorageQuery<Int>{storage2D, {2, 7}, {}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
-    StorageQuery<Int>{storage2D, {3, 6}, {}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
-    StorageQuery<Int>{storage3D, {3, 1, 5}, {}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
-    StorageQuery<Int>{storage3D, {3, 2, 4}, {}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
-    StorageQuery<Int>{storage3D, {4, 1, 4}, {}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
+    StorageQuery<Int>{storage1D, 15, {}, [](const DummyStorage&, std::size_t, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage1D, 15, {}, [](const DummyStorage&, const Containers::Size1D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage2D, {2, 7}, {}, [](const DummyStorage&, const Containers::Size2D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage2D, {3, 6}, {}, [](const DummyStorage&, const Containers::Size2D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage3D, {3, 1, 5}, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage3D, {3, 2, 4}, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage3D, {4, 1, 4}, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) { return 13; }};
     /* No index specified for a 1D/2D/3D storage even though it's in bounds */
-    StorageQuery<Int>{storage1D, {}, [](const DummyStorage&) { return 13; }};
-    StorageQuery<Int>{storage2D, {}, [](const DummyStorage&) { return 13; }};
-    StorageQuery<Int>{storage3D, {}, [](const DummyStorage&) { return 13; }};
+    StorageQuery<Int>{storage1D, {}, [](const DummyStorage&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage2D, {}, [](const DummyStorage&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage3D, {}, [](const DummyStorage&, StorageOperation) { return 13; }};
     /* 1D index specified for a 2D/3D storage even though it's in bounds */
-    StorageQuery<Int>{storage2D, 0, {}, [](const DummyStorage&, std::size_t) { return 13; }};
-    StorageQuery<Int>{storage2D, 0, {}, [](const DummyStorage&, const Containers::Size1D&) { return 13; }};
-    StorageQuery<Int>{storage3D, 0, {}, [](const DummyStorage&, std::size_t) { return 13; }};
-    StorageQuery<Int>{storage3D, 0, {}, [](const DummyStorage&, const Containers::Size1D&) { return 13; }};
+    StorageQuery<Int>{storage2D, 0, {}, [](const DummyStorage&, std::size_t, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage2D, 0, {}, [](const DummyStorage&, const Containers::Size1D&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage3D, 0, {}, [](const DummyStorage&, std::size_t, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage3D, 0, {}, [](const DummyStorage&, const Containers::Size1D&, StorageOperation) { return 13; }};
     /* 2D index specified for a 3D storage even though it's in bounds */
-    StorageQuery<Int>{storage3D, {0, 0}, {}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
+    StorageQuery<Int>{storage3D, {0, 0}, {}, [](const DummyStorage&, const Containers::Size2D&, StorageOperation) { return 13; }};
     /* Invalid StorageOperation + updater combinations */
-    StorageQuery<Int>{storage, StorageOperation::Set|StorageOperation::Reset, [](const DummyStorage&) { return 13; }};
-    StorageQuery<Int>{storage, StorageOperation::Min|StorageOperation::Reset, [](const DummyStorage&) { return 13; }, [](const DummyStorage&, StorageOperation, const Int*) { return StorageUpdateState::Success; }};
-    StorageQuery<Int>{storage, StorageOperation::Max|StorageOperation::Toggle, [](const DummyStorage&) { return 13; }, [](const DummyStorage&, StorageOperation, const Int*) { return StorageUpdateState::Success; }};
-    StorageQuery<Int>{storage, StorageOperation::Increment|StorageOperation::Set, [](const DummyStorage&) { return 13; }, [](const DummyStorage&, StorageOperation, const Int*) { return StorageUpdateState::Success; }};
-    StorageQuery<Int>{storage, StorageOperation::Decrement, [](const DummyStorage&) { return 13; }, [](const DummyStorage&, StorageOperation, const Int*) { return StorageUpdateState::Success; }};
+    StorageQuery<Int>{storage, StorageOperation::Set|StorageOperation::Reset, [](const DummyStorage&, StorageOperation) { return 13; }};
+    /* The Min|Max should be filtered from the message */
+    StorageQuery<Int>{storage, StorageOperation::Reset|StorageOperation::Toggle|StorageOperation::Min|StorageOperation::Max, [](const DummyStorage&, StorageOperation) { return 13; }};
+    StorageQuery<Int>{storage, StorageOperation::Min|StorageOperation::Reset, [](const DummyStorage&, StorageOperation) { return 13; }, [](const DummyStorage&, StorageOperation, const Int*) { return StorageUpdateState::Success; }};
+    StorageQuery<Int>{storage, StorageOperation::Max|StorageOperation::Toggle, [](const DummyStorage&, StorageOperation) { return 13; }, [](const DummyStorage&, StorageOperation, const Int*) { return StorageUpdateState::Success; }};
+    StorageQuery<Int>{storage, StorageOperation::Increment|StorageOperation::Set, [](const DummyStorage&, StorageOperation) { return 13; }, [](const DummyStorage&, StorageOperation, const Int*) { return StorageUpdateState::Success; }};
+    StorageQuery<Int>{storage, StorageOperation::Decrement, [](const DummyStorage&, StorageOperation) { return 13; }, [](const DummyStorage&, StorageOperation, const Int*) { return StorageUpdateState::Success; }};
     CORRADE_COMPARE_AS(out,
         "Ui::StorageQuery: invalid handle Ui::StorageHandle({0xab, 0x12}, {0x4, 0x1})\n"
         "Ui::StorageQuery: invalid handle Ui::StorageHandle({0xab, 0x12}, {0x4, 0x1})\n"
@@ -2129,6 +2155,8 @@ void DataLayerTest::queryConstructInvalid() {
         "Ui::StorageQuery: expected a 2D storage but got a size of {4, 2, 5}\n"
 
         "Ui::StorageQuery: Ui::StorageOperation::Set|Ui::StorageOperation::Reset requires a non-null updater\n"
+        /* The Min|Max should be filtered from this message */
+        "Ui::StorageQuery: Ui::StorageOperation::Reset|Ui::StorageOperation::Toggle requires a non-null updater\n"
         "Ui::StorageQuery: either both Ui::StorageOperation::Min|Ui::StorageOperation::Max have to be set or neither\n"
         "Ui::StorageQuery: either both Ui::StorageOperation::Min|Ui::StorageOperation::Max have to be set or neither\n"
         "Ui::StorageQuery: either both Ui::StorageOperation::Increment|Ui::StorageOperation::Decrement have to be set or neither\n"
@@ -2152,14 +2180,20 @@ void DataLayerTest::queryValueNoDefaultConstructor() {
         Int a;
     };
 
-    StorageQuery<NoDefaultConstructor> query{storage, {}, [](const DummyStorage&) {
+    StorageQuery<NoDefaultConstructor> query{storage, StorageOperation::Min|StorageOperation::Max, [](const DummyStorage&, StorageOperation operation) {
+        if(operation == StorageOperation::Min)
+            return NoDefaultConstructor{0x1111};
+        if(operation == StorageOperation::Max)
+            return NoDefaultConstructor{0x7777};
         return NoDefaultConstructor{0x4444};
     }};
 
     CORRADE_COMPARE(NoDefaultConstructor{query}.a, 0x4444);
+    CORRADE_COMPARE(query.min().a, 0x1111);
+    CORRADE_COMPARE(query.max().a, 0x7777);
 }
 
-void DataLayerTest::queryUpdateInvalid() {
+void DataLayerTest::queryValueUpdateInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     DataLayer layer{layerHandle(0, 1)};
@@ -2168,37 +2202,40 @@ void DataLayerTest::queryUpdateInvalid() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
     } storage{layer};
 
-    StorageQuery<Int> queryNoSet{storage, ~StorageOperation::Set, [](const DummyStorage&) -> Int {
+    StorageQuery<Int> queryNoSet{storage, ~StorageOperation::Set, [](const DummyStorage&, StorageOperation) -> Int {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }};
 
-    StorageQuery<Int> queryNoReset{storage, ~StorageOperation::Reset, [](const DummyStorage&) -> Int {
+    StorageQuery<Int> queryNoReset{storage, ~StorageOperation::Reset, [](const DummyStorage&, StorageOperation) -> Int {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }};
 
-    StorageQuery<Int> queryNoToggle{storage, ~StorageOperation::Toggle, [](const DummyStorage&) -> Int {
+    StorageQuery<Int> queryNoToggle{storage, ~StorageOperation::Toggle, [](const DummyStorage&, StorageOperation) -> Int {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }};
 
-    StorageQuery<Int> queryNoIncrementDecrement{storage, ~(StorageOperation::Increment|StorageOperation::Decrement), [](const DummyStorage&) -> Int {
+    StorageQuery<Int> queryNoMinMax{storage, ~(StorageOperation::Min|StorageOperation::Max), [](const DummyStorage&, StorageOperation) {
+        /* This actually *does* get called from min() / max() asserts, as
+           that's the only way to make them work with non-default-constructible
+           types. See queryValueNoDefaultConstructor() above for such test. */
+        return 0;
+    }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
+        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    }};
+
+    StorageQuery<Int> queryNoIncrementDecrement{storage, ~(StorageOperation::Increment|StorageOperation::Decrement), [](const DummyStorage&, StorageOperation) -> Int {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }};
 
-    StorageQuery<Int> queryNoMinMax{storage, ~(StorageOperation::Min|StorageOperation::Max), [](const DummyStorage&) -> Int {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }};
-
-    StorageQuery<Int> queryWrongState{storage, ~StorageOperations{}, [](const DummyStorage&) -> Int {
+    StorageQuery<Int> queryWrongState{storage, ~StorageOperations{}, [](const DummyStorage&, StorageOperation) -> Int {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }, [](const DummyStorage&, StorageOperation, const Int*) {
         return StorageUpdateState::Clamped;
@@ -2211,7 +2248,9 @@ void DataLayerTest::queryUpdateInvalid() {
     queryNoToggle.toggle();
     queryNoIncrementDecrement.increment();
     queryNoIncrementDecrement.decrement();
+    queryNoMinMax.min();
     queryNoMinMax.setMin();
+    queryNoMinMax.max();
     queryNoMinMax.setMax();
 
     queryWrongState.reset();
@@ -2226,7 +2265,9 @@ void DataLayerTest::queryUpdateInvalid() {
         "Ui::StorageQuery::toggle(): Ui::StorageOperation::Toggle not supported\n"
         "Ui::StorageQuery::increment(): Ui::StorageOperation::Increment not supported\n"
         "Ui::StorageQuery::decrement(): Ui::StorageOperation::Decrement not supported\n"
+        "Ui::StorageQuery::min(): Ui::StorageOperation::Min not supported\n"
         "Ui::StorageQuery::setMin(): Ui::StorageOperation::Min not supported\n"
+        "Ui::StorageQuery::max(): Ui::StorageOperation::Max not supported\n"
         "Ui::StorageQuery::setMax(): Ui::StorageOperation::Max not supported\n"
 
         "Ui::StorageQuery::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
@@ -2256,14 +2297,20 @@ void DataLayerTest::queryInvalidHandle() {
     layer.removeStorage(DummyStorage{layer});
     DummyStorage removedStorage{layer};
 
-    StorageQuery<Int> query{removedStorage, ~StorageOperations{}, [](const DummyStorage&) {
-        CORRADE_FAIL("This shouldn't be called.");
+    StorageQuery<Int> query{removedStorage, ~StorageOperations{}, [](const DummyStorage&, StorageOperation) {
+        /* This actually *does* get called from operator T() / min() / max()
+           asserts, as that's the only way to make them work with non-default-
+           constructible types. See queryValueNoDefaultConstructor() above for
+           such test. */
         return 33;
     }, [](const DummyStorage&, StorageOperation, const Int*) {
         CORRADE_FAIL("This shouldn't be called.");
         return StorageUpdateState::Success;
     }};
     layer.removeStorage(removedStorage);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
 
     /* Querying the function pointers doesn't check the handle, as the handle
        is passed externally to them anyway */
@@ -2280,7 +2327,9 @@ void DataLayerTest::queryInvalidHandle() {
     query.toggle();
     query.increment();
     query.decrement();
+    query.min();
     query.setMin();
+    query.max();
     query.setMax();
     CORRADE_COMPARE_AS(out,
         "Ui::StorageQuery: invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
@@ -2289,7 +2338,9 @@ void DataLayerTest::queryInvalidHandle() {
         "Ui::StorageQuery::toggle(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
         "Ui::StorageQuery::increment(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
         "Ui::StorageQuery::decrement(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
+        "Ui::StorageQuery::min(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
         "Ui::StorageQuery::setMin(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
+        "Ui::StorageQuery::max(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
         "Ui::StorageQuery::setMax(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n",
         TestSuite::Compare::String);
 }
@@ -2311,7 +2362,7 @@ void DataLayerTest::createRemove() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer, 15} {}
 
         StorageQuery<Int> operator[](std::size_t index) const {
-            return {*this, index, {}, [](const DummyStorage&, std::size_t index) {
+            return {*this, index, {}, [](const DummyStorage&, std::size_t index, StorageOperation) {
                 CORRADE_COMPARE(index, 13);
                 ++storageCalled;
                 return 0x333;
@@ -2324,7 +2375,7 @@ void DataLayerTest::createRemove() {
         explicit DummyStorageImplicit(DataLayer& layer): AbstractStorage{layer} {}
 
         operator StorageQuery<Int>() const {
-            return {*this, {}, [](const DummyStorageImplicit&) {
+            return {*this, {}, [](const DummyStorageImplicit&, StorageOperation) {
                 ++storageImplicitCalled;
                 return 0x4444;
             }};
@@ -2640,7 +2691,7 @@ void DataLayerTest::createRemoveHandleRecycle() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer, {13, 5, 22}} {}
 
         StorageQuery<Int> operator[](const Containers::Size3D& index) const {
-            return {*this, index, {}, [](const DummyStorage&, const Containers::Size3D&) -> Int {
+            return {*this, index, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) -> Int {
                 CORRADE_FAIL("This should never be called.");
                 return {};
             }};
@@ -2695,13 +2746,13 @@ void DataLayerTest::createInvalid() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
 
         operator StorageQuery<Int>() const {
-            return {*this, {}, [](const DummyStorage&) -> Int {
+            return {*this, {}, [](const DummyStorage&, StorageOperation) -> Int {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
 
         StorageQuery<Float> value() const {
-            return {*this, {}, [](const DummyStorage&) -> Float {
+            return {*this, {}, [](const DummyStorage&, StorageOperation) -> Float {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
@@ -2758,17 +2809,17 @@ void DataLayerTest::setIndex() {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
 
         StorageQuery<Int> operator[](std::size_t index) const {
-            return {*this, index, {}, [](const DummyStorage&, std::size_t) {
+            return {*this, index, {}, [](const DummyStorage&, std::size_t, StorageOperation) {
                 return 667;
             }};
         }
         StorageQuery<Int> operator[](const Containers::Size2D& index) const {
-            return {*this, index, {}, [](const DummyStorage&, const Containers::Size2D&) {
+            return {*this, index, {}, [](const DummyStorage&, const Containers::Size2D&, StorageOperation) {
                 return 667;
             }};
         }
         StorageQuery<Int> operator[](const Containers::Size3D& index) const {
-            return {*this, index, {}, [](const DummyStorage&, const Containers::Size3D&) {
+            return {*this, index, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) {
                 return 667;
             }};
         }
@@ -2922,17 +2973,17 @@ void DataLayerTest::setIndexInvalid() {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
 
         StorageQuery<Int> operator[](std::size_t index) const {
-            return {*this, index, {}, [](const DummyStorage&, std::size_t) -> Int {
+            return {*this, index, {}, [](const DummyStorage&, std::size_t, StorageOperation) -> Int {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
         StorageQuery<Int> operator[](const Containers::Size2D& index) const {
-            return {*this, index, {}, [](const DummyStorage&, const Containers::Size2D&) -> Int {
+            return {*this, index, {}, [](const DummyStorage&, const Containers::Size2D&, StorageOperation) -> Int {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
         StorageQuery<Int> operator[](const Containers::Size3D& index) const {
-            return {*this, index, {}, [](const DummyStorage&, const Containers::Size3D&) -> Int {
+            return {*this, index, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) -> Int {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }};
         }
@@ -3044,7 +3095,7 @@ void DataLayerTest::indexLinearization() {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
 
         StorageQuery<Int> operator[](const Containers::Size3D& index) const {
-            return {*this, index, {}, [](const DummyStorage&, const Containers::Size3D&) {
+            return {*this, index, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) {
                 return 1337;
             }};
         }
@@ -3096,7 +3147,7 @@ void DataLayerTest::indexLinearizationFullStorageCapacity() {
         explicit DummyStorage(DataLayer& layer, std::size_t size): AbstractStorage{layer, size} {}
 
         StorageQuery<Int> operator[](const std::size_t index) const {
-            return {*this, index, {}, [](const DummyStorage&, std::size_t) {
+            return {*this, index, {}, [](const DummyStorage&, std::size_t, StorageOperation) {
                 return 1337;
             }};
         }
@@ -3134,7 +3185,7 @@ void DataLayerTest::clean() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
 
         operator StorageQuery<Int>() const {
-            return {*this, {}, [](const DummyStorage&) {
+            return {*this, {}, [](const DummyStorage&, StorageOperation) {
                 ++queryCalled;
                 return 0x333;
             }};
@@ -3219,7 +3270,7 @@ void DataLayerTest::update() {
         explicit Storage(DataLayer& layer): AbstractStorage{layer} {}
 
         StorageQuery<Float> leet() const {
-            return {*this, {}, [](const Storage&) {
+            return {*this, {}, [](const Storage&, StorageOperation) {
                 return 1.337f;
             }};
         }
@@ -3234,7 +3285,7 @@ void DataLayerTest::update() {
         }
 
         StorageQuery<Short> operator[](const Containers::Size2D& index) const {
-            return {*this, index, {}, [](const Storage2D& storage, const Containers::Size2D& index) {
+            return {*this, index, {}, [](const Storage2D& storage, const Containers::Size2D& index, StorageOperation) {
                 return storage.data<Short>()[index[0]*3 + index[1]];
             }};
         }
@@ -3464,7 +3515,7 @@ void DataLayerTest::referenceCounted() {
         }
 
         operator StorageQuery<Int>() const {
-            return {*this, {}, [](const NonTrivialStorage&) -> Int {
+            return {*this, {}, [](const NonTrivialStorage&, StorageOperation) -> Int {
                 return {};
             }};
         }
