@@ -355,8 +355,9 @@ jobs:
     steps:
     - install-base-linux:
         extra: cmake libsdl2-dev libglfw3-dev libvulkan-dev wget unzip
+    # 16+ leads to OOMs as of 2026-04-24
     - cap-ninja-jobs:
-        count: 16
+        count: 12
     - install-gcc-4_8
     - install-swiftshader-vulkan:
         build: ubuntu-18.04
@@ -396,9 +397,9 @@ jobs:
     # libidn11 needed by CMake
     - install-base-linux:
         extra: libidn11 libsdl2-dev libglfw3-dev wget unzip
-    # 20+ leads to OOMs as of 2025-02-02
+    # 16+ leads to OOMs as of 2026-04-24
     - cap-ninja-jobs:
-        count: 16
+        count: 12
     - install-gcc-4_8
     - install-cmake:
         version: "3.5.2"
