@@ -452,6 +452,7 @@ namespace Implementation {
     enum class StorageCallOoverload {
         ByReference, /* void(const T&) */
         ByValue, /* void(T) */
+        ByValueMinMax, /* void(T, T, T) */
     };
 }
 
@@ -821,7 +822,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const T&)>&&
+            Containers::Function<void(const T& value)>&&
             #else /* Without this, deduction of T won't work */
             typename std::common_type<Containers::Function<void(const T&)>>::type&&
             #endif
@@ -837,7 +838,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         /** @overload */
         template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T)>&&
+            Containers::Function<void(T value)>&&
             #else /* Without this, deduction of T won't work */
             typename std::common_type<Containers::Function<void(T)>>::type&&
             #endif
@@ -852,11 +853,51 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         }
 
         /**
+         * @brief Bind a function to storage data update along with min/max values
+         * @param query         Storage query
+         * @param function      Function to call when data get updated
+         * @param node          Node to attach to
+         * @return New data handle
+         *
+         * Expects that @p query references a valid storage from this layer,
+         * @ref StorageQuery::operations() includes @ref StorageOperation::Min
+         * and @relativeref{StorageOperation,Max} and @p function is not
+         * @cpp nullptr @ce. The @p function gets called with the result of
+         * @p query along with min and max values with
+         * @ref AbstractUserInterface::update() or
+         * @relativeref{AbstractUserInterface,draw()} whenever either the data
+         * itself or the @p storage is marked as dirty. The data is marked as
+         * dirty initially.
+         *
+         * Delegates to @ref AbstractLayer::create(), see its documentation for
+         * detailed description of all constraints. Calling this function
+         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
+         * @see @ref isStorageDirty(), @ref storageSize()
+         */
+        template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            Containers::Function<void(T value, T min, T max)>&&
+            #else /* Without this, deduction of T won't work */
+            typename std::common_type<Containers::Function<void(T, T, T)>>::type&&
+            #endif
+        function, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            CORRADE_ASSERT(query.operations() >= (StorageOperation::Min|StorageOperation::Max),
+                "Ui::DataLayer::onUpdate(): query doesn't support" << (StorageOperation::Min|StorageOperation::Max) << "for this overload", {});
+            return onUpdateInternal(*query._layer, query._storage, query._index, query._call(Implementation::StorageCallOoverload::ByValueMinMax), Utility::move(function), node);
+        }
+
+        /**
          * @brief Bind a function to storage's implicit data update
          *
          * Assuming the @p storage has a `Type` @cpp typedef @ce which denotes
          * what @ref StorageQuery type the storage is implicitly convertible
-         * to, delegates to @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(const T&)>&&, NodeHandle)
+         * to, delegates to @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(const T& value)>&&, NodeHandle)
          * and overloads with given type. See their documentation for more
          * information.
          */
@@ -866,7 +907,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             #endif
         > DataHandle onUpdate(const Storage& storage,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const typename Storage::Type&)>&&
+            Containers::Function<void(const typename Storage::Type& value)>&&
             #else /* Without this, deduction of T won't work */
             typename std::common_type<Containers::Function<void(const typename Storage::Type&)>>::type&&
             #endif
@@ -886,9 +927,29 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             #endif
         > DataHandle onUpdate(const Storage& storage,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(typename Storage::Type)>&&
+            Containers::Function<void(typename Storage::Type value)>&&
             #else /* Without this, deduction of T won't work */
             typename std::common_type<Containers::Function<void(typename Storage::Type)>>::type&&
+            #endif
+        function, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return onUpdate<typename Storage::Type>(storage, Utility::move(function), node);
+        }
+        /** @overload */
+        template<class Storage
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , typename std::enable_if<std::is_base_of<AbstractStorage, Storage>::value, int>::type = 0
+            #endif
+        > DataHandle onUpdate(const Storage& storage,
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            Containers::Function<void(typename Storage::Type value, typename Storage::Type min, typename Storage::Type max)>&&
+            #else /* Without this, deduction of T won't work */
+            typename std::common_type<Containers::Function<void(typename Storage::Type, typename Storage::Type, typename Storage::Type)>>::type&&
             #endif
         function, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1479,6 +1540,13 @@ class MAGNUM_UI_EXPORT AbstractStorage {
                         const AbstractStorage storage{layer, handle};
                         reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), StorageOperation{}));
                     };
+                case Implementation::StorageCallOoverload::ByValueMinMax:
+                    return [](DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D&, Containers::FunctionData& result) {
+                        /* See above for why we're casting from empty struct */
+                        struct {} empty;
+                        const AbstractStorage storage{layer, handle};
+                        reinterpret_cast<Containers::Function<void(T, T, T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), StorageOperation{}), reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), StorageOperation::Min), reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), StorageOperation::Max));
+                    };
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
         }
@@ -1497,6 +1565,13 @@ class MAGNUM_UI_EXPORT AbstractStorage {
                         struct {} empty;
                         const AbstractStorage storage{layer, handle};
                         reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), StorageOperation{}));
+                    };
+                case Implementation::StorageCallOoverload::ByValueMinMax:
+                    return [](DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
+                        /* See above for why we're casting from empty struct */
+                        struct {} empty;
+                        const AbstractStorage storage{layer, handle};
+                        reinterpret_cast<Containers::Function<void(T, T, T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), StorageOperation{}), reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), StorageOperation::Min), reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), StorageOperation::Max));
                     };
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
