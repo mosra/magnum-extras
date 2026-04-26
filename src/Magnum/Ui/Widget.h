@@ -34,39 +34,11 @@
 #include <Corrade/Utility/Move.h>
 
 #include "Magnum/Tags.h"
+#include "Magnum/Ui/Tags.h"
 #include "Magnum/Ui/Ui.h"
 #include "Magnum/Ui/visibility.h"
 
 namespace Magnum { namespace Ui {
-
-/**
-@brief Non-owned construction tag type
-@m_since_latest_{extras}
-
-Used to distinguish widget construction that doesn't own the underlying
-@ref NodeHandle.
-@see @ref NonOwned,
-    @ref AbstractWidget::AbstractWidget(NonOwnedT, AbstractUserInterface&, NodeHandle),
-    @ref AbstractWidget::AbstractWidget(NonOwnedT, const AbstractAnchor&)
-*/
-struct NonOwnedT {
-    #ifndef DOXYGEN_GENERATING_OUTPUT
-    struct Init {};
-    /* Explicit constructor to avoid ambiguous calls when using {} */
-    constexpr explicit NonOwnedT(Init) {}
-    #endif
-};
-
-/**
-@brief No-owned construction tag
-@m_since_latest_{extras}
-
-Use for constructiing widgets without them owning the underlying
-@ref NodeHandle, and thus not removing it on destruction.
-@see @ref AbstractWidget::AbstractWidget(NonOwnedT, AbstractUserInterface&, NodeHandle),
-    @ref AbstractWidget::AbstractWidget(NonOwnedT, const AbstractAnchor&)
-*/
-constexpr NonOwnedT NonOwned{NonOwnedT::Init{}};
 
 /**
 @brief Base for stateful widgets

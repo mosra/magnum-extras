@@ -72,6 +72,7 @@ corrade_add_test(UiScrollAreaTest ScrollAreaTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiSnapLayoutTest SnapLayoutTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiStorageTest StorageTest.cpp LIBRARIES MagnumUiTestLib)
+corrade_add_test(UiTagsTest TagsTest.cpp LIBRARIES MagnumUi)
 
 corrade_add_test(UiThemeTest ThemeTest.cpp LIBRARIES MagnumUi)
 if(MAGNUM_BUILD_STATIC)
