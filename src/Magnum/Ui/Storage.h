@@ -110,6 +110,9 @@ template<class T> class Storage: public AbstractStorage {
          *
          * Expects that @ref size() is @cpp {1, 1, 1} @ce. If it's not, use one
          * of the @ref operator[]() overloads.
+         *
+         * See documentation of @ref operator[](const Containers::Size3D&) const
+         * for details about what is all supported by the returned query.
          */
         StorageQuery<T> value() const {
             return {*this, {}, [](const Storage<T>& storage, StorageOperation) {
@@ -134,6 +137,9 @@ template<class T> class Storage: public AbstractStorage {
          * less than `size`. Use @ref operator[](const Containers::Size2D&) const
          * for indexing a 2D storage and @ref operator[](const Containers::Size3D&) const
          * for indexing a 3D storage.
+         *
+         * See documentation of @ref operator[](const Containers::Size3D&) const
+         * for details about what is all supported by the returned query.
          */
         StorageQuery<T> operator[](std::size_t index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const std::size_t index, StorageOperation) {
@@ -150,6 +156,9 @@ template<class T> class Storage: public AbstractStorage {
          * @p index is less than `size`. Use
          * @ref operator[](const Containers::Size3D&) const for indexing a 3D
          * storage.
+         *
+         * See documentation of @ref operator[](const Containers::Size3D&) const
+         * for details about what is all supported by the returned query.
          */
         StorageQuery<T> operator[](const Containers::Size2D& index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const Containers::Size2D& index, StorageOperation) {
@@ -163,6 +172,9 @@ template<class T> class Storage: public AbstractStorage {
          * @brief 3D storage value at given index
          *
          * Expects that @p index is less than @ref size().
+         *
+         * As the storage itself is immutable, the returned query neither
+         * supports any @ref StorageOperations nor it has a parser.
          */
         StorageQuery<T> operator[](const Containers::Size3D& index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const Containers::Size3D& index, StorageOperation) {
@@ -177,6 +189,9 @@ template<class T> class Storage: public AbstractStorage {
          *
          * Expects that @ref size() is @cpp {1, 1, 1} @ce. If it's not, use one
          * of the other overloads.
+         *
+         * See documentation of @ref operator[](const Containers::Size3D&) const
+         * for details about what is all supported by the returned query.
          */
         template<class U> StorageQuery<U> value() const {
             return {*this, {}, [](const Storage<T>& storage, StorageOperation) {
@@ -193,6 +208,9 @@ template<class T> class Storage: public AbstractStorage {
          * less than `size`. Use @ref value(const Containers::Size2D&) const
          * for indexing a 2D storage and @ref value(const Containers::Size3D&) const
          * for indexing a 3D storage.
+         *
+         * See documentation of @ref operator[](const Containers::Size3D&) const
+         * for details about what is all supported by the returned query.
          */
         template<class U> StorageQuery<U> value(std::size_t index) const {
             return {*this, index, {}, [](const Storage<T>& storage, std::size_t index, StorageOperation) {
@@ -209,6 +227,9 @@ template<class T> class Storage: public AbstractStorage {
          * @p index is less than `size`. Use
          * @ref operator[](const Containers::Size3D&) const for indexing a 3D
          * storage.
+         *
+         * See documentation of @ref operator[](const Containers::Size3D&) const
+         * for details about what is all supported by the returned query.
          */
         template<class U> StorageQuery<U> value(const Containers::Size2D& index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const Containers::Size2D& index, StorageOperation) {
@@ -222,6 +243,9 @@ template<class T> class Storage: public AbstractStorage {
          * @brief 3D storage value query, cast to a different type
          *
          * Expects that @p index is less than @ref size().
+         *
+         * See documentation of @ref operator[](const Containers::Size3D&) const
+         * for details about what is all supported by the returned query.
          */
         template<class U> StorageQuery<U> value(const Containers::Size3D& index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const Containers::Size3D& index, StorageOperation) {
