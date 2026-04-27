@@ -97,6 +97,55 @@ Debug& operator<<(Debug& debug, const StorageFlags value) {
     });
 }
 
+Debug& operator<<(Debug& debug, const StorageOperation value) {
+    debug << "Ui::StorageOperation" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case StorageOperation::value: return debug << "::" #value;
+        _c(Set)
+        _c(Reset)
+        _c(Toggle)
+        _c(Increment)
+        _c(Decrement)
+        _c(Min)
+        _c(Max)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const StorageOperations value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::StorageOperations{}", {
+        StorageOperation::Set,
+        StorageOperation::Reset,
+        StorageOperation::Toggle,
+        StorageOperation::Increment,
+        StorageOperation::Decrement,
+        StorageOperation::Min,
+        StorageOperation::Max,
+    });
+}
+
+Debug& operator<<(Debug& debug, const StorageUpdateState value) {
+    debug << "Ui::StorageUpdateState" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case StorageUpdateState::value: return debug << "::" #value;
+        _c(Success)
+        _c(Approximated)
+        _c(Clamped)
+        _c(Failed)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
 namespace {
 
 /* Abusing last two bits of the StorageFlag enum to prevent clashing with newly
@@ -960,7 +1009,7 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
     }
 }
 
-AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _index{index}, _callReference{callReference}, _callValue{callValue} {
+AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const StorageOperations operations, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _operations{operations}, _index{index}, _callReference{callReference}, _callValue{callValue} {
     /* The class is always constructed through the StorageQuery subclass, so
        make the assertions mention that to reduce confusion */
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
@@ -970,6 +1019,14 @@ AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const
     #endif
     CORRADE_ASSERT(index[0] < size[0] && index[1] < size[1] && index[2] < size[2],
         "Ui::StorageQuery: index" << index << "out of range for" << size << "elements", );
+    #ifndef CORRADE_NO_ASSERT
+    for(const StorageOperations expected: {
+        StorageOperation::Min|StorageOperation::Max,
+        StorageOperation::Increment|StorageOperation::Decrement,
+    })
+        CORRADE_ASSERT(!(operations & expected) || operations >= expected,
+            "Ui::StorageQuery: either both" << expected << "have to be set or neither", );
+    #endif
 }
 
 }}

@@ -249,6 +249,8 @@ void StorageTest::access3D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{1, 2, 1}));
+    CORRADE_COMPARE(query.operations(), StorageOperations{});
+    CORRADE_VERIFY(!query.updater());
     CORRADE_COMPARE(query, -17654321);
 
     Int called = 0;
@@ -288,6 +290,8 @@ void StorageTest::access2D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 1, 2}));
+    CORRADE_COMPARE(query.operations(), StorageOperations{});
+    CORRADE_VERIFY(!query.updater());
     CORRADE_COMPARE(query, -17654);
 
     Int called = 0;
@@ -326,6 +330,8 @@ void StorageTest::access1D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 0, 4}));
+    CORRADE_COMPARE(query.operations(), StorageOperations{});
+    CORRADE_VERIFY(!query.updater());
     CORRADE_COMPARE(query, -114);
 
     Int called = 0;
@@ -360,6 +366,10 @@ void StorageTest::access() {
     CORRADE_COMPARE(query2.storage(), storage.handle());
     CORRADE_COMPARE(query1.index(), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE(query2.index(), (Containers::Size3D{0, 0, 0}));
+    CORRADE_COMPARE(query1.operations(), StorageOperations{});
+    CORRADE_COMPARE(query2.operations(), StorageOperations{});
+    CORRADE_VERIFY(!query1.updater());
+    CORRADE_VERIFY(!query2.updater());
     CORRADE_COMPARE(query1, -9876543210ll);
     CORRADE_COMPARE(query2, -9876543210ll);
 
@@ -409,6 +419,8 @@ void StorageTest::accessCast3D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{1, 2, 1}));
+    CORRADE_COMPARE(query.operations(), StorageOperations{});
+    CORRADE_VERIFY(!query.updater());
     CORRADE_COMPARE(query, 40399);
 
     Int called = 0;
@@ -447,6 +459,8 @@ void StorageTest::accessCast2D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 1, 2}));
+    CORRADE_COMPARE(query.operations(), StorageOperations{});
+    CORRADE_VERIFY(!query.updater());
     CORRADE_COMPARE(query, -119);
 
     Int called = 0;
@@ -485,6 +499,8 @@ void StorageTest::accessCast1D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 0, 4}));
+    CORRADE_COMPARE(query.operations(), StorageOperations{});
+    CORRADE_VERIFY(!query.updater());
     CORRADE_COMPARE(query, 142);
 
     Int called = 0;
@@ -514,6 +530,8 @@ void StorageTest::accessCast() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 0, 0}));
+    CORRADE_COMPARE(query.operations(), StorageOperations{});
+    CORRADE_VERIFY(!query.updater());
     CORRADE_COMPARE(query, -9876);
 
     Int called = 0;

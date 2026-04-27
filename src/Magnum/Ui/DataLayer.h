@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::DataLayer, @ref Magnum::Ui::AbstractStorage, @ref Magnum::Ui::AbstractStorageQuery, @ref Magnum::Ui::StorageQuery, handle @ref Magnum::Ui::DataLayerStorageHandle, @ref Magnum::Ui::StorageHandle, enum @ref Magnum::Ui::StorageFlag, enum set @ref Magnum::Ui::StorageFlags, function @ref Magnum::Ui::dataLayerStorageHandle(), @ref Magnum::Ui::dataLayerStorageHandleId(), @ref Magnum::Ui::dataLayerStorageHandleGeneration(), @ref Magnum::Ui::storageHandle(), @ref Magnum::Ui::storageHandleLayer(), @ref Magnum::Ui::storageHandleStorage(), @ref Magnum::Ui::storageHandleLayerId(), @ref Magnum::Ui::storageHandleLayerGeneration(), @ref Magnum::Ui::storageHandleId(), @ref Magnum::Ui::storageHandleGeneration()
+ * @brief Class @ref Magnum::Ui::DataLayer, @ref Magnum::Ui::AbstractStorage, @ref Magnum::Ui::AbstractStorageQuery, @ref Magnum::Ui::StorageQuery, handle @ref Magnum::Ui::DataLayerStorageHandle, @ref Magnum::Ui::StorageHandle, enum @ref Magnum::Ui::StorageFlag, @ref Magnum::Ui::StorageOperation, @ref Magnum::Ui::StorageUpdateState, enum set @ref Magnum::Ui::StorageFlags, @ref Magnum::Ui::StorageOperations, function @ref Magnum::Ui::dataLayerStorageHandle(), @ref Magnum::Ui::dataLayerStorageHandleId(), @ref Magnum::Ui::dataLayerStorageHandleGeneration(), @ref Magnum::Ui::storageHandle(), @ref Magnum::Ui::storageHandleLayer(), @ref Magnum::Ui::storageHandleStorage(), @ref Magnum::Ui::storageHandleLayerId(), @ref Magnum::Ui::storageHandleLayerGeneration(), @ref Magnum::Ui::storageHandleId(), @ref Magnum::Ui::storageHandleGeneration()
  * @m_since_latest_{extras}
  */
 
@@ -297,6 +297,148 @@ typedef Containers::EnumSet<StorageFlag> StorageFlags;
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StorageFlags value);
 
 CORRADE_ENUMSET_OPERATORS(StorageFlags)
+
+/**
+@brief Storage operation
+@m_since_latest_{extras}
+
+@see @ref StorageOperations, @ref StorageQuery::StorageQuery(),
+    @ref StorageQuery::operations(), @ref StorageQuery::updater()
+*/
+enum class StorageOperation: UnsignedByte {
+    /**
+     * Set a value.
+     * @see @ref StorageQuery::set()
+     */
+    Set = 1 << 0,
+
+    /**
+     * Reset a value back to default.
+     * @see @ref StorageQuery::reset()
+     */
+    Reset = 1 << 1,
+
+    /**
+     * Toggle a value.
+     * @see @ref StorageQuery::toggle()
+     */
+    Toggle = 1 << 2,
+
+    /**
+     * Increment a value. When passed to the @ref StorageQuery constructor,
+     * either both @ref StorageOperation::Increment and
+     * @relativeref{StorageOperation,Decrement} have to be present or neither.
+     * @see @ref StorageQuery::increment()
+     */
+    Increment = 1 << 3,
+
+    /**
+     * Decrement a value. When passed to the @ref StorageQuery constructor,
+     * either both @ref StorageOperation::Increment and
+     * @relativeref{StorageOperation,Decrement} have to be present or neither.
+     * @see @ref StorageQuery::decrement()
+     */
+    Decrement = 1 << 4,
+
+    /**
+     * Set a minimum possible value. When passed to the @ref StorageQuery
+     * constructor, either both @ref StorageOperation::Min and
+     * @relativeref{StorageOperation,Max} have to be present or neither.
+     * @see @ref StorageQuery::setMin()
+     */
+    Min = 1 << 5,
+
+    /**
+     * Set a maximum possible value. When passed to the @ref StorageQuery
+     * constructor, either both @ref StorageOperation::Min and
+     * @relativeref{StorageOperation,Max} have to be present or neither.
+     * @see @ref StorageQuery::setMax()
+     */
+    Max = 1 << 6,
+};
+
+/**
+@debugoperatorenum{StorageOperation}
+@m_since_latest_{extras}
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StorageOperation value);
+
+/**
+@brief Storage operations
+@m_since_latest_{extras}
+
+@see @ref StorageQuery::StorageQuery(), @ref StorageQuery::operations(),
+    @ref StorageQuery::updater()
+*/
+typedef Containers::EnumSet<StorageOperation> StorageOperations;
+
+/**
+@debugoperatorenum{StorageOperations}
+@m_since_latest_{extras}
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StorageOperations value);
+
+CORRADE_ENUMSET_OPERATORS(StorageOperations)
+
+/**
+@brief Storage update state
+@m_since_latest_{extras}
+
+@see @ref StorageQuery::updater(), @ref StorageQuery::set()
+*/
+enum class StorageUpdateState: UnsignedByte {
+    /**
+     * The update succeeded, setting the desired value.
+     *
+     * This value can be returned by the updater for any @ref StorageOperation.
+     */
+    Success,
+
+    /**
+     * The update succeeded but the value was approximated, for example if a
+     * numeric storage is quantized. This is commonly considered to not be an
+     * issue and shouldn't result in a warning feedback to the user.
+     *
+     * This value can be returned by the updater *only* for
+     * @ref StorageOperation::Set, all other operations are expected to return
+     * @ref StorageUpdateState::Success.
+     */
+    Approximated,
+
+    /**
+     * The update succeeded but the value was clamped, for example if
+     * attempting to set a value larger than what can fit, or if a number is
+     * outside of allowed range. Unlike @ref StorageUpdateState::Approximated
+     * this state should result in a visual feedback to the user to warn about
+     * potential data loss.
+     *
+     * The concrete clamping behavior is specific to a particular storage and
+     * query implementation, for numbers in particular it can be either a
+     * min/max operation or a wraparound.
+     *
+     * This value can only be returned by the updater *only* for
+     * @ref StorageOperation::Set, all other operations are expected to return
+     * @ref StorageUpdateState::Success.
+     */
+    Clamped,
+
+    /**
+     * The update failed because given value isn't allowed. Concrete
+     * interpretation of the failure is specific to a particular storage and
+     * query implementation.
+     *
+     * This value can only be returned by the updater *only* for
+     * @ref StorageOperation::Set, all other operations are expected to return
+     * @ref StorageUpdateState::Success.
+     */
+    Failed
+};
+
+/**
+@debugoperatorenum{StorageUpdateState}
+@m_since_latest_{extras}
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StorageUpdateState value);
 
 namespace Implementation {
     enum: std::size_t {
@@ -1323,6 +1465,7 @@ class MAGNUM_UI_EXPORT AbstractStorage {
             const AbstractStorage storage{layer, handle};
             reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index)));
         }
+        template<class T, class Storage, class G> struct QueryUpdater;
 
         /* Used by DataLayer::storageInternal() */
         explicit AbstractStorage(DataLayer& layer, DataLayerStorageHandle handle): _layer{&layer}, _handle{handle} {}
@@ -1345,6 +1488,44 @@ class MAGNUM_UI_EXPORT AbstractStorage {
         #endif
         #endif
 };
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+template<class T, class Storage, class G> struct AbstractStorage::QueryUpdater {
+    static StorageUpdateState call(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D&, const StorageOperation operation, const T* value) {
+        /* See queryCall() above for why we're casting from an empty struct */
+        struct {} empty;
+        const AbstractStorage storage{layer, handle};
+        return reinterpret_cast<G&>(empty)(static_cast<const Storage&>(storage), operation, value);
+    }
+    /** @todo any idea how to deduplicate this like queryCallND()? The nullptr
+        specializations below would need C++17 variable templates or some
+        such :( */
+    static StorageUpdateState call1D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, const T* value) {
+        /* See queryCall() above for why we're casting from an empty struct */
+        struct {} empty;
+        const AbstractStorage storage{layer, handle};
+        return reinterpret_cast<G&>(empty)(static_cast<const Storage&>(storage), index[2], operation, value);
+    }
+    static StorageUpdateState call2D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, const T* value) {
+        /* See queryCall() above for why we're casting from an empty struct */
+        struct {} empty;
+        const AbstractStorage storage{layer, handle};
+        return reinterpret_cast<G&>(empty)(static_cast<const Storage&>(storage), {index[1], index[2]}, operation, value);
+    }
+    static StorageUpdateState call3D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, const T* value) {
+        /* See queryCall() above for why we're casting from an empty struct */
+        struct {} empty;
+        const AbstractStorage storage{layer, handle};
+        return reinterpret_cast<G&>(empty)(static_cast<const Storage&>(storage), index, operation, value);
+    }
+};
+template<class T, class Storage> struct AbstractStorage::QueryUpdater<T, Storage, std::nullptr_t> {
+    static constexpr std::nullptr_t call = nullptr;
+    static constexpr std::nullptr_t call1D = nullptr;
+    static constexpr std::nullptr_t call2D = nullptr;
+    static constexpr std::nullptr_t call3D = nullptr;
+};
+#endif
 
 /**
 @brief Base for @ref DataLayer storage queries
@@ -1372,6 +1553,16 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
         /** @brief Data index */
         Containers::Size3D index() const { return _index; }
 
+        /**
+         * @brief Available storage operations
+         *
+         * @see @ref StorageQuery::updater(), @ref StorageQuery::set(),
+         *      @ref StorageQuery::reset(), @ref StorageQuery::toggle(),
+         *      @ref StorageQuery::increment(), @ref StorageQuery::decrement(),
+         *      @ref StorageQuery::setMin(), @ref StorageQuery::setMax()
+         */
+        StorageOperations operations() const { return _operations; }
+
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
     #else
@@ -1381,11 +1572,12 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
            getters */
         friend DataLayer;
 
-        explicit AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&));
+        explicit AbstractStorageQuery(const AbstractStorage& storage, StorageOperations operations, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&));
 
         DataLayer* _layer;
         DataLayerStorageHandle _storage;
-        /* 0/4 bytes free */
+        StorageOperations _operations;
+        /* 3 bytes free */
         Containers::Size3D _index;
         void(*_callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
         void(*_callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
@@ -1402,116 +1594,158 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
     public:
         /**
          * @brief Create a query to a single-item storage
-         * @param storage   Storage instance
-         * @param query     Lambda to call on the storage to retrieve the
+         * @param operations    Operations supported by @p updater
+         * @param storage       Storage instance
+         * @param query         Lambda to call on the storage to retrieve the
          *      desired value
+         * @param updater       Lambda to call to update the storage value
+         *      based on supplied operation and value or @cpp nullptr @ce if
+         *      the storage isn't mutable.
          *
          * Expects that @p storage is valid in the layer it's associated with
          * and is single-item, i.e. with a size of @cpp {1, 1, 1} @ce. The
-         * @p query is expected to be a non-capturing lambda with given
-         * signature, *not* a function pointer.
+         * @p query and @p updater is expected to be a non-capturing lambda
+         * with given signature, *not* a function pointer.
+         *
+         * If @p updater is @cpp nullptr @ce, @p operations are expected to be
+         * empty. Otherwise @p operations are expected to be set according to
+         * constraints specified in particular @ref StorageOperation values.
+         * The @p updater return value should follow @ref StorageUpdateState
+         * value documentation.
          */
         template<class Storage
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value, int>::type = 0
+            , class F, class G = std::nullptr_t, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, StorageOperation, const T*)>::value, int>::type = 0
             #endif
         > /*implicit*/ StorageQuery(const Storage& storage,
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            F query
+            StorageOperations operations, F query, G updater = nullptr
             #else
-            T(*query)(const Storage& storage)
+            StorageOperations operations, T(*query)(const Storage& storage), StorageUpdateState(*updater)(const Storage& storage, StorageOperation operation, const T* value) = nullptr
             #endif
         );
 
         /**
          * @brief Create a query to a 1D storage
-         * @param storage   Storage instance
-         * @param index     Value index to query
-         * @param query     Lambda to call on the storage to retrieve the
+         * @param operations    Operations supported by @p updater
+         * @param storage       Storage instance
+         * @param index         Value index to query
+         * @param query         Lambda to call on the storage to retrieve the
          *      desired value
+         * @param updater       Lambda to call to update the storage value
+         *      based on supplied operation and value or @cpp nullptr @ce if
+         *      the storage isn't mutable.
          *
          * Expects that @p storage is valid in the layer it's associated with,
          * is 1D, i.e. with a size of @cpp {1, 1, size} @ce, and @p index is
-         * not larger than `size`. The @p query is expected to be a
-         * non-capturing lambda with given signature, *not* a function pointer.
+         * not larger than `size`. The @p query and @p updater is expected to
+         * be a non-capturing lambda with given signature, *not* a function
+         * pointer.
+         *
+         * If @p updater is @cpp nullptr @ce, @p operations are expected to be
+         * empty. Otherwise @p operations are expected to be set according to
+         * constraints specified in particular @ref StorageOperation values.
+         * The @p updater return value should follow @ref StorageUpdateState
+         * value documentation.
          */
         template<class Storage
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type = 0
+            , class F, class G = std::nullptr_t, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, std::size_t, StorageOperation, const T*)>::value, int>::type = 0
             #endif
         > /*implicit*/ StorageQuery(const Storage& storage, std::size_t index,
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            F query
+            StorageOperations operations, F query, G updater = nullptr
             #else
-            T(*query)(const Storage& storage, std::size_t index)
+            StorageOperations operations, T(*query)(const Storage& storage, std::size_t index), StorageUpdateState(*updater)(const Storage& storage, std::size_t index, StorageOperation operation, const T* value) = nullptr
             #endif
         );
 
         /**
          * @brief Create a query to a 1D storage
          *
-         * Same as @ref StorageQuery() "StorageQuery(const Storage&, std::size_t, T(*)(const Storage&, std::size_t))",
+         * Same as @ref StorageQuery() "StorageQuery(const Storage&, std::size_t, StorageOperations, T(*)(const Storage&, std::size_t), StorageUpdateState(*)(const Storage&, std::size_t, StorageOperation, const T*))",
          * just with @ref Containers::Size1D instead of @ref std::size_t as an
          * index type to make it easier for generic storage implementations.
          * @todoc fix the constructor link once Doxygen is capable of that
          */
         template<class Storage
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type = 0
+            , class F, class G = std::nullptr_t, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size1D&, StorageOperation, const T*)>::value, int>::type = 0
             #endif
         > /*implicit*/ StorageQuery(const Storage& storage, const Containers::Size1D& index,
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            F query
+            StorageOperations operations, F query, G updater = nullptr
             #else
-            T(*query)(const Storage& storage, const Containers::Size1D& index)
+            StorageOperations operations, T(*query)(const Storage& storage, const Containers::Size1D& index), StorageUpdateState(*updater)(const Storage& storage, const Containers::Size1D& index, StorageOperation operation, const T* value) = nullptr
             #endif
         );
 
         /**
          * @brief Create a query to a 2D storage
-         * @param storage   Storage instance
-         * @param index     Value index to query
-         * @param query     Lambda to call on the storage to retrieve the
+         * @param operations    Operations supported by @p updater
+         * @param storage       Storage instance
+         * @param index         Value index to query
+         * @param query         Lambda to call on the storage to retrieve the
          *      desired value
+         * @param updater       Lambda to call to update the storage value
+         *      based on supplied operation and value or @cpp nullptr @ce if
+         *      the storage isn't mutable.
          *
          * Expects that @p storage is valid in the layer it's associated with,
          * is 2D, i.e. with a size of @cpp {1, size[0], size[1]} @ce, and
-         * @p index is not larger than `size`. The @p query is expected to be a
-         * non-capturing lambda with given signature, *not* a function pointer.
+         * @p index is not larger than `size`. The @p query and @p updater is
+         * expected to be a non-capturing lambda with given signature, *not* a
+         * function pointer.
+         *
+         * If @p updater is @cpp nullptr @ce, @p operations are expected to be
+         * empty. Otherwise @p operations are expected to be set according to
+         * constraints specified in particular @ref StorageOperation values.
+         * The @p updater return value should follow @ref StorageUpdateState
+         * value documentation.
          */
         template<class Storage
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type = 0
+            , class F, class G = std::nullptr_t, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size2D&, StorageOperation, const T*)>::value, int>::type = 0
             #endif
         > /*implicit*/ StorageQuery(const Storage& storage, const Containers::Size2D& index,
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            F query
+            StorageOperations operations, F query, G updater = nullptr
             #else
-            T(*query)(const Storage& storage, const Containers::Size2D& index)
+            StorageOperations operations, T(*query)(const Storage& storage, const Containers::Size2D& index), StorageUpdateState(*updater)(const Storage& storage, const Containers::Size2D& index, StorageOperation operation, const T* value) = nullptr
             #endif
         );
 
         /**
          * @brief Create a query to a 3D storage
-         * @param storage   Storage instance
-         * @param index     Value index to query
-         * @param query     Lambda to call on the storage to retrieve the
+         * @param operations    Operations supported by @p updater
+         * @param storage       Storage instance
+         * @param index         Value index to query
+         * @param query         Lambda to call on the storage to retrieve the
          *      desired value
+         * @param updater       Lambda to call to update the storage value
+         *      based on supplied operation and value or @cpp nullptr @ce if
+         *      the storage isn't mutable.
          *
          * Expects that @p storage is valid in the layer it's associated with
-         * and @p index is not larger than @p storage size. The @p query is
-         * expected to be a non-capturing lambda with given signature, *not* a
-         * function pointer.
+         * and @p index is not larger than @p storage size. The @p query and
+         * @p updater is expected to be a non-capturing lambda with given
+         * signature, *not* a function pointer.
+         *
+         * If @p updater is @cpp nullptr @ce, @p operations are expected to be
+         * empty. Otherwise @p operations are expected to be set according to
+         * constraints specified in particular @ref StorageOperation values.
+         * The @p updater return value should follow @ref StorageUpdateState
+         * value documentation.
          */
         template<class Storage
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type = 0
+            , class F, class G = std::nullptr_t, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size3D&, StorageOperation, const T*)>::value, int>::type = 0
             #endif
         > /*implicit*/ StorageQuery(const Storage& storage, const Containers::Size3D& index,
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            F query
+            StorageOperations operations, F query, G updater = nullptr
             #else
-            T(*query)(const Storage& storage, const Containers::Size3D& index)
+            StorageOperations operations, T(*query)(const Storage& storage, const Containers::Size3D& index), StorageUpdateState(*updater)(const Storage& storage, const Containers::Size3D& index, StorageOperation operation, const T* value) = nullptr
             #endif
         );
 
@@ -1524,6 +1758,166 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * the storage data directly.
          */
         /*implicit*/ operator T() const;
+
+        /**
+         * @brief Updater implementation
+         *
+         * The returned function can be used in various event callbacks to have
+         * changes reflected back to the storage. If the function is
+         * @cpp nullptr @ce, no updating is possible, likely because the
+         * storage is immutable.
+         *
+         * If the function doesn't return @cpp nullptr @ce, the set of
+         * operations supported by the implementation is exposed via
+         * @ref operations(). If @ref operations() return an empty set, no
+         * updater is available, and the pointer returned by this function may
+         * likely also be @cpp nullptr @ce.
+         *
+         * When called, the updater updates @p storage at @p index, marking the
+         * storage as dirty as appropriate. Implementations commonly expect
+         * @p value to be not @cpp nullptr @ce when @p operation is
+         * @ref StorageOperation::Set, it can be null in other cases. See
+         * documentation of a particular storage implementation for details.
+         */
+        auto updater() const -> StorageUpdateState(*)(DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, StorageOperation operation, const T* value) {
+            return _updater;
+        }
+
+        /**
+         * @brief Update the storage value
+         *
+         * Expects that @ref storage() is still valid in the @ref layer() and
+         * @ref operations() list @ref StorageOperation::Set. Internally calls
+         * @ref updater() with @ref layer(), @ref storage(), @ref index(),
+         * @ref StorageOperation::Set and a pointer to @p value, and propagates
+         * its return value. See documentation of @ref updater() and
+         * @ref StorageUpdateState for more information.
+         * @see @ref reset(), @ref toggle()
+         */
+        StorageUpdateState set(const T& value) const;
+
+        /**
+         * @brief Reset the storage value
+         *
+         * Expects that @ref storage() is still valid in the @ref layer() and
+         * @ref operations() list @ref StorageOperation::Reset. Internally
+         * calls @ref updater() with @ref layer(), @ref storage(),
+         * @ref index(), @ref StorageOperation::Reset and a @cpp nullptr @ce
+         * value pointer. See documentation of @ref updater() for more
+         * information.
+         * @see @ref set(), @ref toggle()
+         */
+        void reset() const {
+            updateInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery::reset():",
+                #endif
+                StorageOperation::Reset);
+        }
+
+        /**
+         * @brief Toggle the storage value
+         *
+         * Expects that @ref storage() is still valid in the @ref layer() and
+         * @ref operations() list @ref StorageOperation::Toggle. Internally
+         * calls @ref updater() with @ref layer(), @ref storage(),
+         * @ref index(), @ref StorageOperation::Toggle and a @cpp nullptr @ce
+         * value pointer. See documentation of @ref updater() for more
+         * information.
+         * @see @ref set(), @ref reset()
+         */
+        void toggle() const  {
+            updateInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery::toggle():",
+                #endif
+                StorageOperation::Toggle);
+        }
+
+        /**
+         * @brief Increment the storage value
+         *
+         * Expects that @ref storage() is still valid in the @ref layer() and
+         * @ref operations() list @ref StorageOperation::Increment. Internally
+         * calls @ref updater() with @ref layer(), @ref storage(),
+         * @ref index(), @ref StorageOperation::Increment and a
+         * @cpp nullptr @ce value pointer. See documentation of @ref updater()
+         * for more information.
+         * @see @ref decrement()
+         */
+        void increment() const  {
+            updateInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery::increment():",
+                #endif
+                StorageOperation::Increment);
+        }
+
+        /**
+         * @brief Decrement the storage value
+         *
+         * Expects that @ref storage() is still valid in the @ref layer() and
+         * @ref operations() list @ref StorageOperation::Decrement. Internally
+         * calls @ref updater() with @ref layer(), @ref storage(),
+         * @ref index(), @ref StorageOperation::Decrement and a
+         * @cpp nullptr @ce value pointer. See documentation of @ref updater()
+         * for more information.
+         * @see @ref increment()
+         */
+        void decrement() const {
+            updateInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery::decrement():",
+                #endif
+                StorageOperation::Decrement);
+        }
+
+        /**
+         * @brief Set the storage value to a minimum
+         *
+         * Expects that @ref storage() is still valid in the @ref layer() and
+         * @ref operations() list @ref StorageOperation::Min. Internally calls
+         * @ref updater() with @ref layer(), @ref storage(), @ref index(),
+         * @ref StorageOperation::Min and a @cpp nullptr @ce value pointer. See
+         * documentation of @ref updater() for more information.
+         * @see @ref setMax()
+         */
+        void setMin() const {
+            updateInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery::setMin():",
+                #endif
+                StorageOperation::Min);
+        }
+
+        /**
+         * @brief Set the storage value to a maximum
+         *
+         * Expects that @ref storage() is still valid in the @ref layer() and
+         * @ref operations() list @ref StorageOperation::Max. Internally calls
+         * @ref updater() with @ref layer(), @ref storage(), @ref index(),
+         * @ref StorageOperation::Max and a @cpp nullptr @ce value pointer. See
+         * documentation of @ref updater() for more information.
+         * @see @ref setMin()
+         */
+        void setMax() const {
+            updateInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery::setMax():",
+                #endif
+                StorageOperation::Max);
+        }
+
+    private:
+        explicit StorageQuery(const AbstractStorage& storage, StorageOperations operations, const Containers::Size3D& index, void(*callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), StorageUpdateState(*updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const T*));
+
+        void updateInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            StorageOperation operation) const;
+
+        StorageUpdateState(*_updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const T*);
 };
 
 template<class Storage> Storage DataLayer::storage(const StorageHandle handle) {
@@ -1549,9 +1943,10 @@ template<class Storage> Storage DataLayer::storage(const DataLayerStorageHandle 
 }
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, F): AbstractStorageQuery{storage, {},
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const StorageOperations operations, F, G): StorageQuery{storage, operations, {},
     AbstractStorage::queryCall<const T&, Storage, F>,
-    AbstractStorage::queryCall<T, Storage, F>
+    AbstractStorage::queryCall<T, Storage, F>,
+    AbstractStorage::QueryUpdater<T, Storage, G>::call
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1570,11 +1965,14 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "Ui::StorageQuery: expected a single-item storage but got a size of" << size, );
     static_assert(std::is_empty<F>::value,
         "expected query to be a non-capturing lambda");
+    static_assert(std::is_same<G, std::nullptr_t>::value || std::is_empty<G>::value,
+        "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, F): AbstractStorageQuery{storage, {0, 0, index},
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, std::size_t, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, const StorageOperations operations, F, G): StorageQuery{storage, operations, {0, 0, index},
     AbstractStorage::queryCallND<1, const T&, Storage, F>,
-    AbstractStorage::queryCallND<1, T, Storage, F>
+    AbstractStorage::queryCallND<1, T, Storage, F>,
+    AbstractStorage::QueryUpdater<T, Storage, G>::call1D
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1590,11 +1988,14 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "Ui::StorageQuery: expected a 1D storage but got a size of" << size, );
     static_assert(std::is_empty<F>::value,
         "expected query to be a non-capturing lambda");
+    static_assert(std::is_same<G, std::nullptr_t>::value || std::is_empty<G>::value,
+        "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, F): AbstractStorageQuery{storage, {0, 0, index},
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size1D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, const StorageOperations operations, F, G): StorageQuery{storage, operations, {0, 0, index},
     AbstractStorage::queryCallND<1, const T&, Storage, F>,
-    AbstractStorage::queryCallND<1, T, Storage, F>
+    AbstractStorage::queryCallND<1, T, Storage, F>,
+    AbstractStorage::QueryUpdater<T, Storage, G>::call1D
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1610,11 +2011,14 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "Ui::StorageQuery: expected a 1D storage but got a size of" << size, );
     static_assert(std::is_empty<F>::value,
         "expected query to be a non-capturing lambda");
+    static_assert(std::is_same<G, std::nullptr_t>::value || std::is_empty<G>::value,
+        "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, F): AbstractStorageQuery{storage, {0, index[0], index[1]},
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size2D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, const StorageOperations operations, F, G): StorageQuery{storage, operations, {0, index[0], index[1]},
     AbstractStorage::queryCallND<2, const T&, Storage, F>,
-    AbstractStorage::queryCallND<2, T, Storage, F>
+    AbstractStorage::queryCallND<2, T, Storage, F>,
+    AbstractStorage::QueryUpdater<T, Storage, G>::call2D
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1630,11 +2034,14 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "Ui::StorageQuery: expected a 2D storage but got a size of" << size, );
     static_assert(std::is_empty<F>::value,
         "expected query to be a non-capturing lambda");
+    static_assert(std::is_same<G, std::nullptr_t>::value || std::is_empty<G>::value,
+        "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, F): AbstractStorageQuery{storage, index,
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size3D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, const StorageOperations operations, F, G): StorageQuery{storage, operations, index,
     AbstractStorage::queryCallND<3, const T&, Storage, F>,
-    AbstractStorage::queryCallND<3, T, Storage, F>
+    AbstractStorage::queryCallND<3, T, Storage, F>,
+    AbstractStorage::QueryUpdater<T, Storage, G>::call3D
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -1644,6 +2051,13 @@ template<class T> template<class Storage, class F, typename std::enable_if<std::
         "AbstractStorage subclasses expected to be trivially copyable with no extra members");
     static_assert(std::is_empty<F>::value,
         "expected query to be a non-capturing lambda");
+    static_assert(std::is_same<G, std::nullptr_t>::value || std::is_empty<G>::value,
+        "expected updater to be a nullptr or a non-capturing lambda");
+}
+
+template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const StorageOperations operations, const Containers::Size3D& index, void(*const callReference)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), void(*const callValue)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), StorageUpdateState(*const updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const T*)): AbstractStorageQuery{storage, operations, index, callReference, callValue}, _updater{updater} {
+    CORRADE_ASSERT(!operations || updater,
+        "Ui::StorageQuery:" << operations << "requires a non-null updater", );
 }
 
 template<class T> StorageQuery<T>::operator T() const {
@@ -1663,6 +2077,32 @@ template<class T> StorageQuery<T>::operator T() const {
     }};
     _callReference(*_layer, _storage, _index, update);
     return out.value;
+}
+
+template<class T> StorageUpdateState StorageQuery<T>::set(const T& value) const {
+    CORRADE_ASSERT(_layer->isHandleValid(_storage),
+        "Ui::StorageQuery::set(): invalid handle" << storageHandle(_layer->handle(), _storage), {});
+    CORRADE_ASSERT(_operations >= StorageOperation::Set,
+        "Ui::StorageQuery::set():" << StorageOperation::Set << "not supported", {});
+    return _updater(*_layer, _storage, _index, StorageOperation::Set, &value);
+}
+
+template<class T> void StorageQuery<T>::updateInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const StorageOperation operation) const
+{
+    CORRADE_ASSERT(_layer->isHandleValid(_storage),
+        messagePrefix << "invalid handle" << storageHandle(_layer->handle(), _storage), );
+    CORRADE_ASSERT(_operations >= operation,
+        messagePrefix << operation << "not supported", );
+    #ifndef CORRADE_NO_ASSERT
+    const StorageUpdateState state =
+    #endif
+        _updater(*_layer, _storage, _index, operation, nullptr);
+    CORRADE_ASSERT(state == StorageUpdateState::Success,
+        messagePrefix << "updater implementation expected to return" << StorageUpdateState::Success << "for" << operation << "but got" << state, );
 }
 #endif
 
