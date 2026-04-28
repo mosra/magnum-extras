@@ -783,28 +783,28 @@ void DataLayerTest::createRemoveStorageAllocated() {
 
     struct AllocatedStorage: AbstractStorage {
         explicit AllocatedStorage(DataLayer& layer, Int& destructed, StorageFlags flags): AbstractStorage{layer, flags} {
-            createAllocated(&destructed, 1336, [](void* data, std::size_t size) {
+            CORRADE_COMPARE(createAllocated(&destructed, 1336, [](void* data, std::size_t size) {
                 CORRADE_COMPARE(size, 1336);
                 ++*static_cast<Int*>(data);
-            });
+            }), &destructed);
         }
         explicit AllocatedStorage(DataLayer& layer, std::size_t size, Int& destructed, StorageFlags flags): AbstractStorage{layer, size, flags} {
-            createAllocated(&destructed, 1337, [](void* data, std::size_t size) {
+            CORRADE_COMPARE(createAllocated(&destructed, 1337, [](void* data, std::size_t size) {
                 CORRADE_COMPARE(size, 1337);
                 ++*static_cast<Int*>(data);
-            });
+            }), &destructed);
         }
         explicit AllocatedStorage(DataLayer& layer, const Containers::Size2D& size, Int& destructed, StorageFlags flags): AbstractStorage{layer, size, flags} {
-            createAllocated(&destructed, 1338, [](void* data, std::size_t size) {
+            CORRADE_COMPARE(createAllocated(&destructed, 1338, [](void* data, std::size_t size) {
                 CORRADE_COMPARE(size, 1338);
                 ++*static_cast<Int*>(data);
-            });
+            }), &destructed);
         }
         explicit AllocatedStorage(DataLayer& layer, const Containers::Size3D& size, Int& destructed, StorageFlags flags): AbstractStorage{layer, size, flags} {
-            createAllocated(&destructed, 1339, [](void* data, std::size_t size) {
+            CORRADE_COMPARE(createAllocated(&destructed, 1339, [](void* data, std::size_t size) {
                 CORRADE_COMPARE(size, 1339);
                 ++*static_cast<Int*>(data);
-            });
+            }), &destructed);
         }
 
         /* Delibrately *not* using operator*() here, it should work even

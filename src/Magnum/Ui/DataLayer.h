@@ -1469,6 +1469,7 @@ class MAGNUM_UI_EXPORT AbstractStorage {
          * @param data      Pointer to the allocated data
          * @param size      Size of the allocated data in bytes
          * @param deleter   Deleter
+         * @return The @p data pointer unchanged
          *
          * When the storage is removed, @p deleter gets called with @p data and
          * @p size passed to it. The @p data and @p deleter are expected to not
@@ -1479,8 +1480,8 @@ class MAGNUM_UI_EXPORT AbstractStorage {
          * allocation. It's not a requirement however.
          * @see @ref isAllocated()
          */
-        void createAllocated(void* data, std::size_t size, void(*deleter)(void*, std::size_t)) {
-            _layer->createStorageAllocated(_handle, data, size, deleter);
+        template<class T> T* createAllocated(T* data, std::size_t size, void(*deleter)(void*, std::size_t)) {
+            return static_cast<T*>(_layer->createStorageAllocated(_handle, data, size, deleter));
         }
 
         /**
