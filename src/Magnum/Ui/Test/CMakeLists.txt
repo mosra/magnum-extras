@@ -67,6 +67,7 @@ corrade_add_test(UiLayoutLayerTest LayoutLayerTest.cpp LIBRARIES MagnumUiTestLib
 corrade_add_test(UiLineLayerTest LineLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeAnimatorTest NodeAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumUi)
+corrade_add_test(UiNumericStorageTest NumericStorageTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiPanelTest PanelTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiScrollAreaTest ScrollAreaTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumUiTestLib)
@@ -130,6 +131,7 @@ set_property(TARGET
     UiDataLayerTest # Asserts in storageHandle() helpers, and graceful assert
                     # propagation in DataLayer::createStorage<T>()
     UiHandleTest # Asserts in most *Handle() helpers
+    UiNumericStorageTest # Asserts in inline StorageQuery constructors
     UiStorageTest # Asserts in inline StorageQuery constructors
     UiTextLayerTest # Asserts in fontHandle() and related helpers
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
