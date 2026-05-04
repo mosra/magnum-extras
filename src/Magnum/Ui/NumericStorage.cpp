@@ -479,7 +479,9 @@ template<class T> Containers::StridedArrayView3D<const T> NumericStorage<T>::dat
    in a GCC Debug build. Making operator[]() and value() all delegate to the 3D
    variant (and then reimplementing the assertions that would otherwise be
    handled by StorageQuery) made the file "only" 2.5 MB, but that needlessly
-   duplicates a lot of checks and is still significantly larger. */
+   duplicates a lot of checks and is still significantly larger.
+
+   This works almost everywhere with an exception of Clang, see below. */
 #define _c(type)                                                            \
 template MAGNUM_UI_EXPORT void NumericStorage<type>::create(NoInitT);       \
 template MAGNUM_UI_EXPORT void NumericStorage<type>::create(ValueInitT);    \
@@ -510,6 +512,48 @@ _c(UnsignedLong)
 _c(Long)
 _c(Float)
 _c(Double)
+/* On Clang (version 14 to 20, at least, and only on Unix), instantiating
+   individual functions and exporting them as symbols in a shared library
+   somehow works only if the template type is either builtin or is an exported
+   class. Which is not the case for any of the types below. In other words, for
+   e.g.
+
+    nm libMagnumUi-d.so | grep NumericStorage | grep Half | grep setRange
+
+   Clang lists the symbol as `t`, while GCC lists it as `W`. If I add
+
+    namespace Magnum { namespace Math {
+        class MAGNUM_UI_EXPORT Half;
+        // And similarly for the templates, need explicit instantiations also
+        template class MAGNUM_UI_EXPORT Deg<Float>;
+        ...
+    }}
+
+   at the top of this file, then Clang correctly lists the setRange symbols as
+   `W` and linking against them work. But obviously exporting the Half class
+   or the other templates from within a completely different library is a
+   no-go, so that's merely discovering the root cause. The other way that works
+   is exporting the whole class, which I didn't want to do in general for code
+   size reasons explaining above. So it's below done only on Clang, only on a
+   dynamic build (because in case of a static build we don't export anything
+   and it all works well), only on Unix platforms (as clang-cl seems to not
+   have any problems on Windows), and only for the types that actually need it.
+   Even then, it still results in a significant code size increase (2.3 MB for
+   the NumericStorage.cpp.o object file on Debug vs 1.4 MB with just function
+   instantiations).
+
+   I also tried various forms of `extern template` from the header, none of
+   which helped. Listing the same functions as here achieved nothing (as
+   expected), listing whole classes resulted in linker errors for operator[]()
+   and such (as unfortunately also expected). I tried searching for related
+   bugs but found only https://github.com/llvm/llvm-project/issues/62134, which
+   seems unrelated, as it's claimed to work with Clang 14 (which isn't the case
+   here), and it affects builtin types (which also isn't the case here). */
+/** @todo revisit this with other ideas in the future */
+#if defined(CORRADE_TARGET_CLANG) && !defined(CORRADE_TARGET_WINDOWS) && !defined(MAGNUM_UI_BUILD_STATIC)
+#undef _c
+#define _c(type) template class MAGNUM_UI_EXPORT NumericStorage<type>;
+#endif
 _c(Half)
 _c(Deg)
 _c(Rad)
