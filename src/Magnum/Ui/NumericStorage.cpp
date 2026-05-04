@@ -367,7 +367,6 @@ template<class T> T updaterImplementation(const T min, const T max, const T step
 
     /* Set can return a non-Success state */
     if(operation == StorageOperation::Set) {
-        CORRADE_INTERNAL_ASSERT(value);
         if(value < min) {
             state = StorageUpdateState::Clamped;
             return min;

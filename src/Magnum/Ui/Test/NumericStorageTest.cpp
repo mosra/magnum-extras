@@ -176,6 +176,12 @@ const struct {
         1134, {}, {},
         StorageOperation::Set, 31655,
         StorageUpdateState::Success, true, 31655},
+    /* Just to verify that there isn't some weird rogue assertion blowing up
+       if encountering a zero (it used to be, which is why this is here) */
+    {"set zero",
+        1134, {}, {},
+        StorageOperation::Set, 0,
+        StorageUpdateState::Success, true, 0},
     {"set the same value",
         -1134, {}, {},
         StorageOperation::Set, -1134,
