@@ -283,15 +283,15 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         "Inputs", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
     {
         Ui::SnapLayoutRow row = root.child();
-        Ui::Input inputDefault{row.child({128, 0.0f}),
+        Ui::Input inputDefault{row.child({128.0f, 0.0f}),
             "Default", Ui::InputStyle::Default};
-        Ui::Input inputSuccess{row.child({128, 0.0f}),
+        Ui::Input inputSuccess{row.child({128.0f, 0.0f}),
             "Success", Ui::InputStyle::Success};
-        Ui::Input inputWarning{row.child({128, 0.0f}),
+        Ui::Input inputWarning{row.child({128.0f, 0.0f}),
             "Warning", Ui::InputStyle::Warning};
-        Ui::Input inputDanger{row.child({128, 0.0f}),
+        Ui::Input inputDanger{row.child({128.0f, 0.0f}),
             "Danger", Ui::InputStyle::Danger};
-        Ui::Input inputFlat{row.child({128, 0.0f}),
+        Ui::Input inputFlat{row.child({128.0f, 0.0f}),
             "Flat", Ui::InputStyle::Flat};
 
         /** @todo provide some APIs on the Input directly */
@@ -307,27 +307,27 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         inputFlat.release();
     } {
         Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
-        Ui::Input{row.child({128, 0.0f}),
+        Ui::Input{row.child({128.0f, 0.0f}),
             "Default", Ui::InputStyle::Default}.release();
-        Ui::Input{row.child({128, 0.0f}),
+        Ui::Input{row.child({128.0f, 0.0f}),
             "Succes", Ui::InputStyle::Success}.release();
-        Ui::Input{row.child({128, 0.0f}),
+        Ui::Input{row.child({128.0f, 0.0f}),
             "Warning", Ui::InputStyle::Warning}.release();
-        Ui::Input{row.child({128, 0.0f}),
+        Ui::Input{row.child({128.0f, 0.0f}),
             "Danger", Ui::InputStyle::Danger}.release();
-        Ui::Input{row.child({128, 0.0f}),
+        Ui::Input{row.child({128.0f, 0.0f}),
             "Flat", Ui::InputStyle::Flat}.release();
     } {
         Ui::SnapLayoutRow row = root.child();
-        Ui::PasswordInput inputDefault{row.child({128, 0.0f}),
+        Ui::PasswordInput inputDefault{row.child({128.0f, 0.0f}),
             "Default", Ui::InputStyle::Default};
-        Ui::PasswordInput inputSuccess{row.child({128, 0.0f}),
+        Ui::PasswordInput inputSuccess{row.child({128.0f, 0.0f}),
             "Success", Ui::InputStyle::Success};
-        Ui::PasswordInput inputWarning{row.child({128, 0.0f}),
+        Ui::PasswordInput inputWarning{row.child({128.0f, 0.0f}),
             "Warning", Ui::InputStyle::Warning};
-        Ui::PasswordInput inputDanger{row.child({128, 0.0f}),
+        Ui::PasswordInput inputDanger{row.child({128.0f, 0.0f}),
             "Danger", Ui::InputStyle::Danger};
-        Ui::PasswordInput inputFlat{row.child({128, 0.0f}),
+        Ui::PasswordInput inputFlat{row.child({128.0f, 0.0f}),
             "Flat", Ui::InputStyle::Flat};
 
         /** @todo provide some APIs on the Input directly */
@@ -343,15 +343,15 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         inputFlat.release();
     } {
         Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
-        Ui::PasswordInput{row.child({128, 0.0f}),
+        Ui::PasswordInput{row.child({128.0f, 0.0f}),
             "Default", Ui::InputStyle::Default}.release();
-        Ui::PasswordInput{row.child({128, 0.0f}),
+        Ui::PasswordInput{row.child({128.0f, 0.0f}),
             "Succes", Ui::InputStyle::Success}.release();
-        Ui::PasswordInput{row.child({128, 0.0f}),
+        Ui::PasswordInput{row.child({128.0f, 0.0f}),
             "Warning", Ui::InputStyle::Warning}.release();
-        Ui::PasswordInput{row.child({128, 0.0f}),
+        Ui::PasswordInput{row.child({128.0f, 0.0f}),
             "Danger", Ui::InputStyle::Danger}.release();
-        Ui::PasswordInput{row.child({128, 0.0f}),
+        Ui::PasswordInput{row.child({128.0f, 0.0f}),
             "Flat", Ui::InputStyle::Flat}.release();
     }
 
