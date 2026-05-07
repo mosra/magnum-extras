@@ -26,8 +26,8 @@
 
 #include "Formatter.h"
 
-#include <cstdio> /** @todo throw away once Corrade has standalone formatters */
 #include <cinttypes> /* PRIi64, PRIu64 */ /** @todo throw away also, ugh */
+#include <cstdio> /** @todo throw away once Corrade has integer parsers */
 #include <Corrade/Containers/ArrayView.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Utility/Assert.h>
