@@ -46,6 +46,7 @@ namespace Magnum { namespace Ui { namespace Test { namespace {
 struct FormatterTest: TestSuite::Tester {
     explicit FormatterTest();
 
+    void debugParseState();
     void debugDecimalFlag();
     void debugDecimalFlags();
     void debugHexadecimalFlag();
@@ -74,6 +75,14 @@ struct FormatterTest: TestSuite::Tester {
     void formatHexadecimal();
     void formatFloat();
     template<class T, class U> void formatInvalid();
+
+    void parseDecimal();
+    void parseDecimalFailed();
+    void parseHexadecimal();
+    void parseHexadecimalFailed();
+    void parseFloat();
+    void parseFloatFailed();
+    void parseInvalid();
 
     private:
         struct: Text::AbstractFont {
@@ -114,6 +123,8 @@ struct FormatterTest: TestSuite::Tester {
             void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
         } _shared{_cache, TextLayer::Shared::Configuration{1}};
 };
+
+using namespace Containers::Literals;
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
@@ -808,8 +819,625 @@ const struct {
         },
 };
 
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Containers::StringView text;
+    /* Enumerating all four cases because anything else would make the test
+       code too cryptic and prone to accidentally testing the wrong thing or
+       not testing certain cases at all */
+    ParseState expectedState;
+    Int expected;
+    ParseState expectedStateUnsigned;
+    UnsignedInt expectedUnsigned;
+    ParseState expectedStateLong;
+    Long expectedLong;
+    ParseState expectedStateUnsignedLong;
+    UnsignedLong expectedUnsignedLong;
+} ParseDecimalData[]{
+    {"zero", "0",
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0},
+    {"very many zeros",
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000",
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0},
+    {"positive zero", "+0",
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0},
+    {"negative zero", "-0",
+        ParseState::Success, 0,
+        ParseState::Failed, 0,
+        ParseState::Success, 0,
+        ParseState::Failed, 0},
+    {"value", "1337420",
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420},
+    {"value, leading zeros", "000000000000001337420",
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420},
+    {"positive value", "+1337420",
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420},
+    {"negative value", "-1337420",
+        ParseState::Success, -1337420,
+        ParseState::Failed, 0,
+        ParseState::Success, -1337420,
+        ParseState::Failed, 0},
+
+    {"leading whitespace", " \t \v\n\r  \f\f1337420",
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420},
+    {"trailing whitespace", "1337420 \t\t \v\f\f  \r\n",
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420},
+    {"leading and trailing whitespace", "\t \v\f  1337420 \t\f  \r\n",
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420},
+    {"leading and trailing whitespace, positive value", "\t \v\f  +1337420 \t\f  \r\n",
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420,
+        ParseState::Success, 1337420},
+    {"leading and trailing whitespace, negative value", "\t \v\f  -1337420 \t\f  \r\n",
+        ParseState::Success, -1337420,
+        ParseState::Failed, 0,
+        ParseState::Success, -1337420,
+        ParseState::Failed, 0},
+
+    /* Value clamping. Comparing to TypeTraits values to make sure the text
+       doesn't contain off-by-one values and such. */
+    {"largest 32-bit signed value", "2147483647",
+        ParseState::Success, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<Int>::max()},
+    {"largest 32-bit signed value plus one", "2147483648",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<Int>::max() + 1u,
+        ParseState::Success, Math::TypeTraits<Int>::max() + 1ll,
+        ParseState::Success, Math::TypeTraits<Int>::max() + 1ull},
+    {"smallest 32-bit signed value", "-2147483648",
+        ParseState::Success, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0,
+        ParseState::Success, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0},
+    {"smallest 32-bit signed value minus one", "-2147483649",
+        ParseState::Clamped, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0,
+        ParseState::Success, Math::TypeTraits<Int>::min() -1ll,
+        ParseState::Failed, 0},
+    {"largest 32-bit unsigned value", "4294967295",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max()},
+    {"largest 32-bit unsigned value plus one", "4294967296",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max() + 1ll,
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max() + 1ull},
+
+    {"largest 64-bit signed value", "9223372036854775807",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Success, Math::TypeTraits<Long>::max(),
+        ParseState::Success, Math::TypeTraits<Long>::max()},
+    {"largest 64-bit signed value plus one", "9223372036854775808",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Clamped, Math::TypeTraits<Long>::max(),
+        ParseState::Success, Math::TypeTraits<Long>::max() + 1ull},
+    {"smallest 64-bit signed value", "-9223372036854775808",
+        ParseState::Clamped, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0,
+        ParseState::Success, Math::TypeTraits<Long>::min(),
+        ParseState::Failed, 0},
+    {"smallest 64-bit signed value minus one", "-9223372036854775809",
+        ParseState::Clamped, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0,
+        ParseState::Clamped, Math::TypeTraits<Long>::min(),
+        ParseState::Failed, 0},
+    {"largest 64-bit unsigned value", "18446744073709551615",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Clamped, Math::TypeTraits<Long>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedLong>::max()},
+    {"largest 64-bit unsigned value plus one", "18446744073709551616",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Clamped, Math::TypeTraits<Long>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedLong>::max()},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Containers::StringView text;
+    /** @todo expand with further diagnostic (cursor position and such) */
+} ParseDecimalFailedData[]{
+    {"empty string", ""},
+    {"just spaces alone", " \t\t \v\f\f  \r\n"},
+    {"invalid character at the begin", "_42069"},
+    {"invalid character in the middle", "420#69"},
+    {"invalid character at the end", "42069?"},
+    /* This would pass if the string length wouldn't be correctly propagated
+       all the way. Have to split in two literals because FUCKING C understands
+       that as octal 06, ugh. */
+    {"null terminator in the middle", "420\0" "69"_s},
+    {"duplicated minus sign", "--1337"},
+    {"duplicated plus sign", "++1337"},
+    {"plus and minus sign", "+-1337"},
+    {"minus and plus sign", "+-1337"},
+
+    /* Cases that currently fail but maybe eventually shouldn't? */
+    {"space in the middle", "420 69"},
+    {"space after a plus sign", "+ 4201337"},
+    {"space after a minus sign", "- 4201337"},
+    /* This definitely shouldn't fail, sigh. Compare the vertical alignment of
+       the two: −- */
+    {"Unicode minus sign", "−42069"},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Containers::StringView text;
+    /* Enumerating all four cases because anything else would make the test
+       code too cryptic and prone to accidentally testing the wrong thing or
+       not testing certain cases at all */
+    ParseState expectedState;
+    Int expected;
+    ParseState expectedStateUnsigned;
+    UnsignedInt expectedUnsigned;
+    ParseState expectedStateLong;
+    Long expectedLong;
+    ParseState expectedStateUnsignedLong;
+    UnsignedLong expectedUnsignedLong;
+} ParseHexadecimalData[]{
+    {"zero", "0",
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0},
+    {"very many zeros",
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000",
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0},
+    {"positive zero", "+0",
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0,
+        ParseState::Success, 0},
+    {"negative zero", "-0",
+        ParseState::Success, 0,
+        ParseState::Failed, 0,
+        ParseState::Success, 0,
+        ParseState::Failed, 0},
+    {"value", "2cafe5",
+        ParseState::Success, 0x2cafe5,
+        ParseState::Success, 0x2cafe5,
+        ParseState::Success, 0x2cafe5,
+        ParseState::Success, 0x2cafe5},
+    {"uppercase", "DEADB07",
+        ParseState::Success, 0xdeadb07,
+        ParseState::Success, 0xdeadb07,
+        ParseState::Success, 0xdeadb07,
+        ParseState::Success, 0xdeadb07},
+    {"mixed case", "BADcafe",
+        ParseState::Success, 0xBADcafe,
+        ParseState::Success, 0xBADcafe,
+        ParseState::Success, 0xBADcafe,
+        ParseState::Success, 0xBADcafe},
+    {"just numeric", "1337",
+        ParseState::Success, 0x1337,
+        ParseState::Success, 0x1337,
+        ParseState::Success, 0x1337,
+        ParseState::Success, 0x1337},
+    {"hex prefix", "0x1ee7",
+        ParseState::Success, 0x1ee7,
+        ParseState::Success, 0x1ee7,
+        ParseState::Success, 0x1ee7,
+        ParseState::Success, 0x1ee7},
+    {"uppercase hex prefix, mixed case after", "0XbadC0DE",
+        ParseState::Success, 0xbadc0de,
+        ParseState::Success, 0xbadc0de,
+        ParseState::Success, 0xbadc0de,
+        ParseState::Success, 0xbadc0de},
+    {"hash prefix", "#3366cc",
+        ParseState::Success, 0x3366cc,
+        ParseState::Success, 0x3366cc,
+        ParseState::Success, 0x3366cc,
+        ParseState::Success, 0x3366cc},
+    {"leading zeros", "000000000000000000000000000beef5",
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5},
+    {"leading zeros with a hex prefix", "0x0000beef5",
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5},
+    /* This one is too long to fit in a SSO so it allocates when changing the #
+       to 0 and should still be parsed correctly */
+    {"leading zeros with a hash prefix", "#000000000000000000000000000beef5",
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5},
+    {"positive value", "+faad5",
+        ParseState::Success, 0xfaad5,
+        ParseState::Success, 0xfaad5,
+        ParseState::Success, 0xfaad5,
+        ParseState::Success, 0xfaad5},
+    {"positive value, hex prefix", "+0xfaad5",
+        ParseState::Success, 0xfaad5,
+        ParseState::Success, 0xfaad5,
+        ParseState::Success, 0xfaad5,
+        ParseState::Success, 0xfaad5},
+    {"negative value", "-deed1",
+        ParseState::Success, -0xdeed1,
+        ParseState::Failed, 0,
+        ParseState::Success, -0xdeed1,
+        ParseState::Failed, 0},
+    {"negative value, hash prefix", "-#deed1",
+        ParseState::Success, -0xdeed1,
+        ParseState::Failed, 0,
+        ParseState::Success, -0xdeed1,
+        ParseState::Failed, 0},
+
+    {"leading whitespace", " \t \v\n\r  \f\fbeef5",
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5},
+    {"trailing whitespace", "beef5 \t\t \v\f\f  \r\n",
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5},
+    {"leading and trailing whitespace", "\t \v\f  beef5 \t\f  \r\n",
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5,
+        ParseState::Success, 0xbeef5},
+    {"leading and trailing whitespace, positive value", "\t \v\f  +faad5 \t\f  \r\n",
+        ParseState::Success, 0xfaad5,
+        ParseState::Success, 0xfaad5,
+        ParseState::Success, 0xfaad5,
+        ParseState::Success, 0xfaad5},
+    {"leading and trailing whitespace, negative value", "\t \v\f  -deed1 \t\f  \r\n",
+        ParseState::Success, -0xdeed1,
+        ParseState::Failed, 0,
+        ParseState::Success, -0xdeed1,
+        ParseState::Failed, 0},
+    {"leading and trailing whitespace, negative value and a hash prefix", "\t \v\f  -#deed1 \t\f  \r\n",
+        ParseState::Success, -0xdeed1,
+        ParseState::Failed, 0,
+        ParseState::Success, -0xdeed1,
+        ParseState::Failed, 0},
+
+    /* Value clamping. Comparing to TypeTraits values to make sure the text
+       doesn't contain off-by-one values and such. */
+    {"largest 32-bit signed value", "7fffffff",
+        ParseState::Success, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<Int>::max()},
+    {"largest 32-bit signed value plus one", "80000000",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<Int>::max() + 1u,
+        ParseState::Success, Math::TypeTraits<Int>::max() + 1ll,
+        ParseState::Success, Math::TypeTraits<Int>::max() + 1ull},
+    {"smallest 32-bit signed value", "-80000000",
+        ParseState::Success, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0,
+        ParseState::Success, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0},
+    {"smallest 32-bit signed value minus one", "-80000001",
+        ParseState::Clamped, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0,
+        ParseState::Success, Math::TypeTraits<Int>::min() -1ll,
+        ParseState::Failed, 0},
+    {"largest 32-bit unsigned value", "ffffffff",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max()},
+    {"largest 32-bit unsigned value plus one", "100000000",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max() + 1ll,
+        ParseState::Success, Math::TypeTraits<UnsignedInt>::max() + 1ull},
+
+    {"largest 64-bit signed value", "7fffffffffffffff",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Success, Math::TypeTraits<Long>::max(),
+        ParseState::Success, Math::TypeTraits<Long>::max()},
+    {"largest 64-bit signed value plus one", "8000000000000000",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Clamped, Math::TypeTraits<Long>::max(),
+        ParseState::Success, Math::TypeTraits<Long>::max() + 1ull},
+    {"smallest 64-bit signed value", "-8000000000000000",
+        ParseState::Clamped, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0,
+        ParseState::Success, Math::TypeTraits<Long>::min(),
+        ParseState::Failed, 0},
+    {"smallest 64-bit signed value minus one", "-8000000000000001",
+        ParseState::Clamped, Math::TypeTraits<Int>::min(),
+        ParseState::Failed, 0,
+        ParseState::Clamped, Math::TypeTraits<Long>::min(),
+        ParseState::Failed, 0},
+    {"largest 64-bit unsigned value", "ffffffffffffffff",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Clamped, Math::TypeTraits<Long>::max(),
+        ParseState::Success, Math::TypeTraits<UnsignedLong>::max()},
+    {"largest 64-bit unsigned value plus one", "10000000000000000",
+        ParseState::Clamped, Math::TypeTraits<Int>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedInt>::max(),
+        ParseState::Clamped, Math::TypeTraits<Long>::max(),
+        ParseState::Clamped, Math::TypeTraits<UnsignedLong>::max()},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Containers::StringView text;
+    /** @todo expand with further diagnostic (cursor position and such) */
+} ParseHexadecimalFailedData[]{
+    {"empty string", ""},
+    {"just spaces alone", " \t\t \v\f\f  \r\n"},
+    {"invalid character at the begin", "gfeed"},
+    {"invalid character in the middle", "feegd"},
+    {"invalid character at the end", "deefg"},
+    /* This would pass if the string length wouldn't be correctly propagated
+       all the way */
+    {"null terminator in the middle", "fee\0d"_s},
+    {"duplicated minus sign", "--feed"},
+    {"duplicated plus sign", "++feed"},
+    {"plus and minus sign", "+-feed"},
+    {"minus and plus sign", "+-feed"},
+    {"leading zeros before the hex prefix", "0000x0ab"},
+    {"both hex and hash prefix", "#0xabcdef"},
+    {"hex prefix alone", "0x"},
+    {"uppercase hex prefix alone", "0X"},
+    /* Internally if a # is found, the string is copied and the # gets replaced
+       with 0 before passing it further. But replacing it the wrong way could
+       cause invalid inputs to be treated as valid, so test that these fail as
+       they should. */
+    {"multiple hash prefixes", "###abcdef"}, /* 000abcdef is valid */
+    {"hash prefix in the middle", "a#bcdef"}, /* a0bcdef is valid */
+    {"hash prefix alone", "#"}, /* 0 is valid */
+    {"positive hash prefix alone", "+#"}, /* 0 is valid */
+    {"negative hash prefix alone", "-#"}, /* 0 is valid */
+
+    /* Cases that currently fail but maybe eventually shouldn't? */
+    {"space in the middle", "feed cafe"},
+    {"space after a plus sign", "+ feedcafe"},
+    {"space after a minus sign", "- feedcafe"},
+    {"space after a hex prefix", "0x feedcafe"},
+    {"space after a hash", "# feedcafe"},
+    /* Same as with decimal, maybe should be allowed? If so, then the hash
+       detection logic needs updating as well, tho. */
+    {"Unicode minus sign", "−deaf"},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Containers::StringView text;
+    /* Enumerating both cases because anything else would make the test code
+       too cryptic and prone to accidentally testing the wrong thing or not
+       testing certain cases at all */
+    ParseState expectedState;
+    Float expected;
+    ParseState expectedStateDouble;
+    Double expectedDouble;
+} ParseFloatData[]{
+    {"zero", "0",
+        ParseState::Success, 0.0f,
+        ParseState::Success, 0.0},
+    {"very many zeros",
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000e100",
+        ParseState::Success, 0.0f,
+        ParseState::Success, 0.0},
+    {"positive zero", "+0",
+        ParseState::Success, 0.0f,
+        ParseState::Success, 0.0},
+    {"negative zero", "-0",
+        ParseState::Success, -0.0f,
+        ParseState::Success, -0.0},
+    {"negative zero with an exponent", "-0e-100",
+        ParseState::Success, -0.0f,
+        ParseState::Success, -0.0},
+    {"value", "1337.420",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    {"leading zeros", "000000000000001337.420",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    /** @todo make this fail? if yes, then disallow also +. and -. */
+    {"leading zero omitted", ".420",
+        ParseState::Success, 0.420f,
+        ParseState::Success, 0.420},
+    {"positive value", "+1337.420",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    {"negative value", "-1337.420",
+        ParseState::Success, -1337.420f,
+        ParseState::Success, -1337.420},
+    {"exponent", "1.33742e3",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    {"uppercase exponent", "1.33742E3",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    {"exponent with positive sign", "1.33742e+3",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    {"exponent with negative sign", "1337420e-3",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+
+    {"leading whitespace", " \t \v\n\r  \f\f1337.420",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    {"trailing whitespace", "1337.420 \t\t \v\f\f  \r\n",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    {"leading and trailing whitespace", "\t \v\f  1337.420 \t\f  \r\n",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    {"leading and trailing whitespace, positive value", "\t \v\f  +1337.420 \t\f  \r\n",
+        ParseState::Success, 1337.420f,
+        ParseState::Success, 1337.420},
+    {"leading and trailing whitespace, negative value", "\t \v\f  -1337.420 \t\f  \r\n",
+        ParseState::Success, -1337.420f,
+        ParseState::Success, -1337.420},
+
+    /* Overflow to positive/negative infninity */
+    {"largest 32-bit value", "340282346638528859811704183484516925440",
+        /* https://en.wikipedia.org/wiki/Single-precision_floating-point_format */
+        ParseState::Success, FloatFromBits{0x7f7fffffu}.value,
+        ParseState::Success, 340282346638528859811704183484516925440.0},
+                      /* value changed here ---v to 6 from 4 */
+    {"largest 32-bit value plus some", "340282366638528859811704183484516925440",
+        ParseState::Clamped, Constants::inf(),
+        ParseState::Success, 340282366638528859811704183484516925440.0},
+    {"smallest 32-bit value", "-340282346638528859811704183484516925440",
+        /* Like above, but flipping the highest sign bit */
+        ParseState::Success, FloatFromBits{0xff7fffffu}.value,
+        ParseState::Success, -340282346638528859811704183484516925440.0},
+                         /* value changed here ---v to 6 from 4 */
+    {"smallest 32-bit value minus some", "-340282366638528859811704183484516925440",
+        ParseState::Clamped, -Constants::inf(),
+        ParseState::Success, -340282366638528859811704183484516925440.0},
+
+    {"largest 64-bit value",
+        "179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368",
+        ParseState::Clamped, Constants::inf(),
+        /* https://en.wikipedia.org/wiki/Double-precision_floating-point_format */
+        ParseState::Success, DoubleFromBits{0x7fefffffffffffffull}.value},
+    {"largest 64-bit value plus some",
+                      /* v--- value changed here to 8 from 7 */
+        "179769313486231580814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368",
+        ParseState::Clamped, Constants::inf(),
+        ParseState::Clamped, Constantsd::inf()},
+    {"smallest 64-bit value",
+        "-179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368",
+        ParseState::Clamped, -Constants::inf(),
+        /* Like above, but flipping the highest sign bit */
+        ParseState::Success, DoubleFromBits{0xffefffffffffffffull}.value},
+    {"smallest 64-bit value plus one",
+                       /* v--- value changed here to 8 from 7 */
+        "-179769313486231580814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368",
+        ParseState::Clamped, -Constants::inf(),
+        ParseState::Clamped, -Constantsd::inf()},
+
+    /* The string `infinity` is supported by std::strtof() as well but I don't
+       intend to claim that as being supported so don't even test for that */
+    {"infinity", "inf",
+        /* It should *not* claim that a clamp happened since that's what we
+           want to enter */
+        ParseState::Success, Constants::inf(),
+        ParseState::Success, Constantsd::inf()},
+    {"positive infinity, mixed case", "+iNF",
+        ParseState::Success, Constants::inf(),
+        ParseState::Success, Constantsd::inf()},
+    {"negative infinity, mixed case", "-Inf",
+        ParseState::Success, -Constants::inf(),
+        ParseState::Success, -Constantsd::inf()},
+    /* Positive / negative NaN is ignored for practical purposes, so comparing
+       to just NaN always */
+    {"NaN", "nan",
+        ParseState::Success, Constants::nan(),
+        ParseState::Success, Constantsd::nan()},
+    {"negative NaN, mixed case", "-nAn",
+        ParseState::Success, Constants::nan(),
+        ParseState::Success, Constantsd::nan()},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Containers::StringView text;
+    /** @todo expand with further diagnostic (cursor position and such) */
+} ParseFloatFailedData[]{
+    {"empty string", ""},
+    {"just spaces alone", " \t\t \v\f\f  \r\n"},
+    {"invalid character at the begin", "_42069"},
+    {"invalid character in the middle", "420#69"},
+    {"invalid character at the end", "42069?"},
+    /* This would pass if the string length wouldn't be correctly propagated
+       all the way. Have to split in two literals because FUCKING C understands
+       that as octal 06, ugh. */
+    {"null terminator in the middle", "420\0" "69"_s},
+    {"duplicated minus sign", "--13.37"},
+    {"duplicated plus sign", "++13.37"},
+    {"plus and minus sign", "+-13.37"},
+    {"minus and plus sign", "+-13.37"},
+
+    /* I don't intend to support this weird hex representation once Corrade has
+       own float parsers so disallowing it here already. (A hex representation
+       of a float/double bit pattern is something else, supporting that makes
+       sense, but that doesn't need a complex float parser.) Checking all
+       possible variants that should fail. */
+    {"hex representation", "0xfeed.beef"},
+    {"hex representation, negative", "-0xfeed.beef"},
+    {"hex representation, positive", "+0xfeed.beef"},
+    {"hex representation, uppercase", "0XFEED.BEEF"},
+    {"hex representation, negative uppercase", "-0XFEED.BEEF"},
+    {"hex representation, positive uppercase", "-0XFEED.BEEF"},
+    {"hex representation with an exponent and spaces around", "   -0x1.bc70a3d70a3d7p+6 "},
+    {"hex representation with an exponent and spaces around, uppercase", "\t\b0X1.BC70A3D70A3D7P6  "},
+
+    /* Cases that currently fail but maybe eventually shouldn't? */
+    {"space in the middle", "420 69"},
+    {"space after a plus sign", "+ 420.1337"},
+    {"space after a minus sign", "- 420.1337"},
+    {"space before an exponent", "4.201337e +2"},
+    {"comma as a decimal separator", "13,37"},
+    /* This definitely shouldn't fail, sigh. Compare the vertical alignment of
+       the two: −- */
+    {"Unicode minus sign", "−42069"},
+};
+
 FormatterTest::FormatterTest() {
-    addTests({&FormatterTest::debugDecimalFlag,
+    addTests({&FormatterTest::debugParseState,
+              &FormatterTest::debugDecimalFlag,
               &FormatterTest::debugDecimalFlags,
               &FormatterTest::debugHexadecimalFlag,
               &FormatterTest::debugHexadecimalFlags,
@@ -864,6 +1492,26 @@ FormatterTest::FormatterTest() {
         &FormatterTest::formatInvalid<FloatFormatter, Float>,
         &FormatterTest::formatInvalid<FloatFormatter, Double>});
 
+    addInstancedTests({&FormatterTest::parseDecimal},
+        Containers::arraySize(ParseDecimalData));
+
+    addInstancedTests({&FormatterTest::parseDecimalFailed},
+        Containers::arraySize(ParseDecimalFailedData));
+
+    addInstancedTests({&FormatterTest::parseHexadecimal},
+        Containers::arraySize(ParseHexadecimalData));
+
+    addInstancedTests({&FormatterTest::parseHexadecimalFailed},
+        Containers::arraySize(ParseHexadecimalFailedData));
+
+    addInstancedTests({&FormatterTest::parseFloat},
+        Containers::arraySize(ParseFloatData));
+
+    addInstancedTests({&FormatterTest::parseFloatFailed},
+        Containers::arraySize(ParseFloatFailedData));
+
+    addTests({&FormatterTest::parseInvalid});
+
     /* The cache, font & shared instance are trivial and have no effect on the
        formatter output, so populate them just once to reduce overhead */
     _cache.addFont(67, &_font);
@@ -873,6 +1521,12 @@ FormatterTest::FormatterTest() {
         {_shared.addFont(_font, 1.0f)},
         {Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
+}
+
+void FormatterTest::debugParseState() {
+    Containers::String out;
+    Debug{&out} << ParseState::Clamped << ParseState(0xbe);
+    CORRADE_COMPARE(out, "Ui::ParseState::Clamped Ui::ParseState(0xbe)\n");
 }
 
 void FormatterTest::debugDecimalFlag() {
@@ -1332,6 +1986,169 @@ template<class T, class U> void FormatterTest::formatInvalid() {
     CORRADE_COMPARE_AS(out, Utility::format(
         "Ui::{0}: formatter not attached\n"
         "Ui::{0}: Ui::DataHandle({{0xab, 0x12}}, {{0x2, 0x3}}) is no longer valid\n", FormatTraits<T>::name()),
+        TestSuite::Compare::String);
+}
+
+void FormatterTest::parseDecimal() {
+    auto&& data = ParseDecimalData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    Int value;
+    CORRADE_COMPARE(DecimalFormatter::parse(data.text, value), data.expectedState);
+    if(data.expectedState != ParseState::Failed)
+        CORRADE_COMPARE(value, data.expected);
+
+    UnsignedInt valueUnsigned;
+    CORRADE_COMPARE(DecimalFormatter::parse(data.text, valueUnsigned), data.expectedStateUnsigned);
+    if(data.expectedStateUnsigned != ParseState::Failed)
+        CORRADE_COMPARE(valueUnsigned, data.expectedUnsigned);
+
+    Long valueLong;
+    CORRADE_COMPARE(DecimalFormatter::parse(data.text, valueLong), data.expectedStateLong);
+    if(data.expectedStateLong != ParseState::Failed)
+        CORRADE_COMPARE(valueLong, data.expectedLong);
+
+    UnsignedLong valueUnsignedLong;
+    CORRADE_COMPARE(DecimalFormatter::parse(data.text, valueUnsignedLong), data.expectedStateUnsignedLong);
+    if(data.expectedStateUnsignedLong != ParseState::Failed)
+        CORRADE_COMPARE(valueUnsignedLong, data.expectedUnsignedLong);
+}
+
+void FormatterTest::parseDecimalFailed() {
+    auto&& data = ParseDecimalFailedData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* All failures tested here should behave the same for all cases. Failures
+       affecting only a subset are tested in parseDecimal() above. */
+    Int value;
+    UnsignedInt valueUnsigned;
+    Long valueLong;
+    UnsignedLong valueUnsignedLong;
+    CORRADE_COMPARE(DecimalFormatter::parse(data.text, value), ParseState::Failed);
+    CORRADE_COMPARE(DecimalFormatter::parse(data.text, valueUnsigned), ParseState::Failed);
+    CORRADE_COMPARE(DecimalFormatter::parse(data.text, valueLong), ParseState::Failed);
+    CORRADE_COMPARE(DecimalFormatter::parse(data.text, valueUnsignedLong), ParseState::Failed);
+    /** @todo expand with further diagnostic (cursor position and such) */
+}
+
+void FormatterTest::parseHexadecimal() {
+    auto&& data = ParseHexadecimalData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    Int value;
+    CORRADE_COMPARE(HexadecimalFormatter::parse(data.text, value), data.expectedState);
+    if(data.expectedState != ParseState::Failed)
+        CORRADE_COMPARE(value, data.expected);
+
+    UnsignedInt valueUnsigned;
+    CORRADE_COMPARE(HexadecimalFormatter::parse(data.text, valueUnsigned), data.expectedStateUnsigned);
+    if(data.expectedStateUnsigned != ParseState::Failed)
+        CORRADE_COMPARE(valueUnsigned, data.expectedUnsigned);
+
+    Long valueLong;
+    CORRADE_COMPARE(HexadecimalFormatter::parse(data.text, valueLong), data.expectedStateLong);
+    if(data.expectedStateLong != ParseState::Failed)
+        CORRADE_COMPARE(valueLong, data.expectedLong);
+
+    UnsignedLong valueUnsignedLong;
+    CORRADE_COMPARE(HexadecimalFormatter::parse(data.text, valueUnsignedLong), data.expectedStateUnsignedLong);
+    if(data.expectedStateUnsignedLong != ParseState::Failed)
+        CORRADE_COMPARE(valueUnsignedLong, data.expectedUnsignedLong);
+}
+
+void FormatterTest::parseHexadecimalFailed() {
+    auto&& data = ParseHexadecimalFailedData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* All failures tested here should behave the same for all cases. Failures
+       affecting only a subset are tested in parseHexadecimal() above. */
+    Int value;
+    UnsignedInt valueUnsigned;
+    Long valueLong;
+    UnsignedLong valueUnsignedLong;
+    CORRADE_COMPARE(HexadecimalFormatter::parse(data.text, value), ParseState::Failed);
+    CORRADE_COMPARE(HexadecimalFormatter::parse(data.text, valueUnsigned), ParseState::Failed);
+    CORRADE_COMPARE(HexadecimalFormatter::parse(data.text, valueLong), ParseState::Failed);
+    CORRADE_COMPARE(HexadecimalFormatter::parse(data.text, valueUnsignedLong), ParseState::Failed);
+    /** @todo expand with further diagnostic (cursor position and such) */
+}
+
+void FormatterTest::parseFloat() {
+    auto&& data = ParseFloatData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    Float value;
+    CORRADE_COMPARE(FloatFormatter::parse(data.text, value), data.expectedState);
+    if(data.expectedState != ParseState::Failed) {
+        CORRADE_COMPARE(value, data.expected);
+        /*  Verify that the result is really negative if it should be, i.e.
+            that -0 is preserved as such */
+        CORRADE_COMPARE(value < 0.0f, data.expected < 0.0f);
+    }
+
+    Double valueDouble;
+    CORRADE_COMPARE(FloatFormatter::parse(data.text, valueDouble), data.expectedStateDouble);
+    if(data.expectedStateDouble != ParseState::Failed) {
+        CORRADE_COMPARE(valueDouble, data.expectedDouble);
+        /*  Verify that the result is really negative if it should be, i.e.
+            that -0 is preserved as such */
+        CORRADE_COMPARE(valueDouble < 0.0, data.expectedDouble < 0.0);
+    }
+}
+
+void FormatterTest::parseFloatFailed() {
+    auto&& data = ParseFloatFailedData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* All failures tested here should behave the same for all cases. Failures
+       affecting only a subset are tested in parseFloat() above. */
+    Float value;
+    Double valueDouble;
+    CORRADE_COMPARE(FloatFormatter::parse(data.text, value), ParseState::Failed);
+    CORRADE_COMPARE(FloatFormatter::parse(data.text, valueDouble), ParseState::Failed);
+}
+
+void FormatterTest::parseInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    /* Just a sanity check that an empty or view doesn't have NullTerminated
+       set. Can't test with that as it crashes inside std::strto[u]ll() because
+       of course, it's the STL we're talking about. */
+    CORRADE_VERIFY(!(Containers::StringView{}.flags() >= Containers::StringViewFlag::NullTerminated));
+    CORRADE_VERIFY(!(Containers::StringView{nullptr}.flags() >= Containers::StringViewFlag::NullTerminated));
+
+    Int value;
+    UnsignedInt valueUnsigned;
+    Long valueLong;
+    UnsignedLong valueUnsignedLong;
+    Float valueFloat;
+    Double valueDouble;
+
+    Containers::String out;
+    Error redirectError{&out};
+    /* Be sure to still pass a string that eventually null terminates to avoid
+       std::strto[u]ll() runaway reading into random memory after. Sigh. */
+    DecimalFormatter::parse("12345"_s.exceptSuffix(1), value);
+    DecimalFormatter::parse("12345"_s.exceptSuffix(1), valueUnsigned);
+    DecimalFormatter::parse("12345"_s.exceptSuffix(1), valueLong);
+    DecimalFormatter::parse("12345"_s.exceptSuffix(1), valueUnsignedLong);
+    HexadecimalFormatter::parse("12345"_s.exceptSuffix(1), value);
+    HexadecimalFormatter::parse("12345"_s.exceptSuffix(1), valueUnsigned);
+    HexadecimalFormatter::parse("12345"_s.exceptSuffix(1), valueLong);
+    HexadecimalFormatter::parse("12345"_s.exceptSuffix(1), valueUnsignedLong);
+    FloatFormatter::parse("12345"_s.exceptSuffix(1), valueFloat);
+    FloatFormatter::parse("12345"_s.exceptSuffix(1), valueDouble);
+    CORRADE_COMPARE_AS(out,
+        "Ui::DecimalFormatter::parse(): text is not null-terminated\n"
+        "Ui::DecimalFormatter::parse(): text is not null-terminated\n"
+        "Ui::DecimalFormatter::parse(): text is not null-terminated\n"
+        "Ui::DecimalFormatter::parse(): text is not null-terminated\n"
+        "Ui::HexadecimalFormatter::parse(): text is not null-terminated\n"
+        "Ui::HexadecimalFormatter::parse(): text is not null-terminated\n"
+        "Ui::HexadecimalFormatter::parse(): text is not null-terminated\n"
+        "Ui::HexadecimalFormatter::parse(): text is not null-terminated\n"
+        "Ui::FloatFormatter::parse(): text is not null-terminated\n"
+        "Ui::FloatFormatter::parse(): text is not null-terminated\n",
         TestSuite::Compare::String);
 }
 

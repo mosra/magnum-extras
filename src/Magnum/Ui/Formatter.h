@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::DecimalFormatter, @ref Magnum::Ui::HexadecimalFormatter, @ref Magnum::Ui::FloatFormatter
+ * @brief Class @ref Magnum::Ui::DecimalFormatter, @ref Magnum::Ui::HexadecimalFormatter, @ref Magnum::Ui::FloatFormatter, enum @ref Magnum::Ui::ParseState
  * @m_since_latest_{extras}
  */
 
@@ -37,6 +37,43 @@
 #include "Magnum/Ui/visibility.h"
 
 namespace Magnum { namespace Ui {
+
+/**
+@brief Parse state
+@m_since_latest_{extras}
+
+@see @ref DecimalFormatter::parse(), @ref HexadecimalFormatter::parse(),
+    @ref FloatFormatter::parse()
+*/
+/* Not called ParseResult as that's reserved for a class that wraps this enum
+   together with additional information like error location */
+enum class ParseState: UnsignedByte {
+    /**
+     * Parsing succeeded with no information loss, i.e. the value can fit into
+     * the resulting type without being clamped.
+     */
+    Success,
+
+    /**
+     * Parsing succeeded but the parsed value had to be clamped to fit into the
+     * resulting type. The output value is set to an appropriate min or max
+     * representable value for given type.
+     */
+    Clamped,
+
+    /**
+     * Parsing the value failed, for example because it contains invalid
+     * characters. The output value is left in an unspecified state in this
+     * case.
+     */
+    Failed
+};
+
+/**
+@debugoperatorenum{ParseState}
+@m_since_latest_{extras}
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, ParseState value);
 
 /**
 @brief Formatter for decimal integer values
@@ -65,6 +102,36 @@ class MAGNUM_UI_EXPORT DecimalFormatter {
          *      @ref clearFlags()
          */
         typedef Containers::EnumSet<Flag> Flags;
+
+        /**
+         * @brief Parse text matching the formatter output
+         * @param text      Text to parse
+         * @param value     Where to put the parsed value
+         * @return Result of the parsing operation
+         *
+         * Expects that @p text is
+         * @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
+         * Leading and trailing whitespace is trimmed from the text and the
+         * value is parsed assuming it's decimal with any amount of leading
+         * zeros.
+         *
+         * If parsing succeeds, the function returns @ref ParseState::Success
+         * and populates @p value. If the text is empty or all whitespace,
+         * @ref ParseState::Failed is returned, same if the text contains a
+         * negative value and the resulting type is unsigned. Otherwise, if the
+         * value cannot fit into chosen resulting type, @p value is filled with
+         * a corresponding min / max representable value and
+         * @ref ParseState::Clamped is returned.
+         * @see @relativeref{Corrade,Containers::StringView::trimmed()},
+         *      @ref Math::TypeTraits::min(), @ref Math::TypeTraits::max()
+         */
+        static ParseState parse(Containers::StringView text, Int& value);
+        /** @overload */
+        static ParseState parse(Containers::StringView text, UnsignedInt& value);
+        /** @overload */
+        static ParseState parse(Containers::StringView text, Long& value);
+        /** @overload */
+        static ParseState parse(Containers::StringView text, UnsignedLong& value);
 
         /**
          * @brief Constructor
@@ -284,6 +351,36 @@ class MAGNUM_UI_EXPORT HexadecimalFormatter {
          *      @ref clearFlags()
          */
         typedef Containers::EnumSet<Flag> Flags;
+
+        /**
+         * @brief Parse text matching the formatter output
+         * @param text      Text to parse
+         * @param value     Where to put the parsed value
+         * @return Result of the parsing operation
+         *
+         * Expects that @p text is
+         * @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
+         * Leading and trailing whitespace is trimmed from the text and the
+         * value is parsed assuming it's hexadecimal, potentially with a 0x /
+         * 0X or # prefix. Both lowercase and uppercase input is supported.
+         *
+         * If parsing succeeds, the function returns @ref ParseState::Success
+         * and populates @p value. If the text is empty or all whitespace,
+         * @ref ParseState::Failed is returned, same if the text contains a
+         * negative value and the resulting type is unsigned. Otherwise, if the
+         * value cannot fit into chosen resulting type, @p value is filled with
+         * a corresponding min / max representable value and
+         * @ref ParseState::Clamped is returned.
+         * @see @relativeref{Corrade,Containers::StringView::trimmed()},
+         *      @ref Math::TypeTraits::min(), @ref Math::TypeTraits::max()
+         */
+        static ParseState parse(Containers::StringView text, Int& value);
+        /** @overload */
+        static ParseState parse(Containers::StringView text, UnsignedInt& value);
+        /** @overload */
+        static ParseState parse(Containers::StringView text, Long& value);
+        /** @overload */
+        static ParseState parse(Containers::StringView text, UnsignedLong& value);
 
         /**
          * @brief Constructor
@@ -509,6 +606,33 @@ class MAGNUM_UI_EXPORT FloatFormatter {
          *      @ref clearFlags()
          */
         typedef Containers::EnumSet<Flag> Flags;
+
+        /**
+         * @brief Parse text matching the formatter output
+         * @param text      Text to parse
+         * @param value     Where to put the parsed value
+         * @return Result of the parsing operation
+         *
+         * Expects that @p text is
+         * @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
+         * Leading and trailing whitespace is trimmed from the text and the
+         * value is parsed assuming it's floating-point with an optional
+         * exponent or an inf or nan, preceded with an optional sign.
+         *
+         * If parsing succeeds, the function returns @ref ParseState::Success
+         * and populates @p value. If the text is empty or all whitespace,
+         * @ref ParseState::Failed is returned, same if the text contains a
+         * negative value and the resulting type is unsigned. Otherwise, if the
+         * value cannot fit into chosen resulting type, @p value is filled with
+         * a corresponding positive or negative infinity and
+         * @ref ParseState::Clamped is returned. Parsing a literal inf or nan
+         * itself results in @ref ParseState::Success, not
+         * @ref ParseState::Clamped.
+         * @see @relativeref{Corrade,Containers::StringView::trimmed()}
+         */
+        static ParseState parse(Containers::StringView text, Float& value);
+        /** @overload */
+        static ParseState parse(Containers::StringView text, Double& value);
 
         /**
          * @brief Constructor
