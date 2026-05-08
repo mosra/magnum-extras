@@ -1229,8 +1229,15 @@ const struct {
     {"minus and plus sign", "+-feed"},
     {"leading zeros before the hex prefix", "0000x0ab"},
     {"both hex and hash prefix", "#0xabcdef"},
+    /* All cases enumerated to catch Emscripten / musl edge cases where it
+       accepts this as a valid number. */
     {"hex prefix alone", "0x"},
+    {"hex prefix alone with spaces around", " 0x   "},
     {"uppercase hex prefix alone", "0X"},
+    {"positive hex prefix alone", "+0x"},
+    {"positive uppercase hex prefix alone", "+0X"},
+    {"negative hex prefix alone", "-0x"},
+    {"negative uppercase hex prefix alone", "-0X"},
     /* Internally if a # is found, the string is copied and the # gets replaced
        with 0 before passing it further. But replacing it the wrong way could
        cause invalid inputs to be treated as valid, so test that these fail as

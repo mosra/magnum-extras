@@ -183,6 +183,20 @@ Containers::String parsePrepareHexadecimal(/*mutable*/ Containers::StringView te
        decimal case above */
     text = text.trimmed();
 
+    /* On Emscripten (musl) the parser happily accepts just the 0x / 0X prefix
+       alone, with no digits after. Other platforms treat that as an error and
+       so should we. The code responsible for the parsing looks like this and
+       ... I don't think I want to dig deeper.
+        https://git.musl-libc.org/cgit/musl/tree/src/internal/intscan.c?id=5122f9f3c99fee366167c5de98b31546312921ab#n41 */
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    if(text == "0x"_s || text == "0X"_s ||
+       text == "+0x"_s || text == "+0X"_s ||
+       text == "-0x"_s || text == "-0X"_s)
+        /* Return an empty (null-terminated) string which should fail on its
+           own */
+        return {};
+    #endif
+
     /* If the text has a hash prefix and it isn't just the prefix alone,
        replace it with a zero to make std::strto[u]ll() understand it. It
        understands the 0x / 0X prefix on its own, no need to do anything for
