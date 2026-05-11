@@ -136,80 +136,8 @@ class MAGNUM_UI_EXPORT DecimalFormatter {
         /**
          * @brief Constructor
          * @param flags         Flags
-         *
-         * The formatter is only usable once it's attached to concrete text
-         * data by calling @ref attach().
          */
-        explicit DecimalFormatter(Flags flags = {}): _layer{}, _data{}, _flags{flags}, _minWidth{1} {}
-
-        /**
-         * @brief Construct and attach to a concrete text data
-         * @param layer     Text layer instance
-         * @param data      Text data handle
-         * @param flags     Flags
-         *
-         * Equivalent to constructing with @ref DecimalFormatter(Flags) and
-         * then calling @ref attach(TextLayer&, DataHandle). See their
-         * documentation for more information.
-         */
-        explicit DecimalFormatter(TextLayer& layer, DataHandle data, Flags flags = {}): DecimalFormatter{flags} {
-            attach(layer, data);
-        }
-
-        /**
-         * @brief Construct and attach to a concrete text data assuming it comes from given layer
-         * @param layer     Text layer instance
-         * @param data      Text data handle
-         * @param flags     Flags
-         *
-         * Equivalent to constructing with @ref DecimalFormatter(Flags) and
-         * then calling @ref attach(TextLayer&, LayerDataHandle). See their
-         * documentation for more information.
-         */
-        explicit DecimalFormatter(TextLayer& layer, LayerDataHandle data, Flags flags = {}): DecimalFormatter{flags} {
-            attach(layer, data);
-        }
-
-        /**
-         * @brief Text layer instance
-         *
-         * If @ref attach() wasn't called yet, either directly or from the
-         * constructor, returns @cpp nullptr @ce.
-         */
-        TextLayer* layer() const { return _layer; }
-
-        /**
-         * @brief Text data handle
-         *
-         * If @ref attach() wasn't called yet, either directly or from the
-         * constructor, returns @ref DataHandle::Null.
-         */
-        DataHandle data() const;
-
-        /**
-         * @brief Attach the formatter to text data
-         * @return Reference to self (for method chaining)
-         *
-         * Expects that @p data is valid in @p layer. Upon calling this
-         * function, @ref operator()() can be used. Calling this function again
-         * with different arguments will reassign the formatter elsewhere. It's
-         * however not possible to detach the formatter once it has been
-         * attached.
-         * @see @ref TextLayer::isHandleValid(DataHandle) const
-         */
-        DecimalFormatter& attach(TextLayer& layer, DataHandle data);
-
-        /**
-         * @brief Attach the formatter to text data assuming it comes from given layer
-         * @return Reference to self (for method chaining)
-         *
-         * Like @ref attach(TextLayer&, DataHandle) but without checking that
-         * @p handle indeed belongs to @p layer. See its documentation
-         * for more information.
-         * @see @ref TextLayer::isHandleValid(LayerDataHandle) const,
-         *      @ref dataHandleData()
-         */
-        DecimalFormatter& attach(TextLayer& layer, LayerDataHandle data);
+        explicit DecimalFormatter(Flags flags = {}): _flags{flags}, _minWidth{1} {}
 
         /** @brief Flags */
         Flags flags() const { return _flags; }
@@ -269,24 +197,42 @@ class MAGNUM_UI_EXPORT DecimalFormatter {
         /**
          * @brief Format a value
          *
-         * Expects that @ref attach() was called and the attached-to data
-         * handle is still valid. Internally formats the @p value to a
-         * stack-allocated string and passes it to @ref TextLayer::setText(),
-         * see that function documentation for more information.
+         * Expects that @p data is valid in @p layer. Internally formats the
+         * @p value to a stack-allocated string and passes it to
+         * @ref TextLayer::setText(), see that function documentation for more
+         * information.
+         * @see @ref TextLayer::isHandleValid(DataHandle) const
          */
-        void operator()(Int value) const;
-        void operator()(UnsignedInt value) const; /**< @overload */
-        void operator()(Long value) const; /**< @overload */
-        void operator()(UnsignedLong value) const; /**< @overload */
+        void operator()(TextLayer& layer, DataHandle data, Int value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, DataHandle data, UnsignedInt value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, DataHandle data, Long value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, DataHandle data, UnsignedLong value) const;
+
+        /**
+         * @brief Format a value assuming it comes from given layer
+         *
+         * Like @ref operator()(TextLayer&, DataHandle, Int) const but without
+         * checking that @p handle indeed belongs to @p layer. See its
+         * documentation for more information.
+         * @see @ref TextLayer::isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void operator()(TextLayer& layer, LayerDataHandle data, Int value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, LayerDataHandle data, UnsignedInt value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, LayerDataHandle data, Long value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, LayerDataHandle data, UnsignedLong value) const;
 
     private:
-        template<class T> MAGNUM_UI_LOCAL void format(T value) const;
+        template<class T> MAGNUM_UI_LOCAL void format(TextLayer& layer, LayerDataHandle data, T value) const;
 
-        TextLayer* _layer;
-        LayerDataHandle _data;
         Flags _flags;
         UnsignedByte _minWidth;
-        /* 2 bytes free; 4/8 more bytes left to use for an in-place Function */
 };
 
 /**
@@ -385,80 +331,8 @@ class MAGNUM_UI_EXPORT HexadecimalFormatter {
         /**
          * @brief Constructor
          * @param flags         Flags
-         *
-         * The formatter is only usable once it's attached to concrete text
-         * data by calling @ref attach().
          */
-        explicit HexadecimalFormatter(Flags flags = {}): _layer{}, _data{}, _flags{flags}, _minWidth{1} {}
-
-        /**
-         * @brief Construct and attach to a concrete text data
-         * @param layer     Text layer instance
-         * @param data      Text data handle
-         * @param flags     Flags
-         *
-         * Equivalent to constructing with @ref HexadecimalFormatter(Flags) and
-         * then calling @ref attach(TextLayer&, DataHandle). See their
-         * documentation for more information.
-         */
-        explicit HexadecimalFormatter(TextLayer& layer, DataHandle data, Flags flags = {}): HexadecimalFormatter{flags} {
-            attach(layer, data);
-        }
-
-        /**
-         * @brief Construct and attach to a concrete text data assuming it comes from given layer
-         * @param layer     Text layer instance
-         * @param data      Text data handle
-         * @param flags     Flags
-         *
-         * Equivalent to constructing with @ref HexadecimalFormatter(Flags) and
-         * then calling @ref attach(TextLayer&, LayerDataHandle). See their
-         * documentation for more information.
-         */
-        explicit HexadecimalFormatter(TextLayer& layer, LayerDataHandle data, Flags flags = {}): HexadecimalFormatter{flags} {
-            attach(layer, data);
-        }
-
-        /**
-         * @brief Text layer instance
-         *
-         * If @ref attach() wasn't called yet, either directly or from the
-         * constructor, returns @cpp nullptr @ce.
-         */
-        TextLayer* layer() const { return _layer; }
-
-        /**
-         * @brief Text data handle
-         *
-         * If @ref attach() wasn't called yet, either directly or from the
-         * constructor, returns @ref DataHandle::Null.
-         */
-        DataHandle data() const;
-
-        /**
-         * @brief Attach the formatter to text data
-         * @return Reference to self (for method chaining)
-         *
-         * Expects that @p data is valid in @p layer. Upon calling this
-         * function, @ref operator()() can be used. Calling this function again
-         * with different arguments will reassign the formatter elsewhere. It's
-         * however not possible to detach the formatter once it has been
-         * attached.
-         * @see @ref TextLayer::isHandleValid(DataHandle) const
-         */
-        HexadecimalFormatter& attach(TextLayer& layer, DataHandle data);
-
-        /**
-         * @brief Attach the formatter to text data assuming it comes from given layer
-         * @return Reference to self (for method chaining)
-         *
-         * Like @ref attach(TextLayer&, DataHandle) but without checking that
-         * @p handle indeed belongs to @p layer. See its documentation
-         * for more information.
-         * @see @ref TextLayer::isHandleValid(LayerDataHandle) const,
-         *      @ref dataHandleData()
-         */
-        HexadecimalFormatter& attach(TextLayer& layer, LayerDataHandle data);
+        explicit HexadecimalFormatter(Flags flags = {}): _flags{flags}, _minWidth{1} {}
 
         /** @brief Flags */
         Flags flags() const { return _flags; }
@@ -519,24 +393,42 @@ class MAGNUM_UI_EXPORT HexadecimalFormatter {
         /**
          * @brief Format a value
          *
-         * Expects that @ref attach() was called and the attached-to data
-         * handle is still valid. Internally formats the @p value to a
-         * stack-allocated string and passes it to @ref TextLayer::setText(),
-         * see that function documentation for more information.
+         * Expects that @p data is valid in @p layer. Internally formats the
+         * @p value to a stack-allocated string and passes it to
+         * @ref TextLayer::setText(), see that function documentation for more
+         * information.
+         * @see @ref TextLayer::isHandleValid(DataHandle) const
          */
-        void operator()(Int value) const;
-        void operator()(UnsignedInt value) const; /**< @overload */
-        void operator()(Long value) const; /**< @overload */
-        void operator()(UnsignedLong value) const; /**< @overload */
+        void operator()(TextLayer& layer, DataHandle data, Int value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, DataHandle data, UnsignedInt value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, DataHandle data, Long value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, DataHandle data, UnsignedLong value) const;
+
+        /**
+         * @brief Format a value assuming it comes from given layer
+         *
+         * Like @ref operator()(TextLayer&, DataHandle, Int) const but without
+         * checking that @p handle indeed belongs to @p layer. See its
+         * documentation for more information.
+         * @see @ref TextLayer::isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void operator()(TextLayer& layer, LayerDataHandle data, Int value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, LayerDataHandle data, UnsignedInt value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, LayerDataHandle data, Long value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, LayerDataHandle data, UnsignedLong value) const;
 
     private:
-        template<class T> MAGNUM_UI_LOCAL void format(T value) const;
+        template<class T> MAGNUM_UI_LOCAL void format(TextLayer& layer, LayerDataHandle data, T value) const;
 
-        TextLayer* _layer;
-        LayerDataHandle _data;
         Flags _flags;
         UnsignedByte _minWidth;
-        /* 2 bytes free; 4/8 more bytes left to use for an in-place Function */
 };
 
 /**
@@ -637,80 +529,8 @@ class MAGNUM_UI_EXPORT FloatFormatter {
         /**
          * @brief Constructor
          * @param flags         Flags
-         *
-         * The formatter is only usable once it's attached to concrete text
-         * data by calling @ref attach().
          */
-        explicit FloatFormatter(Flags flags = {}): _layer{}, _data{}, _flags{flags}, _precision{6} {}
-
-        /**
-         * @brief Construct and attach to a concrete text data
-         * @param layer     Text layer instance
-         * @param data      Text data handle
-         * @param flags     Flags
-         *
-         * Equivalent to constructing with @ref FloatFormatter(Flags) and then
-         * calling @ref attach(TextLayer&, DataHandle). See their documentation
-         * for more information.
-         */
-        explicit FloatFormatter(TextLayer& layer, DataHandle data, Flags flags = {}): FloatFormatter{flags} {
-            attach(layer, data);
-        }
-
-        /**
-         * @brief Construct and attach to a concrete text data assuming it comes from given layer
-         * @param layer     Text layer instance
-         * @param data      Text data handle
-         * @param flags     Flags
-         *
-         * Equivalent to constructing with @ref FloatFormatter(Flags) and then
-         * calling @ref attach(TextLayer&, LayerDataHandle). See their
-         * documentation for more information.
-         */
-        explicit FloatFormatter(TextLayer& layer, LayerDataHandle data, Flags flags = {}): FloatFormatter{flags} {
-            attach(layer, data);
-        }
-
-        /**
-         * @brief Text layer instance
-         *
-         * If @ref attach() wasn't called yet, either directly or from the
-         * constructor, returns @cpp nullptr @ce.
-         */
-        TextLayer* layer() const { return _layer; }
-
-        /**
-         * @brief Text data handle
-         *
-         * If @ref attach() wasn't called yet, either directly or from the
-         * constructor, returns @ref DataHandle::Null.
-         */
-        DataHandle data() const;
-
-        /**
-         * @brief Attach the formatter to text data
-         * @return Reference to self (for method chaining)
-         *
-         * Expects that @p data is valid in @p layer. Upon calling this
-         * function, @ref operator()() can be used. Calling this function again
-         * with different arguments will reassign the formatter elsewhere. It's
-         * however not possible to detach the formatter once it has been
-         * attached.
-         * @see @ref TextLayer::isHandleValid(DataHandle) const
-         */
-        FloatFormatter& attach(TextLayer& layer, DataHandle data);
-
-        /**
-         * @brief Attach the formatter to text data assuming it comes from given layer
-         * @return Reference to self (for method chaining)
-         *
-         * Like @ref attach(TextLayer&, DataHandle) but without checking that
-         * @p handle indeed belongs to @p layer. See its documentation
-         * for more information.
-         * @see @ref TextLayer::isHandleValid(LayerDataHandle) const,
-         *      @ref dataHandleData()
-         */
-        FloatFormatter& attach(TextLayer& layer, LayerDataHandle data);
+        explicit FloatFormatter(Flags flags = {}): _flags{flags}, _precision{6} {}
 
         /** @brief Flags */
         Flags flags() const { return _flags; }
@@ -779,20 +599,34 @@ class MAGNUM_UI_EXPORT FloatFormatter {
         /**
          * @brief Format a value
          *
-         * Expects that @ref attach() was called and the attached-to data
-         * handle is still valid. Internally formats the @p value to a
-         * stack-allocated string and passes it to @ref TextLayer::setText(),
-         * see that function documentation for more information.
+         * Expects that @p data is valid in @p layer. Internally formats the
+         * @p value to a stack-allocated string and passes it to
+         * @ref TextLayer::setText(), see that function documentation for more
+         * information.
+         * @see @ref TextLayer::isHandleValid(DataHandle) const
          */
-        void operator()(Float value) const;
-        void operator()(Double value) const; /**< @overload */
+        void operator()(TextLayer& layer, DataHandle data, Float value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, DataHandle data, Double value) const;
+
+        /**
+         * @brief Format a value assuming it comes from given layer
+         *
+         * Like @ref operator()(TextLayer&, DataHandle, Float) const but
+         * without checking that @p handle indeed belongs to @p layer. See its
+         * documentation for more information.
+         * @see @ref TextLayer::isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void operator()(TextLayer& layer, LayerDataHandle data, Float value) const;
+        /** @overload */
+        void operator()(TextLayer& layer, LayerDataHandle data, Double value) const;
 
     private:
-        TextLayer* _layer;
-        LayerDataHandle _data;
+        MAGNUM_UI_LOCAL void format(TextLayer& layer, LayerDataHandle data, Double value) const;
+
         Flags _flags;
         UnsignedByte _precision;
-        /* 2 bytes free; 4/8 more bytes left to use for an in-place Function */
 };
 
 /**

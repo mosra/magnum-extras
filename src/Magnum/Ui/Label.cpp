@@ -157,18 +157,16 @@ template<class T, class Formatter> Label::Label(std::nullptr_t, const Anchor anc
     _layoutData = dataHandleData(ui().layoutLayer().create(layoutStyle(style), node()));
 
     _data = dataHandleData(ui().textLayer().create(textStyleText(style), {}, {}, node()));
-    /* Leaving query validity checks on doUpdate() as that'd be a lot of
-       duplication and the assumption is that StorageQuery is short-lived */
-    _dataBindingData = dataHandleData(ui().dataLayer().onUpdate(query,
-        /* MSVC 2017 doesn't actually make a copy with {}, subsequently failing
-           because attach() cannot be called on a const reference. Lol. */
-        #ifndef CORRADE_MSVC2017_COMPATIBILITY
-        Formatter{formatter}
-        #else
-        Formatter(formatter)
-        #endif
-            .attach(ui().textLayer(), _data),
-        node()));
+    {
+        /** @todo clean this up once I can use C++14 named captures */
+        TextLayer& textLayer = ui().textLayer();
+        const LayerDataHandle data = _data;
+        /* Leaving query validity checks on doUpdate() as that'd be a lot of
+           duplication, the assumption is that StorageQuery is short-lived */
+        _dataBindingData = dataHandleData(ui().dataLayer().onUpdate(query, [&textLayer, data, formatter](const T value) {
+            formatter(textLayer, data, value);
+        }, node()));
+    }
 }
 
 Label::Label(const Anchor anchor, const StorageQuery<Int>& query, const DecimalFormatter& formatter, const LabelStyle style): Label{nullptr, anchor, query, formatter, style} {}

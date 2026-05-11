@@ -409,78 +409,6 @@ ParseState FloatFormatter::parse(const Containers::StringView text, Double& valu
     return parseFloat(parsePrepareFloat(text), value);
 }
 
-DataHandle DecimalFormatter::data() const {
-    return _layer ? dataHandle(_layer->handle(), _data) : DataHandle::Null;
-}
-
-DataHandle HexadecimalFormatter::data() const {
-    return _layer ? dataHandle(_layer->handle(), _data) : DataHandle::Null;
-}
-
-DataHandle FloatFormatter::data() const {
-    return _layer ? dataHandle(_layer->handle(), _data) : DataHandle::Null;
-}
-
-DecimalFormatter& DecimalFormatter::attach(TextLayer& layer, const DataHandle data) {
-    CORRADE_ASSERT(data != DataHandle::Null,
-        "Ui::DecimalFormatter::attach(): invalid handle" << data, *this);
-    CORRADE_ASSERT(layer.isHandleValid(data),
-        "Ui::DecimalFormatter::attach():" << data << "not valid in" << layer.handle(), *this);
-    _layer = &layer;
-    _data = dataHandleData(data);
-    return *this;
-}
-
-DecimalFormatter& DecimalFormatter::attach(TextLayer& layer, const LayerDataHandle data) {
-    CORRADE_ASSERT(data != LayerDataHandle::Null,
-        "Ui::DecimalFormatter::attach(): invalid handle" << data, *this);
-    CORRADE_ASSERT(layer.isHandleValid(data),
-        "Ui::DecimalFormatter::attach():" << data << "not valid in" << layer.handle(), *this);
-    _layer = &layer;
-    _data = data;
-    return *this;
-}
-
-HexadecimalFormatter& HexadecimalFormatter::attach(TextLayer& layer, const DataHandle data) {
-    CORRADE_ASSERT(data != DataHandle::Null,
-        "Ui::HexadecimalFormatter::attach(): invalid handle" << data, *this);
-    CORRADE_ASSERT(layer.isHandleValid(data),
-        "Ui::HexadecimalFormatter::attach():" << data << "not valid in" << layer.handle(), *this);
-    _layer = &layer;
-    _data = dataHandleData(data);
-    return *this;
-}
-
-HexadecimalFormatter& HexadecimalFormatter::attach(TextLayer& layer, const LayerDataHandle data) {
-    CORRADE_ASSERT(data != LayerDataHandle::Null,
-        "Ui::HexadecimalFormatter::attach(): invalid handle" << data, *this);
-    CORRADE_ASSERT(layer.isHandleValid(data),
-        "Ui::HexadecimalFormatter::attach():" << data << "not valid in" << layer.handle(), *this);
-    _layer = &layer;
-    _data = data;
-    return *this;
-}
-
-FloatFormatter& FloatFormatter::attach(TextLayer& layer, const DataHandle data) {
-    CORRADE_ASSERT(data != DataHandle::Null,
-        "Ui::FloatFormatter::attach(): invalid handle" << data, *this);
-    CORRADE_ASSERT(layer.isHandleValid(data),
-        "Ui::FloatFormatter::attach():" << data << "not valid in" << layer.handle(), *this);
-    _layer = &layer;
-    _data = dataHandleData(data);
-    return *this;
-}
-
-FloatFormatter& FloatFormatter::attach(TextLayer& layer, const LayerDataHandle data) {
-    CORRADE_ASSERT(data != LayerDataHandle::Null,
-        "Ui::FloatFormatter::attach(): invalid handle" << data, *this);
-    CORRADE_ASSERT(layer.isHandleValid(data),
-        "Ui::FloatFormatter::attach():" << data << "not valid in" << layer.handle(), *this);
-    _layer = &layer;
-    _data = data;
-    return *this;
-}
-
 DecimalFormatter& DecimalFormatter::setMinWidth(const Int width) {
     CORRADE_ASSERT(width >= 0 && width <= 255,
         "Ui::DecimalFormatter::setMinWidth(): expected width to be between 0 and 255 but got" << width, *this);
@@ -515,12 +443,7 @@ template<> constexpr const char* decimalFormatString<UnsignedLong>() {
 
 }
 
-template<class T> inline void DecimalFormatter::format(const T value) const {
-    CORRADE_ASSERT(_layer,
-        "Ui::DecimalFormatter: formatter not attached", );
-    CORRADE_ASSERT(_layer->isHandleValid(_data),
-        "Ui::DecimalFormatter:" << dataHandle(_layer->handle(), _data) << "is no longer valid", );
-
+template<class T> inline void DecimalFormatter::format(TextLayer& layer, const LayerDataHandle data, const T value) const {
     /** @todo throw away all this once Corrade has standalone formatters */
     /* The output size can be at most the largest possible _minWidth value,
        a plus or minus, and a null terminator */
@@ -555,23 +478,55 @@ template<class T> inline void DecimalFormatter::format(const T value) const {
     }
     const std::size_t size = begin + std::snprintf(output + begin, Containers::arraySize(output) - begin, decimalFormatString<typename std::make_unsigned<T>::type>(), Int(_minWidth), unsignedValue);
     CORRADE_INTERNAL_ASSERT(size < Containers::arraySize(output));
-    _layer->setText(_data, {output, size}, {});
+    layer.setText(data, {output, size}, {});
 }
 
-void DecimalFormatter::operator()(const Int value) const {
-    format(value);
+void DecimalFormatter::operator()(TextLayer& layer, const DataHandle data, const Int value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::DecimalFormatter: invalid handle" << data, );
+    format(layer, dataHandleData(data), value);
 }
 
-void DecimalFormatter::operator()(const UnsignedInt value) const {
-    format(value);
+void DecimalFormatter::operator()(TextLayer& layer, const DataHandle data, const UnsignedInt value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::DecimalFormatter: invalid handle" << data, );
+    format(layer, dataHandleData(data), value);
 }
 
-void DecimalFormatter::operator()(const Long value) const {
-    format(value);
+void DecimalFormatter::operator()(TextLayer& layer, const DataHandle data, const Long value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::DecimalFormatter: invalid handle" << data, );
+    format(layer, dataHandleData(data), value);
 }
 
-void DecimalFormatter::operator()(const UnsignedLong value) const {
-    format(value);
+void DecimalFormatter::operator()(TextLayer& layer, const DataHandle data, const UnsignedLong value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::DecimalFormatter: invalid handle" << data, );
+    format(layer, dataHandleData(data), value);
+}
+
+void DecimalFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const Int value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::DecimalFormatter: invalid handle" << data, );
+    format(layer, data, value);
+}
+
+void DecimalFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const UnsignedInt value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::DecimalFormatter: invalid handle" << data, );
+    format(layer, data, value);
+}
+
+void DecimalFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const Long value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::DecimalFormatter: invalid handle" << data, );
+    format(layer, data, value);
+}
+
+void DecimalFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const UnsignedLong value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::DecimalFormatter: invalid handle" << data, );
+    format(layer, data, value);
 }
 
 namespace {
@@ -587,12 +542,7 @@ template<> constexpr const char* hexadecimalFormatString<UnsignedLong>(bool uppe
 
 }
 
-template<class T> void HexadecimalFormatter::format(const T value) const {
-    CORRADE_ASSERT(_layer,
-        "Ui::HexadecimalFormatter: formatter not attached", );
-    CORRADE_ASSERT(_layer->isHandleValid(_data),
-        "Ui::HexadecimalFormatter:" << dataHandle(_layer->handle(), _data) << "is no longer valid", );
-
+template<class T> void HexadecimalFormatter::format(TextLayer& layer, const LayerDataHandle data, const T value) const {
     /** @todo throw away all this once Corrade has standalone formatters */
     /* The output size can be at most the largest possible _minWidth value,
        a plus or minus, a prefix, and a null terminator */
@@ -637,37 +587,58 @@ template<class T> void HexadecimalFormatter::format(const T value) const {
     }
     const std::size_t size = begin + std::snprintf(output + begin, Containers::arraySize(output) - begin, hexadecimalFormatString<typename std::make_unsigned<T>::type>(_flags >= Flag::Uppercase), Int(_minWidth), unsignedValue);
     CORRADE_INTERNAL_ASSERT(size < Containers::arraySize(output));
-    _layer->setText(_data, {output, size}, {});
+    layer.setText(data, {output, size}, {});
 }
 
-void HexadecimalFormatter::operator()(const Int value) const {
-    format(value);
+void HexadecimalFormatter::operator()(TextLayer& layer, const DataHandle data, const Int value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::HexadecimalFormatter: invalid handle" << data, );
+    format(layer, dataHandleData(data), value);
 }
 
-void HexadecimalFormatter::operator()(const UnsignedInt value) const {
-    format(value);
+void HexadecimalFormatter::operator()(TextLayer& layer, const DataHandle data, const UnsignedInt value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::HexadecimalFormatter: invalid handle" << data, );
+    format(layer, dataHandleData(data), value);
 }
 
-void HexadecimalFormatter::operator()(const Long value) const {
-    format(value);
+void HexadecimalFormatter::operator()(TextLayer& layer, const DataHandle data, const Long value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::HexadecimalFormatter: invalid handle" << data, );
+    format(layer, dataHandleData(data), value);
 }
 
-void HexadecimalFormatter::operator()(const UnsignedLong value) const {
-    format(value);
+void HexadecimalFormatter::operator()(TextLayer& layer, const DataHandle data, const UnsignedLong value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::HexadecimalFormatter: invalid handle" << data, );
+    format(layer, dataHandleData(data), value);
 }
 
-void FloatFormatter::operator()(const Float value) const {
-    /** @todo stop delegating to Double once there's a dedicated code path for
-        float printing (with smaller LUTs and such), printf doesn't do that */
-    return operator()(Double(value));
+void HexadecimalFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const Int value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::HexadecimalFormatter: invalid handle" << data, );
+    format(layer, data, value);
 }
 
-void FloatFormatter::operator()(const Double value) const {
-    CORRADE_ASSERT(_layer,
-        "Ui::FloatFormatter: formatter not attached", );
-    CORRADE_ASSERT(_layer->isHandleValid(_data),
-        "Ui::FloatFormatter:" << dataHandle(_layer->handle(), _data) << "is no longer valid", );
+void HexadecimalFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const UnsignedInt value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::HexadecimalFormatter: invalid handle" << data, );
+    format(layer, data, value);
+}
 
+void HexadecimalFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const Long value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::HexadecimalFormatter: invalid handle" << data, );
+    format(layer, data, value);
+}
+
+void HexadecimalFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const UnsignedLong value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::HexadecimalFormatter: invalid handle" << data, );
+    format(layer, data, value);
+}
+
+void FloatFormatter::format(TextLayer& layer, const LayerDataHandle data, const Double value) const {
     /** @todo throw away all this once Corrade has standalone formatters */
     /* Format string. Either "%.*S" or "%+.*S", where `S` is picked below.
        Compared to DecimalFormatter / HexadecimalFormatter here printf() itself
@@ -697,7 +668,35 @@ void FloatFormatter::operator()(const Double value) const {
     char output[309 + 1 + 1 + 255 + 1];
     const std::size_t size = std::snprintf(output, Containers::arraySize(output), formatString, Int(_precision), value);
     CORRADE_INTERNAL_ASSERT(size < Containers::arraySize(output));
-    _layer->setText(_data, {output, size}, {});
+    layer.setText(data, {output, size}, {});
+}
+
+void FloatFormatter::operator()(TextLayer& layer, const DataHandle data, const Float value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::FloatFormatter: invalid handle" << data, );
+    /** @todo stop delegating to Double once there's a dedicated code path for
+        float printing (with smaller LUTs and such), printf doesn't do that */
+    return format(layer, dataHandleData(data), Double(value));
+}
+
+void FloatFormatter::operator()(TextLayer& layer, const DataHandle data, const Double value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::FloatFormatter: invalid handle" << data, );
+    return format(layer, dataHandleData(data), value);
+}
+
+void FloatFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const Double value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::FloatFormatter: invalid handle" << data, );
+    return format(layer, data, value);
+}
+
+void FloatFormatter::operator()(TextLayer& layer, const LayerDataHandle data, const Float value) const {
+    CORRADE_ASSERT(layer.isHandleValid(data),
+        "Ui::FloatFormatter: invalid handle" << data, );
+    /** @todo stop delegating to Double once there's a dedicated code path for
+        float printing (with smaller LUTs and such), printf doesn't do that */
+    return format(layer, data, Double(value));
 }
 
 }}

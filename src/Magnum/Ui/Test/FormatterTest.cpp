@@ -25,7 +25,6 @@
 */
 
 #include <Corrade/Containers/ArrayView.h> /* arraySize() */
-#include <Corrade/Containers/Function.h> /* construct*(), for in-place fit */
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
@@ -57,13 +56,7 @@ struct FormatterTest: TestSuite::Tester {
     void constructDecimal();
     void constructHexadecimal();
     void constructFloat();
-    template<class T> void constructAttached();
-    /* Invalid construction is only when attaching to invalid data, which is
-       checked in attachInvalid() below already */
     template<class T> void constructCopy();
-
-    template<class T> void attach();
-    template<class T> void attachInvalid();
 
     template<class T> void flags();
     template<class T> void decimalMinWidth();
@@ -72,8 +65,11 @@ struct FormatterTest: TestSuite::Tester {
     void floatPrecisionInvalid();
 
     void formatDecimal();
+    void formatDecimalLayerDataHandle();
     void formatHexadecimal();
+    void formatHexadecimalLayerDataHandle();
     void formatFloat();
+    void formatFloatLayerDataHandle();
     template<class T, class U> void formatInvalid();
 
     void parseDecimal();
@@ -1454,19 +1450,9 @@ FormatterTest::FormatterTest() {
               &FormatterTest::constructDecimal,
               &FormatterTest::constructHexadecimal,
               &FormatterTest::constructFloat,
-              &FormatterTest::constructAttached<DecimalFormatter>,
-              &FormatterTest::constructAttached<HexadecimalFormatter>,
-              &FormatterTest::constructAttached<FloatFormatter>,
               &FormatterTest::constructCopy<DecimalFormatter>,
               &FormatterTest::constructCopy<HexadecimalFormatter>,
               &FormatterTest::constructCopy<FloatFormatter>,
-
-              &FormatterTest::attach<DecimalFormatter>,
-              &FormatterTest::attach<HexadecimalFormatter>,
-              &FormatterTest::attach<FloatFormatter>,
-              &FormatterTest::attachInvalid<DecimalFormatter>,
-              &FormatterTest::attachInvalid<HexadecimalFormatter>,
-              &FormatterTest::attachInvalid<FloatFormatter>,
 
               &FormatterTest::flags<DecimalFormatter>,
               &FormatterTest::flags<HexadecimalFormatter>,
@@ -1481,11 +1467,17 @@ FormatterTest::FormatterTest() {
     addInstancedTests({&FormatterTest::formatDecimal},
         Containers::arraySize(FormatDecimalData));
 
+    addTests({&FormatterTest::formatDecimalLayerDataHandle});
+
     addInstancedTests({&FormatterTest::formatHexadecimal},
         Containers::arraySize(FormatHexadecimalData));
 
+    addTests({&FormatterTest::formatHexadecimalLayerDataHandle});
+
     addInstancedTests({&FormatterTest::formatFloat},
         Containers::arraySize(FormatFloatData));
+
+    addTests({&FormatterTest::formatFloatLayerDataHandle});
 
     addTests<FormatterTest>({
         &FormatterTest::formatInvalid<DecimalFormatter, Int>,
@@ -1574,41 +1566,20 @@ void FormatterTest::debugFloatFlags() {
 
 void FormatterTest::constructDecimal() {
     DecimalFormatter formatter{DecimalFormatter::Flag(0x80)};
-    CORRADE_COMPARE(formatter.layer(), nullptr);
-    CORRADE_COMPARE(formatter.data(), DataHandle::Null);
     CORRADE_COMPARE(formatter.flags(), DecimalFormatter::Flag(0x80));
     CORRADE_COMPARE(formatter.minWidth(), 1);
-
-    /* The formatter should be small enough to fit in-place in a Function for
-       use in DataLayer::onUpdate(). This may also fail if the formatter is not
-       trivially copyable, which is verified in constructCopy() below. */
-    CORRADE_VERIFY(!Containers::Function<void(Int)>{formatter}.isAllocated());
 }
 
 void FormatterTest::constructHexadecimal() {
     HexadecimalFormatter formatter{HexadecimalFormatter::Flag::HashPrefix|HexadecimalFormatter::Flag::Uppercase};
-    CORRADE_COMPARE(formatter.layer(), nullptr);
-    CORRADE_COMPARE(formatter.data(), DataHandle::Null);
     CORRADE_COMPARE(formatter.flags(), HexadecimalFormatter::Flag::HashPrefix|HexadecimalFormatter::Flag::Uppercase);
     CORRADE_COMPARE(formatter.minWidth(), 1);
-
-    /* The formatter should be small enough to fit in-place in a Function for
-       use in DataLayer::onUpdate(). This may also fail if the formatter is not
-       trivially copyable, which is verified in constructCopy() below. */
-    CORRADE_VERIFY(!Containers::Function<void(Int)>{formatter}.isAllocated());
 }
 
 void FormatterTest::constructFloat() {
     FloatFormatter formatter{FloatFormatter::Flag::Decimal|FloatFormatter::Flag::ExplicitPlus};
-    CORRADE_COMPARE(formatter.layer(), nullptr);
-    CORRADE_COMPARE(formatter.data(), DataHandle::Null);
     CORRADE_COMPARE(formatter.flags(), FloatFormatter::Flag::Decimal|FloatFormatter::Flag::ExplicitPlus);
     CORRADE_COMPARE(formatter.precision(), 6);
-
-    /* The formatter should be small enough to fit in-place in a Function for
-       use in DataLayer::onUpdate(). This may also fail if the formatter is not
-       trivially copyable, which is verified in constructCopy() below. */
-    CORRADE_VERIFY(!Containers::Function<void(Float)>{formatter}.isAllocated());
 }
 
 template<class> struct FormatTraits;
@@ -1622,43 +1593,12 @@ template<> struct FormatTraits<FloatFormatter> {
     static const char* name() { return "FloatFormatter"; }
 };
 
-template<class T> void FormatterTest::constructAttached() {
-    setTestCaseTemplateName(FormatTraits<T>::name());
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0xab, 0x12), _shared};
-
-    /* Create some extra data to have a non-trivial handle */
-    layer.create(0, "", {});
-    layer.create(0, "", {});
-    layer.remove(layer.create(0, "", {}));
-    layer.remove(layer.create(0, "", {}));
-    DataHandle data = layer.create(0, "", {});
-
-    T formatter1{layer, data, T::Flag::ExplicitPlus};
-    T formatter2{layer, dataHandleData(data), T::Flag::ExplicitPlus};
-    CORRADE_COMPARE(formatter1.layer(), &layer);
-    CORRADE_COMPARE(formatter2.layer(), &layer);
-    CORRADE_COMPARE(formatter1.data(), dataHandle(layer.handle(), 2, 3));
-    CORRADE_COMPARE(formatter2.data(), dataHandle(layer.handle(), 2, 3));
-    CORRADE_COMPARE(formatter1.flags(), T::Flag::ExplicitPlus);
-    CORRADE_COMPARE(formatter2.flags(), T::Flag::ExplicitPlus);
-}
-
 template<class T> void FormatterTest::constructCopy() {
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0xab, 0x12), _shared};
-
-    DataHandle data = layer.create(0, "", {});
-
     /* The copy is implicit, so verify just a subset of the fields */
 
-    T a{layer, data};
+    T a{T::Flag::ExplicitPlus};
     T b = a;
-    CORRADE_COMPARE(b.layer(), &layer);
-    CORRADE_COMPARE(b.data(), data);
+    CORRADE_COMPARE(b.flags(), T::Flag::ExplicitPlus);
 
     /* If the formatters aren't trivially copyable, they can't be used in-place
        in a Function, which is bad */
@@ -1666,75 +1606,6 @@ template<class T> void FormatterTest::constructCopy() {
     CORRADE_VERIFY(std::is_trivially_copy_constructible<T>::value);
     CORRADE_VERIFY(std::is_trivially_copy_assignable<T>::value);
     #endif
-}
-
-template<class T> void FormatterTest::attach() {
-    setTestCaseTemplateName(FormatTraits<T>::name());
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0xab, 0x12), _shared};
-
-    /* Create some extra data to have a non-trivial handle */
-    layer.create(0, "", {});
-    layer.create(0, "", {});
-    layer.remove(layer.create(0, "", {}));
-    layer.remove(layer.create(0, "", {}));
-    DataHandle data = layer.create(0, "", {});
-
-    T formatter1, formatter2;
-    CORRADE_COMPARE(formatter1.layer(), nullptr);
-    CORRADE_COMPARE(formatter2.layer(), nullptr);
-    CORRADE_COMPARE(formatter1.data(), DataHandle::Null);
-    CORRADE_COMPARE(formatter2.data(), DataHandle::Null);
-
-    formatter1.attach(layer, data);
-    formatter2.attach(layer, dataHandleData(data));
-    CORRADE_COMPARE(formatter1.layer(), &layer);
-    CORRADE_COMPARE(formatter2.layer(), &layer);
-    CORRADE_COMPARE(formatter1.data(), dataHandle(layer.handle(), 2, 3));
-    CORRADE_COMPARE(formatter2.data(), dataHandle(layer.handle(), 2, 3));
-}
-
-template<class T> void FormatterTest::attachInvalid() {
-    setTestCaseTemplateName(FormatTraits<T>::name());
-
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0xab, 0x12), _shared},
-      anotherLayer{layerHandle(0x12, 0xab), _shared};
-
-    T formatter;
-
-    /* Create some extra data to have a non-trivial handle */
-    layer.create(0, "", {});
-    layer.create(0, "", {});
-    layer.remove(layer.create(0, "", {}));
-    layer.remove(layer.create(0, "", {}));
-    DataHandle data = layer.create(0, "", {});
-
-    Containers::String out;
-    Error redirectError{&out};
-    /* Null handle */
-    formatter.attach(layer, DataHandle::Null);
-    formatter.attach(layer, LayerDataHandle::Null);
-    /* Invalid handle */
-    formatter.attach(layer, dataHandle(layer.handle(), 0x12345, 0xabc));
-    formatter.attach(layer, layerDataHandle(0x12345, 0xabc));
-    /* Valid handle but different layer. With LayerDataHandle this cannot
-       happen as the layer is assumed to match. */
-    formatter.attach(anotherLayer, data);
-    CORRADE_COMPARE_AS(out, Utility::format(
-        "Ui::{0}::attach(): invalid handle Ui::DataHandle::Null\n"
-        "Ui::{0}::attach(): invalid handle Ui::LayerDataHandle::Null\n"
-
-        "Ui::{0}::attach(): Ui::DataHandle({{0xab, 0x12}}, {{0x12345, 0xabc}}) not valid in Ui::LayerHandle(0xab, 0x12)\n"
-        "Ui::{0}::attach(): Ui::LayerDataHandle(0x12345, 0xabc) not valid in Ui::LayerHandle(0xab, 0x12)\n"
-
-        "Ui::{0}::attach(): Ui::DataHandle({{0xab, 0x12}}, {{0x2, 0x3}}) not valid in Ui::LayerHandle(0x12, 0xab)\n", FormatTraits<T>::name()),
-        TestSuite::Compare::String);
 }
 
 template<class T> void FormatterTest::flags() {
@@ -1831,7 +1702,7 @@ void FormatterTest::formatDecimal() {
     DataHandle text = layer.create(0, "hello?", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(layer.text(text), "hello?");
 
-    DecimalFormatter formatter{layer, text, data.flags};
+    DecimalFormatter formatter{data.flags};
     if(data.minWidth)
         formatter.setMinWidth(*data.minWidth);
 
@@ -1840,32 +1711,61 @@ void FormatterTest::formatDecimal() {
        output shouldn't to verify we're actually testing the bounds properly.*/
 
     /* 32-bit signed type */
-    formatter(data.valueUnsigned ? Int(data.valueUnsigned) : Int(data.value));
+    formatter(layer, text, data.valueUnsigned ? Int(data.valueUnsigned) : Int(data.value));
     if(!data.valueUnsigned && data.value >= -(1ll << 31) && data.value < (1ll << 31))
         CORRADE_COMPARE(layer.text(text), data.expected);
     else
         CORRADE_VERIFY(layer.text(text) != data.expected);
 
     /* 32-bit unsigned type */
-    formatter(data.valueUnsigned ? UnsignedInt(data.valueUnsigned) : UnsignedInt(data.value));
+    formatter(layer, text, data.valueUnsigned ? UnsignedInt(data.valueUnsigned) : UnsignedInt(data.value));
     if(!data.valueUnsigned && data.value >= 0 && data.value < (1ll << 32))
         CORRADE_COMPARE(layer.text(text), data.expected);
     else
         CORRADE_VERIFY(layer.text(text) != data.expected);
 
     /* 64-bit signed type */
-    formatter(data.valueUnsigned ? Long(data.valueUnsigned) : data.value);
+    formatter(layer, text, data.valueUnsigned ? Long(data.valueUnsigned) : data.value);
     if(!data.valueUnsigned)
         CORRADE_COMPARE(layer.text(text), data.expected);
     else
         CORRADE_VERIFY(layer.text(text) != data.expected);
 
     /* 64-bit unsigned type */
-    formatter(data.valueUnsigned ? data.valueUnsigned : UnsignedLong(data.value));
+    formatter(layer, text, data.valueUnsigned ? data.valueUnsigned : UnsignedLong(data.value));
     if(data.valueUnsigned || data.value >= 0)
         CORRADE_COMPARE(layer.text(text), data.expected);
     else
         CORRADE_VERIFY(layer.text(text) != data.expected);
+}
+
+void FormatterTest::formatDecimalLayerDataHandle() {
+    /* A single case from formatDecimal() verifying the LayerDataHandle
+       overloads */
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0xab, 0x12), _shared};
+
+    /* Create extra data to verify it's not always the first one updated */
+    layer.create(0, "", {});
+
+    DataHandle text = layer.create(0, "hello?", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(layer.text(text), "hello?");
+
+    DecimalFormatter formatter{DecimalFormatter::Flag::ExplicitPlus};
+
+    formatter(layer, dataHandleData(text), Int(1337));
+    CORRADE_COMPARE(layer.text(text), "+1337");
+
+    formatter(layer, dataHandleData(text), UnsignedInt(1338));
+    CORRADE_COMPARE(layer.text(text), "+1338");
+
+    formatter(layer, dataHandleData(text), Long(1339));
+    CORRADE_COMPARE(layer.text(text), "+1339");
+
+    formatter(layer, dataHandleData(text), UnsignedLong(1340));
+    CORRADE_COMPARE(layer.text(text), "+1340");
 }
 
 void FormatterTest::formatHexadecimal() {
@@ -1888,39 +1788,68 @@ void FormatterTest::formatHexadecimal() {
     DataHandle text = layer.create(0, "hello?", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(layer.text(text), "hello?");
 
-    HexadecimalFormatter formatter{layer, text, data.flags};
+    HexadecimalFormatter formatter{data.flags};
     if(data.minWidth)
         formatter.setMinWidth(*data.minWidth);
 
     /* Test with all possible type variants, same as in formatDecimal() */
 
     /* 32-bit signed type */
-    formatter(data.valueUnsigned ? Int(data.valueUnsigned) : Int(data.value));
+    formatter(layer, text, data.valueUnsigned ? Int(data.valueUnsigned) : Int(data.value));
     if(!data.valueUnsigned && data.value >= -(1ll << 31) && data.value < (1ll << 31))
         CORRADE_COMPARE(layer.text(text), data.expected);
     else
         CORRADE_VERIFY(layer.text(text) != data.expected);
 
     /* 32-bit unsigned type */
-    formatter(data.valueUnsigned ? UnsignedInt(data.valueUnsigned) : UnsignedInt(data.value));
+    formatter(layer, text, data.valueUnsigned ? UnsignedInt(data.valueUnsigned) : UnsignedInt(data.value));
     if(!data.valueUnsigned && data.value >= 0 && data.value < (1ll << 32))
         CORRADE_COMPARE(layer.text(text), data.expected);
     else
         CORRADE_VERIFY(layer.text(text) != data.expected);
 
     /* 64-bit signed type */
-    formatter(data.valueUnsigned ? Long(data.valueUnsigned) : data.value);
+    formatter(layer, text, data.valueUnsigned ? Long(data.valueUnsigned) : data.value);
     if(!data.valueUnsigned)
         CORRADE_COMPARE(layer.text(text), data.expected);
     else
         CORRADE_VERIFY(layer.text(text) != data.expected);
 
     /* 64-bit unsigned type */
-    formatter(data.valueUnsigned ? data.valueUnsigned : UnsignedLong(data.value));
+    formatter(layer, text, data.valueUnsigned ? data.valueUnsigned : UnsignedLong(data.value));
     if(data.valueUnsigned || data.value >= 0)
         CORRADE_COMPARE(layer.text(text), data.expected);
     else
         CORRADE_VERIFY(layer.text(text) != data.expected);
+}
+
+void FormatterTest::formatHexadecimalLayerDataHandle() {
+    /* A single case from formatHexadecimal() verifying the LayerDataHandle
+       overloads */
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0xab, 0x12), _shared};
+
+    /* Create extra data to verify it's not always the first one updated */
+    layer.create(0, "", {});
+
+    DataHandle text = layer.create(0, "hello?", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(layer.text(text), "hello?");
+
+    HexadecimalFormatter formatter{HexadecimalFormatter::Flag::HashPrefix};
+
+    formatter(layer, dataHandleData(text), Int(0x1337cafe));
+    CORRADE_COMPARE(layer.text(text), "#1337cafe");
+
+    formatter(layer, dataHandleData(text), UnsignedInt(0x1338cafe));
+    CORRADE_COMPARE(layer.text(text), "#1338cafe");
+
+    formatter(layer, dataHandleData(text), Long(0x1339cafe));
+    CORRADE_COMPARE(layer.text(text), "#1339cafe");
+
+    formatter(layer, dataHandleData(text), UnsignedLong(0x1340cafe));
+    CORRADE_COMPARE(layer.text(text), "#1340cafe");
 }
 
 void FormatterTest::formatFloat() {
@@ -1943,13 +1872,13 @@ void FormatterTest::formatFloat() {
     DataHandle text = layer.create(0, "hello?", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(layer.text(text), "hello?");
 
-    FloatFormatter formatter{layer, text, data.flags};
+    FloatFormatter formatter{data.flags};
     if(data.precision)
         formatter.setPrecision(*data.precision);
 
     /* 32-bit type. Comparing as string to have a diff because the output can
        get *long*. */
-    formatter(data.valueDouble ? Float(data.valueDouble) : data.value);
+    formatter(layer, text, data.valueDouble ? Float(data.valueDouble) : data.value);
     if(!data.valueDouble) {
         CORRADE_EXPECT_FAIL_IF(data.xfail, data.xfail);
         CORRADE_COMPARE_AS(layer.text(text),
@@ -1959,11 +1888,34 @@ void FormatterTest::formatFloat() {
         CORRADE_VERIFY(layer.text(text) != data.expected);
 
     /* 64-bit type. This should pass always. */
-    formatter(data.valueDouble ? data.valueDouble : Double(data.value));
+    formatter(layer, text, data.valueDouble ? data.valueDouble : Double(data.value));
     CORRADE_EXPECT_FAIL_IF(data.xfail, data.xfail);
     CORRADE_COMPARE_AS(layer.text(text),
         data.expected,
         TestSuite::Compare::String);
+}
+
+void FormatterTest::formatFloatLayerDataHandle() {
+    /* A single case from formatFloat() verifying the LayerDataHandle
+       overloads */
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0xab, 0x12), _shared};
+
+    /* Create extra data to verify it's not always the first one updated */
+    layer.create(0, "", {});
+
+    DataHandle text = layer.create(0, "hello?", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(layer.text(text), "hello?");
+
+    FloatFormatter formatter{FloatFormatter::Flag::ExplicitPlus};
+
+    formatter(layer, dataHandleData(text), 13.37f);
+    CORRADE_COMPARE(layer.text(text), "+13.37");
+
+    formatter(layer, dataHandleData(text), 13.38);
+    CORRADE_COMPARE(layer.text(text), "+13.38");
 }
 
 template<class T, class U> void FormatterTest::formatInvalid() {
@@ -1973,26 +1925,17 @@ template<class T, class U> void FormatterTest::formatInvalid() {
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0xab, 0x12), _shared};
+    } layer{layerHandle(0, 1), _shared};
 
-    /* Create some extra data to have a non-trivial handle */
-    layer.create(0, "", {});
-    layer.create(0, "", {});
-    layer.remove(layer.create(0, "", {}));
-    layer.remove(layer.create(0, "", {}));
-    DataHandle removed = layer.create(0, "", {});
-
-    T formatterNotAttached;
-    T formatterRemoved{layer, removed};
-    layer.remove(removed);
+    T formatter;
 
     Containers::String out;
     Error redirectError{&out};
-    formatterNotAttached(U{});
-    formatterRemoved(U{});
+    formatter(layer, DataHandle::Null, U{});
+    formatter(layer, LayerDataHandle::Null, U{});
     CORRADE_COMPARE_AS(out, Utility::format(
-        "Ui::{0}: formatter not attached\n"
-        "Ui::{0}: Ui::DataHandle({{0xab, 0x12}}, {{0x2, 0x3}}) is no longer valid\n", FormatTraits<T>::name()),
+        "Ui::{0}: invalid handle Ui::DataHandle::Null\n"
+        "Ui::{0}: invalid handle Ui::LayerDataHandle::Null\n", FormatTraits<T>::name()),
         TestSuite::Compare::String);
 }
 
