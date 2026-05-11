@@ -1959,8 +1959,8 @@ void DataLayerTest::queryConstruct() {
     if(data.updater) {
         single.reset();
         CORRADE_COMPARE(oneDimensionSizeT.set(-637572134), StorageUpdateState::Approximated);
-        oneDimensionSize1D.setMin();
-        oneDimensionSize1D.setMax();
+        oneDimensionSize1D.setToMin();
+        oneDimensionSize1D.setToMax();
         twoDimensions.increment();
         twoDimensions.decrement();
         threeDimensions.toggle();
@@ -2249,16 +2249,16 @@ void DataLayerTest::queryValueUpdateInvalid() {
     queryNoIncrementDecrement.increment();
     queryNoIncrementDecrement.decrement();
     queryNoMinMax.min();
-    queryNoMinMax.setMin();
+    queryNoMinMax.setToMin();
     queryNoMinMax.max();
-    queryNoMinMax.setMax();
+    queryNoMinMax.setToMax();
 
     queryWrongState.reset();
     queryWrongState.toggle();
     queryWrongState.increment();
     queryWrongState.decrement();
-    queryWrongState.setMin();
-    queryWrongState.setMax();
+    queryWrongState.setToMin();
+    queryWrongState.setToMax();
     CORRADE_COMPARE_AS(out,
         "Ui::StorageQuery::set(): Ui::StorageOperation::Set not supported\n"
         "Ui::StorageQuery::reset(): Ui::StorageOperation::Reset not supported\n"
@@ -2266,16 +2266,16 @@ void DataLayerTest::queryValueUpdateInvalid() {
         "Ui::StorageQuery::increment(): Ui::StorageOperation::Increment not supported\n"
         "Ui::StorageQuery::decrement(): Ui::StorageOperation::Decrement not supported\n"
         "Ui::StorageQuery::min(): Ui::StorageOperation::Min not supported\n"
-        "Ui::StorageQuery::setMin(): Ui::StorageOperation::Min not supported\n"
+        "Ui::StorageQuery::setToMin(): Ui::StorageOperation::Min not supported\n"
         "Ui::StorageQuery::max(): Ui::StorageOperation::Max not supported\n"
-        "Ui::StorageQuery::setMax(): Ui::StorageOperation::Max not supported\n"
+        "Ui::StorageQuery::setToMax(): Ui::StorageOperation::Max not supported\n"
 
         "Ui::StorageQuery::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
         "Ui::StorageQuery::toggle(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Toggle but got Ui::StorageUpdateState::Clamped\n"
         "Ui::StorageQuery::increment(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Increment but got Ui::StorageUpdateState::Clamped\n"
         "Ui::StorageQuery::decrement(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Decrement but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::StorageQuery::setMin(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Min but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::StorageQuery::setMax(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Max but got Ui::StorageUpdateState::Clamped\n",
+        "Ui::StorageQuery::setToMin(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Min but got Ui::StorageUpdateState::Clamped\n"
+        "Ui::StorageQuery::setToMax(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Max but got Ui::StorageUpdateState::Clamped\n",
         TestSuite::Compare::String);
 }
 
@@ -2328,9 +2328,9 @@ void DataLayerTest::queryInvalidHandle() {
     query.increment();
     query.decrement();
     query.min();
-    query.setMin();
+    query.setToMin();
     query.max();
-    query.setMax();
+    query.setToMax();
     CORRADE_COMPARE_AS(out,
         "Ui::StorageQuery: invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
         "Ui::StorageQuery::set(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
@@ -2339,9 +2339,9 @@ void DataLayerTest::queryInvalidHandle() {
         "Ui::StorageQuery::increment(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
         "Ui::StorageQuery::decrement(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
         "Ui::StorageQuery::min(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
-        "Ui::StorageQuery::setMin(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
+        "Ui::StorageQuery::setToMin(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
         "Ui::StorageQuery::max(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n"
-        "Ui::StorageQuery::setMax(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n",
+        "Ui::StorageQuery::setToMax(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n",
         TestSuite::Compare::String);
 }
 

@@ -1868,7 +1868,7 @@ void NumericStorageTest::update() {
     CORRADE_COMPARE(state.called, 4);
 
     /* Setting to min marks the storage as dirty */
-    query.setMin();
+    query.setToMin();
     CORRADE_VERIFY(layer.isStorageDirty(storage));
     CORRADE_VERIFY(!layer.isDirty(update));
 
@@ -1883,7 +1883,7 @@ void NumericStorageTest::update() {
     CORRADE_COMPARE(state.called, 5);
 
     /* Setting to max marks the storage as dirty */
-    query.setMax();
+    query.setToMax();
     CORRADE_VERIFY(layer.isStorageDirty(storage));
     CORRADE_VERIFY(!layer.isDirty(update));
 
@@ -1985,9 +1985,9 @@ void NumericStorageTest::rangeStep() {
         else if(data.operation == StorageOperation::Decrement)
             query.decrement();
         else if(data.operation == StorageOperation::Min)
-            query.setMin();
+            query.setToMin();
         else if(data.operation == StorageOperation::Max)
-            query.setMax();
+            query.setToMax();
         else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }
     CORRADE_COMPARE(query, data.expected);

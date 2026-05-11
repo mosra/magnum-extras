@@ -357,7 +357,7 @@ enum class StorageOperation: UnsignedByte {
      * When passed to the @ref StorageQuery constructor, either both
      * @ref StorageOperation::Min and @relativeref{StorageOperation,Max} have
      * to be present or neither.
-     * @see @ref StorageQuery::min(), @ref StorageQuery::setMin()
+     * @see @ref StorageQuery::min(), @ref StorageQuery::setToMin()
      */
     Min = 1 << 5,
 
@@ -368,7 +368,7 @@ enum class StorageOperation: UnsignedByte {
      * When passed to the @ref StorageQuery constructor, either both
      * @ref StorageOperation::Min and @relativeref{StorageOperation,Max} have
      * to be present or neither.
-     * @see @ref StorageQuery::max(), @ref StorageQuery::setMax()
+     * @see @ref StorageQuery::max(), @ref StorageQuery::setToMax()
      */
     Max = 1 << 6,
 };
@@ -1699,7 +1699,7 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * @see @ref StorageQuery::updater(), @ref StorageQuery::set(),
          *      @ref StorageQuery::reset(), @ref StorageQuery::toggle(),
          *      @ref StorageQuery::increment(), @ref StorageQuery::decrement(),
-         *      @ref StorageQuery::setMin(), @ref StorageQuery::setMax()
+         *      @ref StorageQuery::setToMin(), @ref StorageQuery::setToMax()
          */
         StorageOperations operations() const { return _operations; }
 
@@ -2060,7 +2060,7 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @ref query() with @ref layer(), @ref storage(), @ref index() and
          * @ref StorageOperation::Min. See documentation of @ref query() for
          * more information.
-         * @see @ref setMin(), @ref max()
+         * @see @ref setToMin(), @ref max()
          */
         T min() const;
 
@@ -2072,12 +2072,12 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @ref updater() with @ref layer(), @ref storage(), @ref index(),
          * @ref StorageOperation::Min and a @cpp nullptr @ce value pointer. See
          * documentation of @ref updater() for more information.
-         * @see @ref min(), @ref setMax()
+         * @see @ref min(), @ref setToMax()
          */
-        void setMin() const {
+        void setToMin() const {
             updateInternal(
                 #ifndef CORRADE_NO_ASSERT
-                "Ui::StorageQuery::setMin():",
+                "Ui::StorageQuery::setToMin():",
                 #endif
                 StorageOperation::Min);
         }
@@ -2090,7 +2090,7 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @ref query() with @ref layer(), @ref storage(), @ref index() and
          * @ref StorageOperation::Max. See documentation of @ref query() for
          * more information.
-         * @see @ref setMax(), @ref min()
+         * @see @ref setToMax(), @ref min()
          */
         T max() const;
 
@@ -2102,12 +2102,12 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @ref updater() with @ref layer(), @ref storage(), @ref index(),
          * @ref StorageOperation::Max and a @cpp nullptr @ce value pointer. See
          * documentation of @ref updater() for more information.
-         * @see @ref max(), @ref setMin()
+         * @see @ref max(), @ref setToMin()
          */
-        void setMax() const {
+        void setToMax() const {
             updateInternal(
                 #ifndef CORRADE_NO_ASSERT
-                "Ui::StorageQuery::setMax():",
+                "Ui::StorageQuery::setToMax():",
                 #endif
                 StorageOperation::Max);
         }

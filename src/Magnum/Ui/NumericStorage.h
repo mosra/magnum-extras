@@ -683,8 +683,8 @@ template<class T> class NumericStorage: public AbstractStorage {
          * If the range is different from the previously used range, calling
          * this function causes the storage to be marked as dirty.
          * @see @ref StorageQuery::set(), @ref StorageQuery::increment(),
-         *      @ref StorageQuery::decrement(), @ref StorageQuery::setMin(),
-         *      @ref StorageQuery::setMax(), @ref isDirty()
+         *      @ref StorageQuery::decrement(), @ref StorageQuery::setToMin(),
+         *      @ref StorageQuery::setToMax(), @ref isDirty()
          */
         const NumericStorage<T>& setRange(T min, T max) const;
 
