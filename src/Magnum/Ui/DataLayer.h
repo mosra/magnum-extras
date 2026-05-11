@@ -313,45 +313,61 @@ enum class StorageOperation: UnsignedByte {
     Set = 1 << 0,
 
     /**
-     * Reset a value back to default.
+     * Reset a value back to default, such as a resetting a customized setting
+     * back to the default.
      * @see @ref StorageQuery::reset()
      */
     Reset = 1 << 1,
 
     /**
-     * Toggle a value.
+     * Toggle a value, such as toggling a checkbox without needing to know what
+     * the current value is.
      * @see @ref StorageQuery::toggle()
      */
     Toggle = 1 << 2,
 
     /**
-     * Increment a value. When passed to the @ref StorageQuery constructor,
-     * either both @ref StorageOperation::Increment and
+     * Increment a value, such as in a numeric input, but for example also
+     * changing to the next value in a drop-down select, scrolling a view
+     * further or seeking an audio / video track forward.
+     *
+     * When passed to the @ref StorageQuery constructor, either both
+     * @ref StorageOperation::Increment and
      * @relativeref{StorageOperation,Decrement} have to be present or neither.
      * @see @ref StorageQuery::increment()
      */
     Increment = 1 << 3,
 
     /**
-     * Decrement a value. When passed to the @ref StorageQuery constructor,
-     * either both @ref StorageOperation::Increment and
+     * Decrement a value, such as in a numeric input, but for example also
+     * changing to the previous value in a drop-down select, scrolling a view
+     * back or seeking an audio / video track backward.
+     *
+     * When passed to the @ref StorageQuery constructor, either both
+     * @ref StorageOperation::Increment and
      * @relativeref{StorageOperation,Decrement} have to be present or neither.
      * @see @ref StorageQuery::decrement()
      */
     Decrement = 1 << 4,
 
     /**
-     * Query or set a minimum possible value. When passed to the
-     * @ref StorageQuery constructor, either both @ref StorageOperation::Min
-     * and @relativeref{StorageOperation,Max} have to be present or neither.
+     * Query or set a minimum possible value, but for example also scrolling to
+     * begin of a view or seeking to begin of an audio / video track.
+     *
+     * When passed to the @ref StorageQuery constructor, either both
+     * @ref StorageOperation::Min and @relativeref{StorageOperation,Max} have
+     * to be present or neither.
      * @see @ref StorageQuery::min(), @ref StorageQuery::setMin()
      */
     Min = 1 << 5,
 
     /**
-     * Query or set a maximum possible value. When passed to the
-     * @ref StorageQuery constructor, either both @ref StorageOperation::Min
-     * and @relativeref{StorageOperation,Max} have to be present or neither.
+     * Query or set a maximum possible value, but for example also scrolling to
+     * end of a view or seeking to end of an audio / video track.
+     *
+     * When passed to the @ref StorageQuery constructor, either both
+     * @ref StorageOperation::Min and @relativeref{StorageOperation,Max} have
+     * to be present or neither.
      * @see @ref StorageQuery::max(), @ref StorageQuery::setMax()
      */
     Max = 1 << 6,

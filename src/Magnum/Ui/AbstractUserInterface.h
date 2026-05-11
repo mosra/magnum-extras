@@ -3488,7 +3488,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref clean() wasn't called since.
-         * @see @ref currentCapturedNode(), @ref currentFocusedNode()
+         * @see @ref currentCapturedNode(), @ref currentHoveredNode(),
+         *      @ref currentFocusedNode()
          */
         NodeHandle currentPressedNode() const;
 
@@ -3513,6 +3514,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref clean() wasn't called since.
+         * @see @ref currentPressedNode(), @ref currentHoveredNode(),
+         *      @ref currentFocusedNode()
          */
         NodeHandle currentCapturedNode() const;
 
@@ -3532,6 +3535,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref clean() wasn't called since.
+         * @see @ref currentPressedNode(), @ref currentCapturedNode(),
+         *      @ref currentFocusedNode()
          */
         NodeHandle currentHoveredNode() const;
 
@@ -3553,7 +3558,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref clean() wasn't called since.
-         * @see @ref currentPressedNode()
+         * @see @ref currentPressedNode(), @ref currentCapturedNode(),
+         *      @ref currentHoveredNode()
          */
         NodeHandle currentFocusedNode() const;
 

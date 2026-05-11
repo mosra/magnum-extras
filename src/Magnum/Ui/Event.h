@@ -538,7 +538,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         Vector2 nodeSize() const { return _nodeSize; }
 
         /**
-         * @brief Whether the event is called on a node that's currently hovered
+         * @brief Whether the event is called on a node that's currently pressed
          *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentPressedNode()
          * is the same as the node the initial non-fallthrough event is called
