@@ -1210,11 +1210,11 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
            project not and vice versa. */
         DataHandle onUpdateInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& function, NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
-        MAGNUM_UI_LOCAL StorageHandle storageInternal(const UnsignedInt id) const;
-        MAGNUM_UI_LOCAL Containers::Size3D indexInternal(const UnsignedInt id) const;
-        MAGNUM_UI_LOCAL void setIndexInternal(const UnsignedInt id, std::size_t index);
-        MAGNUM_UI_LOCAL void setIndexInternal(const UnsignedInt id, const Containers::Size2D& index);
-        MAGNUM_UI_LOCAL void setIndexInternal(const UnsignedInt id, const Containers::Size3D& index);
+        MAGNUM_UI_LOCAL StorageHandle storageInternal(UnsignedInt id) const;
+        MAGNUM_UI_LOCAL Containers::Size3D indexInternal(UnsignedInt id) const;
+        MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, std::size_t index);
+        MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, const Containers::Size2D& index);
+        MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, const Containers::Size3D& index);
 
         MAGNUM_UI_LOCAL LayerFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL void doClean(Containers::BitArrayView dataIdsToRemove) override;
