@@ -235,6 +235,9 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventTextInput();
 
     void eventConvertExternal();
+
+    void isNodePressedCapturedHoveredFocused();
+    void isNodePressedCapturedHoveredFocusedInvalid();
 };
 
 using namespace Math::Literals;
@@ -1394,7 +1397,10 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addInstancedTests({&AbstractUserInterfaceTest::eventTextInput},
         Containers::arraySize(UpdateData));
 
-    addTests({&AbstractUserInterfaceTest::eventConvertExternal});
+    addTests({&AbstractUserInterfaceTest::eventConvertExternal,
+
+              &AbstractUserInterfaceTest::isNodePressedCapturedHoveredFocused,
+              &AbstractUserInterfaceTest::isNodePressedCapturedHoveredFocusedInvalid});
 }
 
 void AbstractUserInterfaceTest::debugState() {
@@ -24611,6 +24617,162 @@ void AbstractUserInterfaceTest::eventConvertExternal() {
         KeyRelease,
         TextInput,
     }), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceTest::isNodePressedCapturedHoveredFocused() {
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Initially no node is anything */
+    NodeHandle node = ui.createNode({}, {50, 50});
+    NodeHandle nodeFocusable = ui.createNode({50, 50}, {50, 50}, NodeFlag::Focusable);
+    CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+    /* A layer so we can actually accept the events */
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
+            if(disableCapture)
+                event.setCaptured(false);
+            event.setAccepted();
+        }
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
+            event.setAccepted();
+        }
+        void doFocusEvent(UnsignedInt, FocusEvent& event) override {
+            event.setAccepted();
+        }
+
+        bool disableCapture = false;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    layer.create(node);
+    layer.create(nodeFocusable);
+
+    /* A null handle should not report anything even though it's currently
+       equal to the current*Node() queries */
+    CORRADE_VERIFY(!ui.isNodePressed(NodeHandle::Null));
+    CORRADE_VERIFY(!ui.isNodeCaptured(NodeHandle::Null));
+    CORRADE_VERIFY(!ui.isNodeHovered(NodeHandle::Null));
+    CORRADE_VERIFY(!ui.isNodeFocused(NodeHandle::Null));
+
+    /* Initially a node reports nothing */
+    CORRADE_VERIFY(!ui.isNodePressed(node));
+    CORRADE_VERIFY(!ui.isNodeCaptured(node));
+    CORRADE_VERIFY(!ui.isNodeHovered(node));
+    CORRADE_VERIFY(!ui.isNodeFocused(node));
+    CORRADE_VERIFY(!ui.isNodePressed(nodeFocusable));
+    CORRADE_VERIFY(!ui.isNodeCaptured(nodeFocusable));
+    CORRADE_VERIFY(!ui.isNodeHovered(nodeFocusable));
+    CORRADE_VERIFY(!ui.isNodeFocused(nodeFocusable));
+
+    /* Hovering a node causes it to be marked as hovered */
+    {
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({35, 25}, event));
+    }
+    CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentHoveredNode(), node);
+    CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+    CORRADE_VERIFY(!ui.isNodePressed(node));
+    CORRADE_VERIFY(!ui.isNodeCaptured(node));
+    CORRADE_VERIFY(ui.isNodeHovered(node));
+    CORRADE_VERIFY(!ui.isNodeFocused(node));
+
+    /* Pressing on a node causes it to be marked as pressed and captured as
+       well */
+    {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({25, 35}, event));
+    }
+    CORRADE_COMPARE(ui.currentPressedNode(), node);
+    CORRADE_COMPARE(ui.currentCapturedNode(), node);
+    CORRADE_COMPARE(ui.currentHoveredNode(), node);
+    CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodePressed(node));
+    CORRADE_VERIFY(ui.isNodeCaptured(node));
+    CORRADE_VERIFY(ui.isNodeHovered(node));
+    CORRADE_VERIFY(!ui.isNodeFocused(node));
+
+    /* Moving outside causes only the press and capture to be registered */
+    {
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({35, 75}, event));
+    }
+    CORRADE_COMPARE(ui.currentPressedNode(), node);
+    CORRADE_COMPARE(ui.currentCapturedNode(), node);
+    CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodePressed(node));
+    CORRADE_VERIFY(ui.isNodeCaptured(node));
+    CORRADE_VERIFY(!ui.isNodeHovered(node));
+    CORRADE_VERIFY(!ui.isNodeFocused(node));
+
+    /* Pressing on the focusable node, with capture disabled, causes press and
+       focus to be registed */
+    {
+        layer.disableCapture = true;
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({75, 65}, event));
+    }
+    CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable);
+    CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+    CORRADE_VERIFY(ui.isNodePressed(nodeFocusable));
+    CORRADE_VERIFY(!ui.isNodeCaptured(nodeFocusable));
+    CORRADE_VERIFY(!ui.isNodeHovered(nodeFocusable));
+    CORRADE_VERIFY(ui.isNodeFocused(nodeFocusable));
+
+    /* Releasing makes just the focus left */
+    {
+        layer.disableCapture = true;
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        /* There isn't any pointer release handler so this returns false, which
+           is fine */
+        CORRADE_VERIFY(!ui.pointerReleaseEvent({65, 75}, event));
+    }
+    CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+    CORRADE_VERIFY(!ui.isNodePressed(nodeFocusable));
+    CORRADE_VERIFY(!ui.isNodeCaptured(nodeFocusable));
+    CORRADE_VERIFY(!ui.isNodeHovered(nodeFocusable));
+    CORRADE_VERIFY(ui.isNodeFocused(nodeFocusable));
+}
+
+void AbstractUserInterfaceTest::isNodePressedCapturedHoveredFocusedInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Passing a null handle is explicitly allowed */
+    ui.isNodePressed(NodeHandle::Null);
+    ui.isNodeCaptured(NodeHandle::Null);
+    ui.isNodeHovered(NodeHandle::Null);
+    ui.isNodeFocused(NodeHandle::Null);
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.isNodePressed(Ui::nodeHandle(0x12345, 0xabc));
+    ui.isNodeCaptured(Ui::nodeHandle(0x12345, 0xabc));
+    ui.isNodeHovered(Ui::nodeHandle(0x12345, 0xabc));
+    ui.isNodeFocused(Ui::nodeHandle(0x12345, 0xabc));
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractUserInterface::isNodePressed(): invalid handle Ui::NodeHandle(0x12345, 0xabc)\n"
+        "Ui::AbstractUserInterface::isNodeCaptured(): invalid handle Ui::NodeHandle(0x12345, 0xabc)\n"
+        "Ui::AbstractUserInterface::isNodeHovered(): invalid handle Ui::NodeHandle(0x12345, 0xabc)\n"
+        "Ui::AbstractUserInterface::isNodeFocused(): invalid handle Ui::NodeHandle(0x12345, 0xabc)\n",
+        TestSuite::Compare::String);
 }
 
 }}}}

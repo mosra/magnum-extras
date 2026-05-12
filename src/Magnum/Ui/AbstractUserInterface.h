@@ -1073,11 +1073,14 @@ removes the capture again.
 
 All this state is exposed via @ref PointerEvent::isNodePressed(), @relativeref{PointerEvent,isNodeHovered()} and
 @relativeref{PointerEvent,isCaptured()} and similar properties in other event
-classes for use by event handler implementations. For diagnostic purposes it's
-also exposed via @ref currentPressedNode(), @ref currentHoveredNode() and
-@ref currentCapturedNode(). Additionally, position of the previous pointer
-event is tracked in @ref currentGlobalPointerPosition() and is used to fill in
-the value of @ref PointerMoveEvent::relativePosition().
+classes for use by event handler implementations. For use outside of event
+handlers there are @ref isNodePressed(), @ref isNodeHovered() and
+@ref isNodeCaptured() queries directly on the user interface instance itself.
+Additionally, for diagnostic purposes, the currently active node is exposed via
+@ref currentPressedNode(), @ref currentHoveredNode() and
+@ref currentCapturedNode(). Position of the previous pointer event is tracked
+in @ref currentGlobalPointerPosition() and is used to fill in the value of
+@ref PointerMoveEvent::relativePosition().
 
 While pointer capture is a good default, in certain use cases such as drag &
 drop it's desirable to know the node the pointer is being dragged to instead of
@@ -1113,7 +1116,8 @@ such a node or its children will *not* cause the current focus to get lost,
 which is useful for example when implementing virtual keyboards.
 
 Information about whether a node the event is called on is focused is available
-via @ref KeyEvent::isNodeFocused() and similarly on other event classes. For
+via @ref KeyEvent::isNodeFocused() and similarly on other event classes, and
+as an @ref isNodeFocused() query on the user interface instance itself. For
 diagnostic purposes it's also available through @ref currentFocusedNode().
 
 @subsection Ui-AbstractUserInterface-events-fallthrough Pointer event fallthrough
@@ -3471,12 +3475,28 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         }
 
         /**
+         * @brief Whether a node is currently pressed
+         *
+         * Expects that @p handle is either @ref NodeHandle::Null or valid. For
+         * a null node returns @cpp false @ce, which means you can pass e.g. a
+         * value of @ref AbstractLayer::node(DataHandle) const directly to this
+         * function without any additional checks. Uses
+         * @ref currentPressedNode() internally, see its documentation for more
+         * information.
+         * @see @ref isNodeCaptured(), @ref isNodeHovered(),
+         *      @ref isNodeFocused(), @ref isHandleValid(NodeHandle) const
+         */
+        bool isNodePressed(NodeHandle handle) const;
+
+        /**
          * @brief Node pressed by last pointer event
          *
          * Returns handle of a node that was under the pointer for the last
          * @ref pointerPressEvent(), the pointer wasn't released since and the
          * pointer is either captured on that node or didn't leave its area
-         * since.
+         * since. Meant to be used for diagnostic purposes, for checking
+         * whether a concrete node is currently pressed prefer to use
+         * @ref isNodePressed() instead, which performs additional checks.
          *
          * If no pointer press event was called yet, if the event wasn't
          * accepted by any data, if @ref pointerReleaseEvent() was called since
@@ -3494,14 +3514,35 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         NodeHandle currentPressedNode() const;
 
         /**
+         * @brief Whether a node is currently captured
+         *
+         * Expects that @p handle is either @ref NodeHandle::Null or valid. For
+         * a null node returns @cpp false @ce, which means you can pass e.g. a
+         * value of @ref AbstractLayer::node(DataHandle) const directly to this
+         * function without any additional checks. Uses
+         * @ref currentCapturedNode() internally, see its documentation for
+         * more information.
+         * @see @ref isNodePressed(), @ref isNodeHovered(),
+         *      @ref isNodeFocused(), @ref isHandleValid(NodeHandle) const
+         */
+        bool isNodeCaptured(NodeHandle handle) const;
+
+        /**
          * @brief Node captured by last pointer event
          *
          * Returns handle of a node that captured the last
-         * @ref pointerPressEvent() or @ref pointerMoveEvent(). All data
-         * attached to the captured node then receive all following pointer
-         * events until and including a @ref pointerReleaseEvent() even if they
-         * happen outside of its area, or until the capture is released in a
-         * @ref pointerMoveEvent() again.
+         * @ref pointerPressEvent() or @ref pointerMoveEvent(). Meant to be
+         * used for diagnostic purposes, for checking whether a concrete node
+         * is currently captured prefer to use @ref isNodeCaptured() instead,
+         * which performs additional checks.
+         *
+         * All data attached to the captured node then receive all following
+         * pointer events until and including a @ref pointerReleaseEvent() even
+         * if they happen outside of its area, or until the capture is released
+         * in a @ref pointerMoveEvent() again. Meant to be used for diagnostic
+         * purposes, for checking whether a concrete node is currently captured
+         * prefer to use @ref isNodeCaptured() instead, which performs
+         * additional checks.
          *
          * If no pointer press event was called yet, if the event wasn't
          * accepted by any data, if the capture was disabled or subsequently
@@ -3520,11 +3561,29 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         NodeHandle currentCapturedNode() const;
 
         /**
+         * @brief Whether a node is currently hovered
+         *
+         * Expects that @p handle is either @ref NodeHandle::Null or valid. For
+         * a null node returns @cpp false @ce, which means you can pass e.g. a
+         * value of @ref AbstractLayer::node(DataHandle) const directly to this
+         * function without any additional checks. Uses
+         * @ref currentHoveredNode() internally, see its documentation for more
+         * information.
+         * @see @ref isNodePressed(), @ref isNodeCaptured(),
+         *      @ref isNodeFocused(), @ref isHandleValid(NodeHandle) const
+         */
+        bool isNodeHovered(NodeHandle handle) const;
+
+        /**
          * @brief Node hovered by last pointer event
          *
          * Returns handle of a node that was under the pointer for the last
-         * @ref pointerMoveEvent(). All data attached to such node already
-         * received a @ref AbstractLayer::pointerEnterEvent(). Once a
+         * @ref pointerMoveEvent(). Meant to be used for diagnostic purposes,
+         * for checking whether a concrete node is currently hovered prefer to
+         * use @ref isNodeHovered() instead, which performs additional checks.
+         *
+         * All data attached to such node already received a
+         * @ref AbstractLayer::pointerEnterEvent(). Once a
          * @ref pointerMoveEvent() leaves its area, all data attached to that
          * node will receive a @ref AbstractLayer::pointerLeaveEvent(), and
          * this either becomes @ref NodeHandle::Null, or another node becomes
@@ -3541,16 +3600,34 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         NodeHandle currentHoveredNode() const;
 
         /**
+         * @brief Whether a node is currently focused
+         *
+         * Expects that @p handle is either @ref NodeHandle::Null or valid. For
+         * a null node returns @cpp false @ce, which means you can pass e.g. a
+         * value of @ref AbstractLayer::node(DataHandle) const directly to this
+         * function without any additional checks. Uses
+         * @ref currentFocusedNode() internally, see its documentation for more
+         * information.
+         * @see @ref isNodePressed(), @ref isNodeCaptured(),
+         *      @ref isNodeHovered(), @ref isHandleValid(NodeHandle) const
+         */
+        bool isNodeFocused(NodeHandle handle) const;
+
+        /**
          * @brief Node focused by last pointer or focus event
          *
          * Returns handle of a @ref NodeFlag::Focusable node that was under the
          * pointer for the last @ref pointerPressEvent() or for which
          * @ref focusEvent() was called and at least one data attached to such
-         * node accepted the @ref AbstractLayer::focusEvent(). Once the node
-         * becomes hidden (either due to @ref NodeFlag::Hidden set or due to
-         * the node hierarchy not being in the top-level node order),
-         * @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled is set on it or
-         * it loses @ref NodeFlag::Focusable, the data receive
+         * node accepted the @ref AbstractLayer::focusEvent(). Meant to be used
+         * for diagnostic purposes, for checking whether a concrete node is
+         * currently focused prefer to use @ref isNodeFocused() instead, which
+         * performs additional checks.
+         *
+         * Once the node becomes hidden (either due to @ref NodeFlag::Hidden
+         * set or due to the node hierarchy not being in the top-level node
+         * order), @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled is set on
+         * it or it loses @ref NodeFlag::Focusable, the data receive
          * @ref AbstractLayer::blurEvent() and this becomes
          * @ref NodeHandle::Null. It's also @ref NodeHandle::Null if no node
          * was focused yet or if the node or any of its

@@ -5066,16 +5066,40 @@ bool AbstractUserInterface::textInputEvent(TextInputEvent& event) {
     return callTextInputEventOnNode(state.currentFocusedNode, event);
 }
 
+bool AbstractUserInterface::isNodePressed(const NodeHandle handle) const {
+    CORRADE_ASSERT(handle == NodeHandle::Null || isHandleValid(handle),
+        "Ui::AbstractUserInterface::isNodePressed(): invalid handle" << handle, {});
+    return handle != NodeHandle::Null && _state->currentPressedNode == handle;
+}
+
 NodeHandle AbstractUserInterface::currentPressedNode() const {
     return _state->currentPressedNode;
+}
+
+bool AbstractUserInterface::isNodeCaptured(const NodeHandle handle) const {
+    CORRADE_ASSERT(handle == NodeHandle::Null || isHandleValid(handle),
+        "Ui::AbstractUserInterface::isNodeCaptured(): invalid handle" << handle, {});
+    return handle != NodeHandle::Null && _state->currentCapturedNode == handle;
 }
 
 NodeHandle AbstractUserInterface::currentCapturedNode() const {
     return _state->currentCapturedNode;
 }
 
+bool AbstractUserInterface::isNodeHovered(const NodeHandle handle) const {
+    CORRADE_ASSERT(handle == NodeHandle::Null || isHandleValid(handle),
+        "Ui::AbstractUserInterface::isNodeHovered(): invalid handle" << handle, {});
+    return handle != NodeHandle::Null && _state->currentHoveredNode == handle;
+}
+
 NodeHandle AbstractUserInterface::currentHoveredNode() const {
     return _state->currentHoveredNode;
+}
+
+bool AbstractUserInterface::isNodeFocused(const NodeHandle handle) const {
+    CORRADE_ASSERT(handle == NodeHandle::Null || isHandleValid(handle),
+        "Ui::AbstractUserInterface::isNodeFocused(): invalid handle" << handle, {});
+    return handle != NodeHandle::Null && _state->currentFocusedNode == handle;
 }
 
 NodeHandle AbstractUserInterface::currentFocusedNode() const {
