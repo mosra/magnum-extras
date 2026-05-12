@@ -318,7 +318,9 @@ void AbstractLayer::remove(const DataHandle handle) {
        animators */
     /** @todo make it set NeedsDataClean only if any animators are actually
         attached (is it possible to refcount these in assignAnimator(), and
-        then when the animator is removed, decrease the refcount again?) */
+        then when the animator is removed, decrease the refcount again?); or
+        maybe at least do it only if Feature::AnimateData or AnimateStyles is
+        present? */
     state.state |= LayerState::NeedsDataClean;
 
     /* If the data was attached to a node, mark the layer also as needing a
