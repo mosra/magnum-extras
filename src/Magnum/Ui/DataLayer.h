@@ -465,6 +465,8 @@ namespace Implementation {
         DataLayerStorageMaxInPlaceSize = 5*sizeof(std::size_t)
         #endif
     };
+    template<UnsignedInt, class, class, class, class...> struct StorageLambda;
+    template<UnsignedInt dimensions, class F, class G> struct StorageArgs {};
     enum class StorageCallOoverload {
         ByReference, /* void(const T&) */
         ByValue, /* void(T) */
@@ -1254,19 +1256,6 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         Containers::Pointer<State> _state;
 };
 
-namespace Implementation {
-    template<UnsignedInt dimensions> inline Containers::Size<dimensions> indexFor(const Containers::Size3D& index);
-    template<> inline Containers::Size1D indexFor<1>(const Containers::Size3D& index) {
-        return index[2];
-    }
-    template<> inline Containers::Size2D indexFor<2>(const Containers::Size3D& index) {
-        return {index[1], index[2]};
-    }
-    template<> inline Containers::Size3D indexFor<3>(const Containers::Size3D& index) {
-        return index;
-    }
-}
-
 /**
 @brief Base for @ref DataLayer storage implementations
 @m_since_latest_{extras}
@@ -1554,90 +1543,10 @@ class MAGNUM_UI_EXPORT AbstractStorage {
            storage<T>() then just casts to a subtype which doesn't need a
            friend on the derived type anymore */
         friend DataLayer;
-        /* So StorageQuery can call the queryCall() helpers below */
-        template<class> friend class StorageQuery;
+        /* So it can call the private layer + handle constructor */
+        template<UnsignedInt, class, class, class, class...> friend struct Implementation::StorageLambda;
 
-        /* Used by StorageQuery constructors. The StorageQuery then stores a
-           pointer to a concrete instantation of this function, and the
-           function then returns one of the overloads based on which signature
-           is used in a particular DataLayer::onUpdate() call. Done this way to
-           not have to store pointers to all possible overloads in each
-           StorageQuery instance. Also put here instead of being free functions
-           in the Implementation namespace so they can call the private layer +
-           handle constructor from below without having to explicitly list all
-           these as friends. */
-        template<class T, class Storage, class F> static auto queryCall(Implementation::StorageCallOoverload overload) -> void(*)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&) {
-            switch(overload) {
-                case Implementation::StorageCallOoverload::ByReference:
-                    return [](DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D&, Containers::FunctionData& result) {
-                        /* With a non-capturing lambda, all we need for calling
-                           it is the F type, there's no point in storing the
-                           (empty) `query` instance itself. Could also do
-                           `*reinterpret_cast<F*>(nullptr)` but casting from an
-                           empty struct doesn't break the "`this` pointer is
-                           never null" rule and avoids compiler warnings. */
-                        struct {} empty;
-                        const AbstractStorage storage{layer, handle};
-                        reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), StorageOperation{}));
-                    };
-                case Implementation::StorageCallOoverload::ByValue:
-                    return [](DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D&, Containers::FunctionData& result) {
-                        /* See above for why we're casting from empty struct */
-                        struct {} empty;
-                        const AbstractStorage storage{layer, handle};
-                        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), StorageOperation{}));
-                    };
-                case Implementation::StorageCallOoverload::ByValueMinMax:
-                    return [](DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D&, Containers::FunctionData& result) {
-                        /* See above for why we're casting from empty struct */
-                        struct {} empty;
-                        const AbstractStorage storage{layer, handle};
-                        reinterpret_cast<Containers::Function<void(T, T, T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), StorageOperation{}), reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), StorageOperation::Min), reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), StorageOperation::Max));
-                    };
-            }
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
-        }
-        template<UnsignedInt dimensions, class T, class Storage, class F> static auto queryCallND(Implementation::StorageCallOoverload overload) -> void(*)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&) {
-            switch(overload) {
-                case Implementation::StorageCallOoverload::ByReference:
-                    return [](DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
-                        /* See above for why we're casting from empty struct */
-                        struct {} empty;
-                        const AbstractStorage storage{layer, handle};
-                        reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), StorageOperation{}));
-                    };
-                case Implementation::StorageCallOoverload::ByValue:
-                    return [](DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
-                        /* See above for why we're casting from empty struct */
-                        struct {} empty;
-                        const AbstractStorage storage{layer, handle};
-                        reinterpret_cast<Containers::Function<void(T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), StorageOperation{}));
-                    };
-                case Implementation::StorageCallOoverload::ByValueMinMax:
-                    return [](DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, Containers::FunctionData& result) {
-                        /* See above for why we're casting from empty struct */
-                        struct {} empty;
-                        const AbstractStorage storage{layer, handle};
-                        reinterpret_cast<Containers::Function<void(T, T, T)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), StorageOperation{}), reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), StorageOperation::Min), reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), StorageOperation::Max));
-                    };
-            }
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
-        }
-        template<class T, class Storage, class F> static T query(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D&, const StorageOperation operation) {
-            /* See above for why we're casting from an empty struct */
-            struct {} empty;
-            const AbstractStorage storage{layer, handle};
-            return reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), operation);
-        }
-        template<UnsignedInt dimensions, class T, class Storage, class F> static T queryND(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation) {
-            /* See above for why we're casting from an empty struct */
-            struct {} empty;
-            const AbstractStorage storage{layer, handle};
-            return reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), Implementation::indexFor<dimensions>(index), operation);
-        }
-        template<class T, class Storage, class G> struct QueryUpdater;
-
-        /* Used by DataLayer::storageInternal() */
+        /* Used by StorageLambda and also DataLayer::storageInternal() */
         explicit AbstractStorage(DataLayer& layer, DataLayerStorageHandle handle): _layer{&layer}, _handle{handle} {}
 
         DataLayer* _layer;
@@ -1658,44 +1567,6 @@ class MAGNUM_UI_EXPORT AbstractStorage {
         #endif
         #endif
 };
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-template<class T, class Storage, class G> struct AbstractStorage::QueryUpdater {
-    static StorageUpdateState call(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D&, const StorageOperation operation, const T* value) {
-        /* See queryCall() above for why we're casting from an empty struct */
-        struct {} empty;
-        const AbstractStorage storage{layer, handle};
-        return reinterpret_cast<G&>(empty)(static_cast<const Storage&>(storage), operation, value);
-    }
-    /** @todo any idea how to deduplicate this like queryCallND()? The nullptr
-        specializations below would need C++17 variable templates or some
-        such :( */
-    static StorageUpdateState call1D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, const T* value) {
-        /* See queryCall() above for why we're casting from an empty struct */
-        struct {} empty;
-        const AbstractStorage storage{layer, handle};
-        return reinterpret_cast<G&>(empty)(static_cast<const Storage&>(storage), index[2], operation, value);
-    }
-    static StorageUpdateState call2D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, const T* value) {
-        /* See queryCall() above for why we're casting from an empty struct */
-        struct {} empty;
-        const AbstractStorage storage{layer, handle};
-        return reinterpret_cast<G&>(empty)(static_cast<const Storage&>(storage), {index[1], index[2]}, operation, value);
-    }
-    static StorageUpdateState call3D(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, const T* value) {
-        /* See queryCall() above for why we're casting from an empty struct */
-        struct {} empty;
-        const AbstractStorage storage{layer, handle};
-        return reinterpret_cast<G&>(empty)(static_cast<const Storage&>(storage), index, operation, value);
-    }
-};
-template<class T, class Storage> struct AbstractStorage::QueryUpdater<T, Storage, std::nullptr_t> {
-    static constexpr std::nullptr_t call = nullptr;
-    static constexpr std::nullptr_t call1D = nullptr;
-    static constexpr std::nullptr_t call2D = nullptr;
-    static constexpr std::nullptr_t call3D = nullptr;
-};
-#endif
 
 /**
 @brief Base for @ref DataLayer storage queries
@@ -2143,7 +2014,14 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
         }
 
     private:
-        explicit StorageQuery(const AbstractStorage& storage, StorageOperations operations, const Containers::Size3D& index, void(*(*call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), T(*const query)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation), StorageUpdateState(*updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const T*));
+        /* Delegated to from the public single-item / 1D / 2D / 3D
+           constructors, contains common static assertions. The StorageArgs are
+           used only because it's not possible to explicitly specify template
+           arguments when calling a constructor. */
+        template<UnsignedInt dimensions, class Storage, class F, class G> explicit StorageQuery(const Storage& storage, const Containers::Size3D& index, StorageOperations operations, Implementation::StorageArgs<dimensions, F, G>);
+        /* Base non-templated constructor delegated to from the templated one
+           above to further reduce (generated) code duplication */
+        explicit StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, StorageOperations operations, void(*(*call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), T(*const query)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation), StorageUpdateState(*updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const T*));
 
         void updateInternal(
             #ifndef CORRADE_NO_ASSERT
@@ -2177,18 +2055,88 @@ template<class Storage> Storage DataLayer::storage(const DataLayerStorageHandle 
     return static_cast<const Storage&>(storage);
 }
 
+namespace Implementation {
+    /* Abstracts over the ability to pass lambdas containing either no index or
+       std::size_t, Containers::Size1D, Size2D and Size3D index to the
+       StorageQuery constructor, and in case of the updater also nullptr
+       instead of a lambda */
+    template<class Storage, class T, class F, class ...Args> struct StorageLambda<0, Storage, T, F, Args...> {
+        static T call(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D&, const StorageOperation operation, Args... args) {
+            /* With a non-capturing lambda, all we need for calling it is the F
+               type, there's no point in storing the (empty) `query` instance
+               itself. Could also do `*reinterpret_cast<F*>(nullptr)` but
+               casting from an empty struct doesn't break the "`this` pointer
+               is never null" rule and avoids compiler warnings. */
+            struct {} empty;
+            const AbstractStorage storage{layer, handle};
+            return reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), operation, args...);
+        }
+    };
+    template<class Storage, class T, class F, class ...Args> struct StorageLambda<1, Storage, T, F, Args...> {
+        static T call(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, Args... args) {
+            /* See above for why we're casting from an empty struct */
+            struct {} empty;
+            const AbstractStorage storage{layer, handle};
+            return reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index[2], operation, args...);
+        }
+    };
+    template<class Storage, class T, class F, class ...Args> struct StorageLambda<2, Storage, T, F, Args...> {
+        static T call(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, Args... args) {
+            /* See above for why we're casting from an empty struct */
+            struct {} empty;
+            const AbstractStorage storage{layer, handle};
+            return reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), {index[1], index[2]}, operation, args...);
+        }
+    };
+    template<class Storage, class T, class F, class ...Args> struct StorageLambda<3, Storage, T, F, Args...> {
+        static T call(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, Args... args) {
+            /* See above for why we're casting from an empty struct */
+            struct {} empty;
+            const AbstractStorage storage{layer, handle};
+            return reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index, operation, args...);
+        }
+    };
+    /* This has to specialize on both the index and the F to be a more
+       specialized match than the above variants, thus copied four times */
+    template<class Storage, class T, class ...Args> struct StorageLambda<0, Storage, T, std::nullptr_t, Args...> {
+        constexpr static std::nullptr_t call = nullptr;
+    };
+    template<class Storage, class T, class ...Args> struct StorageLambda<1, Storage, T, std::nullptr_t, Args...> {
+        constexpr static std::nullptr_t call = nullptr;
+    };
+    template<class Storage, class T, class ...Args> struct StorageLambda<2, Storage, T, std::nullptr_t, Args...> {
+        constexpr static std::nullptr_t call = nullptr;
+    };
+    template<class Storage, class T, class ...Args> struct StorageLambda<3, Storage, T, std::nullptr_t, Args...> {
+        constexpr static std::nullptr_t call = nullptr;
+    };
+
+    /* The StorageQuery stores a pointer to a concrete instantation of this
+       function, and the function then returns one of the overloads based on
+       which signature is used in a particular DataLayer::onUpdate() call. Done
+       this way to not have to several store pointers to all possible overloads
+       in each StorageQuery instance. */
+    template<UnsignedInt dimensions, class T, class Storage, class F> static auto storageCall(StorageCallOoverload overload) -> void(*)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&) {
+        switch(overload) {
+            case StorageCallOoverload::ByReference:
+                return [](DataLayer& layer, const DataLayerStorageHandle storageHandle, const Containers::Size3D& index, Containers::FunctionData& result) {
+                    reinterpret_cast<Containers::Function<void(const T&)>&>(result)(StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
+                };
+            case StorageCallOoverload::ByValue:
+                return [](DataLayer& layer, const DataLayerStorageHandle storageHandle, const Containers::Size3D& index, Containers::FunctionData& result) {
+                    reinterpret_cast<Containers::Function<void(T)>&>(result)(StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
+                };
+            case StorageCallOoverload::ByValueMinMax:
+                return [](DataLayer& layer, const DataLayerStorageHandle storageHandle, const Containers::Size3D& index, Containers::FunctionData& result) {
+                    reinterpret_cast<Containers::Function<void(T, T, T)>&>(result)(StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}), StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation::Min), StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation::Max));
+                };
+        }
+        CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+    }
+}
+
 #ifndef DOXYGEN_GENERATING_OUTPUT
-template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const StorageOperations operations, F, G): StorageQuery{storage, operations, {},
-    AbstractStorage::queryCall<T, Storage, F>,
-    AbstractStorage::query<T, Storage, F>,
-    AbstractStorage::QueryUpdater<T, Storage, G>::call
-} {
-    static_assert(
-        #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
-        std::is_trivially_copyable<Storage>::value &&
-        #endif
-        sizeof(Storage) == sizeof(AbstractStorage),
-        "AbstractStorage subclasses expected to be trivially copyable with no extra members");
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const StorageOperations operations, F, G): StorageQuery{storage, {}, operations, Implementation::StorageArgs<0, F, G>{}} {
     #ifndef CORRADE_NO_ASSERT
     /* Subclasses may override size to return different dimension count, query
        the base AbstractStorage tpe. The storage handle also may be invalid at
@@ -2198,85 +2146,41 @@ template<class T> template<class Storage, class F, class G, typename std::enable
     #endif
     CORRADE_ASSERT(size == (Containers::Size3D{1, 1, 1}),
         "Ui::StorageQuery: expected a single-item storage but got a size of" << size, );
-    static_assert(std::is_empty<F>::value,
-        "expected query to be a non-capturing lambda");
-    static_assert(std::is_same<G, std::nullptr_t>::value || std::is_empty<G>::value,
-        "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, std::size_t, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, const StorageOperations operations, F, G): StorageQuery{storage, operations, {0, 0, index},
-    AbstractStorage::queryCallND<1, T, Storage, F>,
-    AbstractStorage::queryND<1, T, Storage, F>,
-    AbstractStorage::QueryUpdater<T, Storage, G>::call1D
-} {
-    static_assert(
-        #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
-        std::is_trivially_copyable<Storage>::value &&
-        #endif
-        sizeof(Storage) == sizeof(AbstractStorage),
-        "AbstractStorage subclasses expected to be trivially copyable with no extra members");
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, std::size_t, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, const StorageOperations operations, F, G): StorageQuery{storage, {0, 0, index}, operations, Implementation::StorageArgs<1, F, G>{}} {
     #ifndef CORRADE_NO_ASSERT
     /* Base type and handle validity reasoning same as above */
     const Containers::Size3D size = _layer->isHandleValid(_storage) ? static_cast<const AbstractStorage&>(storage).size() : Containers::Size3D{1, 1, 1};
     #endif
     CORRADE_ASSERT(size[0] == 1 && size[1] == 1,
         "Ui::StorageQuery: expected a 1D storage but got a size of" << size, );
-    static_assert(std::is_empty<F>::value,
-        "expected query to be a non-capturing lambda");
-    static_assert(std::is_same<G, std::nullptr_t>::value || std::is_empty<G>::value,
-        "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size1D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, const StorageOperations operations, F, G): StorageQuery{storage, operations, {0, 0, index},
-    AbstractStorage::queryCallND<1, T, Storage, F>,
-    AbstractStorage::queryND<1, T, Storage, F>,
-    AbstractStorage::QueryUpdater<T, Storage, G>::call1D
-} {
-    static_assert(
-        #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
-        std::is_trivially_copyable<Storage>::value &&
-        #endif
-        sizeof(Storage) == sizeof(AbstractStorage),
-        "AbstractStorage subclasses expected to be trivially copyable with no extra members");
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size1D&, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size1D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size1D& index, const StorageOperations operations, F, G): StorageQuery{storage, {0, 0, index}, operations, Implementation::StorageArgs<1, F, G>{}} {
     #ifndef CORRADE_NO_ASSERT
     /* Base type and handle validity reasoning same as above */
     const Containers::Size3D size = _layer->isHandleValid(_storage) ? static_cast<const AbstractStorage&>(storage).size() : Containers::Size3D{1, 1, 1};
     #endif
     CORRADE_ASSERT(size[0] == 1 && size[1] == 1,
         "Ui::StorageQuery: expected a 1D storage but got a size of" << size, );
-    static_assert(std::is_empty<F>::value,
-        "expected query to be a non-capturing lambda");
-    static_assert(std::is_same<G, std::nullptr_t>::value || std::is_empty<G>::value,
-        "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size2D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, const StorageOperations operations, F, G): StorageQuery{storage, operations, {0, index[0], index[1]},
-    AbstractStorage::queryCallND<2, T, Storage, F>,
-    AbstractStorage::queryND<2, T, Storage, F>,
-    AbstractStorage::QueryUpdater<T, Storage, G>::call2D
-} {
-    static_assert(
-        #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
-        std::is_trivially_copyable<Storage>::value &&
-        #endif
-        sizeof(Storage) == sizeof(AbstractStorage),
-        "AbstractStorage subclasses expected to be trivially copyable with no extra members");
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size2D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, const StorageOperations operations, F, G): StorageQuery{storage, {0, index[0], index[1]}, operations, Implementation::StorageArgs<2, F, G>{}} {
     #ifndef CORRADE_NO_ASSERT
     /* Base type and handle validity reasoning same as above */
     const Containers::Size3D size = _layer->isHandleValid(_storage) ? static_cast<const AbstractStorage&>(storage).size() : Containers::Size3D{1, 1, 1};
     #endif
     CORRADE_ASSERT(size[0] == 1,
         "Ui::StorageQuery: expected a 2D storage but got a size of" << size, );
-    static_assert(std::is_empty<F>::value,
-        "expected query to be a non-capturing lambda");
-    static_assert(std::is_same<G, std::nullptr_t>::value || std::is_empty<G>::value,
-        "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size3D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, const StorageOperations operations, F, G): StorageQuery{storage, operations, index,
-    AbstractStorage::queryCallND<3, T, Storage, F>,
-    AbstractStorage::queryND<3, T, Storage, F>,
-    AbstractStorage::QueryUpdater<T, Storage, G>::call3D
+template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size3D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, const StorageOperations operations, F, G): StorageQuery{storage, index, operations, Implementation::StorageArgs<3, F, G>{}} {}
+
+template<class T> template<UnsignedInt dimensions, class Storage, class F, class G> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, const StorageOperations operations, Implementation::StorageArgs<dimensions, F, G>): StorageQuery{storage, index, operations,
+    Implementation::storageCall<dimensions, T, Storage, F>,
+    Implementation::StorageLambda<dimensions, Storage, T, F>::call,
+    Implementation::StorageLambda<dimensions, Storage, StorageUpdateState, G, const T*>::call
 } {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
@@ -2290,7 +2194,7 @@ template<class T> template<class Storage, class F, class G, typename std::enable
         "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const StorageOperations operations, const Containers::Size3D& index, void(*(*const call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), T(*const query)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation), StorageUpdateState(*const updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const T*)): AbstractStorageQuery{storage, operations, index, call}, _query{query}, _updater{updater} {
+template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, const StorageOperations operations, void(*(*const call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), T(*const query)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation), StorageUpdateState(*const updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const T*)): AbstractStorageQuery{storage, operations, index, call}, _query{query}, _updater{updater} {
     /* Min|Max can be used for the query as well */
     CORRADE_ASSERT(!(operations & ~(StorageOperation::Min|StorageOperation::Max)) || updater,
         "Ui::StorageQuery:" << (operations & ~(StorageOperation::Min|StorageOperation::Max)) << "requires a non-null updater", );
