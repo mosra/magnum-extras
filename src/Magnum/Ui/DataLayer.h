@@ -663,7 +663,8 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * with this storage to be called in the next
          * @ref AbstractUserInterface::update() or
          * @relativeref{AbstractUserInterface,draw()}. Expects that @p handle
-         * is valid.
+         * is valid. See also @ref setDirty() which can be used to force an
+         * update of just a single data.
          *
          * Calling this function causes @ref LayerState::NeedsCommonDataUpdate
          * to be set, unless the storage has a zero reference count and thus no
@@ -1062,6 +1063,34 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         bool isDirty(LayerDataHandle handle) const;
 
         /**
+         * @brief Mark given data as dirty
+         *
+         * Calling this function causes the update function for given data to
+         * be called in the next @ref AbstractUserInterface::update() or
+         * @relativeref{AbstractUserInterface,draw()}. Expects that @p handle
+         * is valid. Compared to @ref setStorageDirty(), which affects all data
+         * associated with given storage, marking just a single data dirty is
+         * useful for example when previous updates were skipped for some
+         * reason and the storage itself didn't get dirty since.
+         *
+         * Calling this function causes @ref LayerState::NeedsCommonDataUpdate
+         * to be set.
+         * @see @ref isHandleValid(StorageHandle) const
+         */
+        void setDirty(DataHandle handle);
+
+        /**
+         * @brief Mark given data as dirty assuming it belongs to this layer
+         *
+         * Like @ref setDirty(DataHandle) but without checking that @p handle
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void setDirty(LayerDataHandle handle);
+
+        /**
          * @brief Storage given data is associated with
          *
          * Expects that @p handle is valid. The returned storage handle is
@@ -1210,6 +1239,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
            project not and vice versa. */
         DataHandle onUpdateInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& function, NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
+        MAGNUM_UI_LOCAL void setDirtyInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL StorageHandle storageInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL Containers::Size3D indexInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, std::size_t index);

@@ -102,6 +102,8 @@ struct DataLayerTest: TestSuite::Tester {
     void createRemoveHandleRecycle();
     void createInvalid();
 
+    void setDirty();
+
     void setIndex();
     void setIndexInvalid();
 
@@ -255,6 +257,8 @@ DataLayerTest::DataLayerTest() {
         &DataLayerTest::createRemoveSetupTeardown);
 
     addTests({&DataLayerTest::createInvalid,
+
+              &DataLayerTest::setDirty,
 
               &DataLayerTest::setIndex,
               &DataLayerTest::setIndexInvalid,
@@ -2946,6 +2950,74 @@ void DataLayerTest::createInvalid() {
         TestSuite::Compare::String);
 }
 
+void DataLayerTest::setDirty() {
+    struct DummyStorage: AbstractStorage {
+        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer, {10, 10, 10}} {}
+
+        StorageQuery<Int> operator[](const Containers::Size3D& index) const {
+            return {*this, index, {}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) {
+                return 667;
+            }};
+        }
+    };
+
+    DataLayer layer{layerHandle(0, 1)};
+
+    /* Create a few dummy storages to verify it works with non-trivial storage
+       handles */
+    DummyStorage{layer};
+
+    DummyStorage storage{layer};
+
+    /* Create a few dummy data to verify it doesn't always update the first and
+       that it doesn't confuse data and storage IDs (lol) */
+    layer.onUpdate(storage[{3, 5, 7}], [](const Int&) {});
+    layer.onUpdate(storage[{3, 5, 7}], [](const Int&) {});
+    layer.onUpdate(storage[{3, 5, 7}], [](const Int&) {});
+
+    /* By default the data is marked as dirty, and NeedsCommonDataUpdate is
+       set. NeedsDataUpdate is set implicitly when creating new data. */
+    DataHandle data = layer.onUpdate(storage[{3, 7, 5}], [](const Int&) {});
+
+    /* Calling preUpdate() + update() resets the dirty bit and the state. From
+       the outside it doesn't really matter which of the two does it, so call
+       both. */
+    layer.preUpdate(LayerState::NeedsCommonDataUpdate);
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_VERIFY(!layer.isDirty(data));
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Mark the data as dirty. Internally the dirty bit is stored along the
+       index and the storage reference, so verify those didn't get
+       corrupted. */
+    layer.setDirty(data);
+    CORRADE_VERIFY(layer.isDirty(data));
+    CORRADE_COMPARE(layer.storage(data), storage);
+    CORRADE_COMPARE(layer.index(data), (Containers::Size3D{3, 7, 5}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Calling preUpdate() + update() resets the dirty bit and the state */
+    layer.preUpdate(LayerState::NeedsCommonDataUpdate);
+    layer.update(LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_VERIFY(!layer.isDirty(data));
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Mark the data as dirty again, LayerDataHandle overload */
+    layer.setDirty(dataHandleData(data));
+    CORRADE_VERIFY(layer.isDirty(dataHandleData(data)));
+    CORRADE_COMPARE(layer.storage(data), storage);
+    CORRADE_COMPARE(layer.index(data), (Containers::Size3D{3, 7, 5}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Marking the data as dirty again is a no-op, as all bits and states are
+       set already */
+    layer.setDirty(data);
+    CORRADE_VERIFY(layer.isDirty(dataHandleData(data)));
+    CORRADE_COMPARE(layer.storage(data), storage);
+    CORRADE_COMPARE(layer.index(data), (Containers::Size3D{3, 7, 5}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+}
+
 void DataLayerTest::setIndex() {
     struct DummyStorage: AbstractStorage {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
@@ -3201,6 +3273,8 @@ void DataLayerTest::invalidHandle() {
     layer.isAllocated(LayerDataHandle::Null);
     layer.isDirty(DataHandle::Null);
     layer.isDirty(LayerDataHandle::Null);
+    layer.setDirty(DataHandle::Null);
+    layer.setDirty(LayerDataHandle::Null);
     layer.storage(DataHandle::Null);
     layer.storage(LayerDataHandle::Null);
     layer.index(DataHandle::Null);
@@ -3216,6 +3290,8 @@ void DataLayerTest::invalidHandle() {
         "Ui::DataLayer::isAllocated(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::DataLayer::isDirty(): invalid handle Ui::DataHandle::Null\n"
         "Ui::DataLayer::isDirty(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::DataLayer::setDirty(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::DataLayer::setDirty(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::DataLayer::storage(): invalid handle Ui::DataHandle::Null\n"
         "Ui::DataLayer::storage(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::DataLayer::index(): invalid handle Ui::DataHandle::Null\n"

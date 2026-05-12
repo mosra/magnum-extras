@@ -284,7 +284,8 @@ struct Data {
 
        The following bit denotes whether the data is dirty, to force an update
        even if the storage itself isn't. Is set upon data creation and after
-       changing data properties, such as by DataLayer::setIndex().
+       changing data properties, such as by DataLayer::setIndex(), and
+       explicitly with DataLayer::setDirty().
 
        After that (43 bits) is a linearized storage index (basically a linear
        data position as if the 3D storage would be contiguous). With a
@@ -812,6 +813,30 @@ bool DataLayer::isDirty(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::DataLayer::isDirty(): invalid handle" << handle, {});
     return _state->data[layerDataHandleId(handle)].storageIdDirtyLinearizedIndex & DataIsDirty;
+}
+
+void DataLayer::setDirty(const DataHandle handle) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::DataLayer::setDirty(): invalid handle" << handle, );
+    setDirtyInternal(dataHandleId(handle));
+}
+
+void DataLayer::setDirty(const LayerDataHandle handle) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::DataLayer::setDirty(): invalid handle" << handle, );
+    setDirtyInternal(layerDataHandleId(handle));
+}
+
+void DataLayer::setDirtyInternal(const UnsignedInt id) {
+    Data& data = _state->data[id];
+
+    /* If the data is already dirty, the corresponding state should be set as
+       well. In other words, we don't need to branch and set the state only if
+       not dirty already. */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!(data.storageIdDirtyLinearizedIndex & DataIsDirty) || state() >= LayerState::NeedsCommonDataUpdate);
+
+    data.storageIdDirtyLinearizedIndex |= DataIsDirty;
+    setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
 }
 
 StorageHandle DataLayer::storage(const DataHandle handle) const {
