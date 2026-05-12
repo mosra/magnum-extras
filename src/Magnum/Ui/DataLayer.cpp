@@ -300,7 +300,7 @@ struct Data {
     UnsignedLong storageIdDirtyLinearizedIndex;
 
     Containers::FunctionData function;
-    void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&);
+    void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&);
 };
 
 }
@@ -715,7 +715,7 @@ DataHandle DataLayer::onUpdateInternal(const DataLayer&
     #ifndef CORRADE_NO_ASSERT
     layer
     #endif
-    , const DataLayerStorageHandle storage, const Containers::Size3D& index, void(*const call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& function, const NodeHandle node)
+    , const DataLayerStorageHandle storage, const Containers::Size3D& index, void(*const call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&), Containers::FunctionData&& function, const NodeHandle node)
 {
     State& state = *_state;
     CORRADE_ASSERT(&layer == this,
@@ -987,7 +987,11 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
     /* Go through all data and fire updates on data that are dirty or data
        associated with storages that are dirty */
     State& state = *_state;
-    for(Data& data: state.data) {
+    const Containers::StridedArrayView1D<const UnsignedShort> generations = this->generations();
+    const LayerHandle layerHandle = handle();
+    for(std::size_t i = 0; i != state.data.size(); ++i) {
+        Data& data = state.data[i];
+
         /* Data with null functions are removed, skip those */
         if(!data.function)
             continue;
@@ -1010,6 +1014,7 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
         data.call(
             *this, dataLayerStorageHandle(storageId, storage.used.generation),
             delinearizeIndex(storage.used.size, data.storageIdDirtyLinearizedIndex),
+            dataHandle(layerHandle, i, generations[i]),
             data.function);
 
         /* Update got called, reset the data dirty bit if it's set */
@@ -1034,7 +1039,7 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
     }
 }
 
-AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const StorageOperations operations, const Containers::Size3D& index, void(*(*call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, Containers::FunctionData&)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _operations{operations}, _index{index}, _call{call} {
+AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const StorageOperations operations, const Containers::Size3D& index, void(*(*call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _operations{operations}, _index{index}, _call{call} {
     /* The class is always constructed through the StorageQuery subclass, so
        make the assertions mention that to reduce confusion */
     CORRADE_ASSERT(_layer->isHandleValid(_storage),

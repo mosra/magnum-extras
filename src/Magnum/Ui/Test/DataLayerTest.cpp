@@ -2454,8 +2454,45 @@ void DataLayerTest::createRemove() {
         Int* called;
         Int* destructed;
     };
+    struct NonTrivialHandleReference {
+        explicit NonTrivialHandleReference(LayerDataHandle expectedHandle, Int expected, Int(&calledDestructed)[2]): expectedHandle{expectedHandle}, expected{expected}, calledDestructed{&calledDestructed} {}
+        ~NonTrivialHandleReference() {
+            ++(*calledDestructed)[1];
+        }
+        void operator()(DataHandle handle, const Int& value) const {
+            CORRADE_COMPARE(handle, dataHandle(layerHandle(0x12, 0xab), expectedHandle));
+            CORRADE_COMPARE(value, expected);
+            ++(*calledDestructed)[0];
+        }
 
-    DataLayer layer{layerHandle(0, 1)};
+        /* Can't store the full DataHandle as that goes beyond the 12 bytes
+           that a Function can store in-place on 32-bit platforms, which would
+           break the usedAllocatedCount() checks below. The layer handle is
+           however known in advance so we can omit that. Furthermore, to fit,
+           store a single pointer to a two-item array instead of two separate
+           pointers. */
+        LayerDataHandle expectedHandle;
+        Int expected;
+        Int (*calledDestructed)[2];
+    };
+    struct NonTrivialHandleValue {
+        explicit NonTrivialHandleValue(LayerDataHandle expectedHandle, Int expected, Int(&calledDestructed)[2]): expectedHandle{expectedHandle}, expected{expected}, calledDestructed{&calledDestructed} {}
+        ~NonTrivialHandleValue() {
+            ++(*calledDestructed)[1];
+        }
+        void operator()(DataHandle handle, Int value) const {
+            CORRADE_COMPARE(handle, dataHandle(layerHandle(0x12, 0xab), expectedHandle));
+            CORRADE_COMPARE(value, expected);
+            ++(*calledDestructed)[0];
+        }
+
+        /* Same as in NonTrivialHandleReference above */
+        LayerDataHandle expectedHandle;
+        Int expected;
+        Int (*calledDestructed)[2];
+    };
+
+    DataLayer layer{layerHandle(0x12, 0xab)};
 
     /* Create some extra storages to verify it's correctly rebuilding even
        non-trivial storage handles from the ID */
@@ -2483,6 +2520,8 @@ void DataLayerTest::createRemove() {
     Int trivialReferenceCalled = 0;
     Int trivialValueCalled = 0;
     Int trivialValueMinMaxCalled = 0;
+    Int trivialHandleReferenceCalled = 0;
+    Int trivialHandleValueCalled = 0;
     DataHandle trivialReference = layer.onUpdate(storage[13], [&trivialReferenceCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x333);
         ++trivialReferenceCalled;
@@ -2497,10 +2536,34 @@ void DataLayerTest::createRemove() {
         CORRADE_COMPARE(max, 0x666);
         ++trivialValueMinMaxCalled;
     });
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 3);
+    /* Create and remove a few bindings to verify that the passed handle
+       doesn't always have a trivial generation */
+    layer.remove(layer.onUpdate(storage[0], [](Int) {}));
+    /* On 32-bit platforms there's just 12 bytes of in-place storage, and
+       capturing an 8-byte-aligned value along with a pointer would go beyond
+       that. Pass just a 32-bit handle as the layer handle is static. */
+    LayerDataHandle trivialHandleReferencePreviousHandle = dataHandleData(trivialValueMinMax);
+    DataHandle trivialHandleReference = layer.onUpdate(storage[13], [&trivialHandleReferenceCalled, trivialHandleReferencePreviousHandle](DataHandle handle, const Int& value) {
+        CORRADE_COMPARE(handle, dataHandle(layerHandle(0x12, 0xab), layerDataHandleId(trivialHandleReferencePreviousHandle) + 1, 2));
+        CORRADE_COMPARE(value, 0x333);
+        ++trivialHandleReferenceCalled;
+    });
+    /* Create and remove a few bindings to verify that the passed handle
+       doesn't always have a trivial generation */
+    layer.remove(layer.onUpdate(storage[0], [](Int) {}));
+    layer.remove(layer.onUpdate(storage[0], [](Int) {}));
+    layer.remove(layer.onUpdate(storage[0], [](Int) {}));
+    /* Same as with trivialHandleReferencePreviousHandle above */
+    LayerDataHandle trivialHandleValuePreviousHandle = dataHandleData(trivialHandleReference);
+    DataHandle trivialHandleValue = layer.onUpdate(storage[13], [&trivialHandleValueCalled, trivialHandleValuePreviousHandle](DataHandle handle, Int value) {
+        CORRADE_COMPARE(handle, dataHandle(layerHandle(0x12, 0xab), layerDataHandleId(trivialHandleValuePreviousHandle) + 1, 4));
+        CORRADE_COMPARE(value, 0x333);
+        ++trivialHandleValueCalled;
+    });
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 5);
     CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 0);
-    CORRADE_COMPARE(layer.capacity(), 3);
-    CORRADE_COMPARE(layer.usedCount(), 3);
+    CORRADE_COMPARE(layer.capacity(), 5);
+    CORRADE_COMPARE(layer.usedCount(), 5);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
@@ -2511,6 +2574,8 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.node(trivialReference), NodeHandle::Null);
     CORRADE_COMPARE(layer.node(trivialValue), NodeHandle::Null);
     CORRADE_COMPARE(layer.node(trivialValueMinMax), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(trivialHandleReference), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(trivialHandleValue), NodeHandle::Null);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
@@ -2519,20 +2584,30 @@ void DataLayerTest::createRemove() {
         CORRADE_VERIFY(!layer.isAllocated(trivialReference));
         CORRADE_VERIFY(!layer.isAllocated(trivialValue));
         CORRADE_VERIFY(!layer.isAllocated(trivialValueMinMax));
+        CORRADE_VERIFY(!layer.isAllocated(trivialHandleReference));
+        CORRADE_VERIFY(!layer.isAllocated(trivialHandleValue));
     }
     CORRADE_VERIFY(layer.isDirty(trivialReference));
     CORRADE_VERIFY(layer.isDirty(trivialValue));
     CORRADE_VERIFY(layer.isDirty(trivialValueMinMax));
+    CORRADE_VERIFY(layer.isDirty(trivialHandleReference));
+    CORRADE_VERIFY(layer.isDirty(trivialHandleValue));
     CORRADE_COMPARE(layer.storage(trivialReference), storage);
     CORRADE_COMPARE(layer.storage(trivialValue), storage);
     CORRADE_COMPARE(layer.storage(trivialValueMinMax), storage);
+    CORRADE_COMPARE(layer.storage(trivialHandleReference), storage);
+    CORRADE_COMPARE(layer.storage(trivialHandleValue), storage);
     CORRADE_COMPARE(layer.index(trivialReference), (Containers::Size3D{0, 0, 13}));
     CORRADE_COMPARE(layer.index(trivialValue), (Containers::Size3D{0, 0, 13}));
     CORRADE_COMPARE(layer.index(trivialValueMinMax), (Containers::Size3D{0, 0, 13}));
+    CORRADE_COMPARE(layer.index(trivialHandleReference), (Containers::Size3D{0, 0, 13}));
+    CORRADE_COMPARE(layer.index(trivialHandleValue), (Containers::Size3D{0, 0, 13}));
     /* Sets LayerState::NeedsCommonDataUpdate in order to make sure the update
        function is called on the next update even though the data isn't
        attached to any node or the node is not visible. */
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    /** @todo the NeedsDataClean is only due to the remove() call above, update
+        once this is set only if any animators are actually attached */
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataClean);
 
     /* Non-trivial function, attached. The temporary gets destructed right
        away. */
@@ -2542,37 +2617,55 @@ void DataLayerTest::createRemove() {
     Int destructedReference = 0;
     Int destructedValue = 0;
     Int destructedValueMinMax = 0;
+    Int nonTrivialHandleReferenceCalledDestructed[2]{};
+    Int nonTrivialHandleValueCalledDestructed[2]{};
     DataHandle nonTrivialReference = layer.onUpdate(storage[13], NonTrivialReference{0x333, nonTrivialReferenceCalled, destructedReference}, nodeHandle(0x12345, 0xabc));
     DataHandle nonTrivialValue = layer.onUpdate(storage[13], NonTrivialValue{0x333, nonTrivialValueCalled, destructedValue}, nodeHandle(0x12345, 0xabc));
     DataHandle nonTrivialValueMinMax = layer.onUpdate(storage[13], NonTrivialValueMinMax{0x333, 0x222, 0x666, nonTrivialValueMinMaxCalled, destructedValueMinMax}, nodeHandle(0x12345, 0xabc));
+    /* Passed handle generation non-triviality tested above already, here
+       expecting just a trivial generation again */
+    DataHandle nonTrivialHandleReference = layer.onUpdate(storage[13], NonTrivialHandleReference{layerDataHandle(dataHandleId(nonTrivialValueMinMax) + 1, 1), 0x333, nonTrivialHandleReferenceCalledDestructed}, nodeHandle(0x12345, 0xabc));
+    DataHandle nonTrivialHandleValue = layer.onUpdate(storage[13], NonTrivialHandleValue{layerDataHandle(dataHandleId(nonTrivialHandleReference) + 1, 1), 0x333, nonTrivialHandleValueCalledDestructed}, nodeHandle(0x12345, 0xabc));
     CORRADE_COMPARE(destructedReference, 1);
     CORRADE_COMPARE(destructedValue, 1);
     CORRADE_COMPARE(destructedValueMinMax, 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 6);
+    CORRADE_COMPARE(nonTrivialHandleReferenceCalledDestructed[1], 1);
+    CORRADE_COMPARE(nonTrivialHandleValueCalledDestructed[1], 1);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 10);
     CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 0);
-    CORRADE_COMPARE(layer.capacity(), 6);
-    CORRADE_COMPARE(layer.usedCount(), 6);
+    CORRADE_COMPARE(layer.capacity(), 10);
+    CORRADE_COMPARE(layer.usedCount(), 10);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
         CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
         #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 5);
     }
     CORRADE_COMPARE(layer.node(nonTrivialReference), nodeHandle(0x12345, 0xabc));
     CORRADE_COMPARE(layer.node(nonTrivialValue), nodeHandle(0x12345, 0xabc));
     CORRADE_COMPARE(layer.node(nonTrivialValueMinMax), nodeHandle(0x12345, 0xabc));
+    CORRADE_COMPARE(layer.node(nonTrivialHandleReference), nodeHandle(0x12345, 0xabc));
+    CORRADE_COMPARE(layer.node(nonTrivialHandleValue), nodeHandle(0x12345, 0xabc));
     CORRADE_VERIFY(layer.isAllocated(nonTrivialReference));
     CORRADE_VERIFY(layer.isAllocated(nonTrivialValue));
     CORRADE_VERIFY(layer.isAllocated(nonTrivialValueMinMax));
+    CORRADE_VERIFY(layer.isAllocated(nonTrivialHandleReference));
+    CORRADE_VERIFY(layer.isAllocated(nonTrivialHandleValue));
     CORRADE_VERIFY(layer.isDirty(nonTrivialReference));
     CORRADE_VERIFY(layer.isDirty(nonTrivialValue));
     CORRADE_VERIFY(layer.isDirty(nonTrivialValueMinMax));
+    CORRADE_VERIFY(layer.isDirty(nonTrivialHandleReference));
+    CORRADE_VERIFY(layer.isDirty(nonTrivialHandleValue));
     CORRADE_COMPARE(layer.storage(nonTrivialReference), storage);
     CORRADE_COMPARE(layer.storage(nonTrivialValue), storage);
     CORRADE_COMPARE(layer.storage(nonTrivialValueMinMax), storage);
+    CORRADE_COMPARE(layer.storage(nonTrivialHandleReference), storage);
+    CORRADE_COMPARE(layer.storage(nonTrivialHandleValue), storage);
     CORRADE_COMPARE(layer.index(nonTrivialReference), (Containers::Size3D{0, 0, 13}));
     CORRADE_COMPARE(layer.index(nonTrivialValue), (Containers::Size3D{0, 0, 13}));
+    CORRADE_COMPARE(layer.index(nonTrivialHandleReference), (Containers::Size3D{0, 0, 13}));
+    CORRADE_COMPARE(layer.index(nonTrivialHandleValue), (Containers::Size3D{0, 0, 13}));
     CORRADE_COMPARE(layer.index(nonTrivialValueMinMax), (Containers::Size3D{0, 0, 13}));
     /* In this and others additional states get set for node attachment */
     CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
@@ -2583,6 +2676,8 @@ void DataLayerTest::createRemove() {
     Int trivialImplicitReferenceCalled = 0;
     Int trivialImplicitValueCalled = 0;
     Int trivialImplicitValueMinMaxCalled = 0;
+    Int trivialImplicitHandleReferenceCalled = 0;
+    Int trivialImplicitHandleValueCalled = 0;
     DataHandle trivialImplicitReference = layer.onUpdate(storageImplicit, [&trivialImplicitReferenceCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x4444);
         ++trivialImplicitReferenceCalled;
@@ -2597,20 +2692,37 @@ void DataLayerTest::createRemove() {
         CORRADE_COMPARE(max, 0x7777);
         ++trivialImplicitValueMinMaxCalled;
     });
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 6);
-    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 3);
-    CORRADE_COMPARE(layer.capacity(), 9);
-    CORRADE_COMPARE(layer.usedCount(), 9);
+    /* Passed handle generation non-triviality tested above already, here
+       expecting just a trivial generation again. Also reducing the previous
+       handle to 32 bits as with trivialHandleValuePreviousHandle above. */
+    LayerDataHandle trivialImplicitHandleReferencePreviousHandle = dataHandleData(trivialImplicitValueMinMax);
+    DataHandle trivialImplicitHandleReference = layer.onUpdate(storageImplicit, [&trivialImplicitHandleReferenceCalled, trivialImplicitHandleReferencePreviousHandle](DataHandle handle, const Int& value) {
+        CORRADE_COMPARE(handle, dataHandle(layerHandle(0x12, 0xab), layerDataHandleId(trivialImplicitHandleReferencePreviousHandle) + 1, 1));
+        CORRADE_COMPARE(value, 0x4444);
+        ++trivialImplicitHandleReferenceCalled;
+    });
+    LayerDataHandle trivialImplicitHandleValuePreviousHandle = dataHandleData(trivialImplicitHandleReference);
+    DataHandle trivialImplicitHandleValue = layer.onUpdate(storageImplicit, [&trivialImplicitHandleValueCalled, trivialImplicitHandleValuePreviousHandle](DataHandle handle, Int value) {
+        CORRADE_COMPARE(handle, dataHandle(layerHandle(0x12, 0xab), layerDataHandleId(trivialImplicitHandleValuePreviousHandle) + 1, 1));
+        CORRADE_COMPARE(value, 0x4444);
+        ++trivialImplicitHandleValueCalled;
+    });
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 10);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 5);
+    CORRADE_COMPARE(layer.capacity(), 15);
+    CORRADE_COMPARE(layer.usedCount(), 15);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
         CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
         #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 5);
     }
     CORRADE_COMPARE(layer.node(trivialImplicitReference), NodeHandle::Null);
     CORRADE_COMPARE(layer.node(trivialImplicitValue), NodeHandle::Null);
     CORRADE_COMPARE(layer.node(trivialImplicitValueMinMax), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(trivialImplicitHandleReference), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(trivialImplicitHandleValue), NodeHandle::Null);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
@@ -2619,16 +2731,24 @@ void DataLayerTest::createRemove() {
         CORRADE_VERIFY(!layer.isAllocated(dataHandleData(trivialImplicitReference)));
         CORRADE_VERIFY(!layer.isAllocated(dataHandleData(trivialImplicitValue)));
         CORRADE_VERIFY(!layer.isAllocated(dataHandleData(trivialImplicitValueMinMax)));
+        CORRADE_VERIFY(!layer.isAllocated(dataHandleData(trivialImplicitHandleReference)));
+        CORRADE_VERIFY(!layer.isAllocated(dataHandleData(trivialImplicitHandleValue)));
     }
     CORRADE_VERIFY(layer.isDirty(dataHandleData(trivialImplicitReference)));
     CORRADE_VERIFY(layer.isDirty(dataHandleData(trivialImplicitValue)));
     CORRADE_VERIFY(layer.isDirty(dataHandleData(trivialImplicitValueMinMax)));
+    CORRADE_VERIFY(layer.isDirty(dataHandleData(trivialImplicitHandleReference)));
+    CORRADE_VERIFY(layer.isDirty(dataHandleData(trivialImplicitHandleValue)));
     CORRADE_COMPARE(layer.storage(dataHandleData(trivialImplicitReference)), storageImplicit);
     CORRADE_COMPARE(layer.storage(dataHandleData(trivialImplicitValue)), storageImplicit);
     CORRADE_COMPARE(layer.storage(dataHandleData(trivialImplicitValueMinMax)), storageImplicit);
+    CORRADE_COMPARE(layer.storage(dataHandleData(trivialImplicitHandleReference)), storageImplicit);
+    CORRADE_COMPARE(layer.storage(dataHandleData(trivialImplicitHandleValue)), storageImplicit);
     CORRADE_COMPARE(layer.index(dataHandleData(trivialImplicitReference)), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE(layer.index(dataHandleData(trivialImplicitValue)), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE(layer.index(dataHandleData(trivialImplicitValueMinMax)), (Containers::Size3D{0, 0, 0}));
+    CORRADE_COMPARE(layer.index(dataHandleData(trivialImplicitHandleReference)), (Containers::Size3D{0, 0, 0}));
+    CORRADE_COMPARE(layer.index(dataHandleData(trivialImplicitHandleValue)), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
 
@@ -2641,41 +2761,61 @@ void DataLayerTest::createRemove() {
     Int destructedImplicitReference = 0;
     Int destructedImplicitValue = 0;
     Int destructedImplicitValueMinMax = 0;
+    Int nonTrivialImplicitHandleReferenceCalledDestructed[2]{};
+    Int nonTrivialImplicitHandleValueCalledDestructed[2]{};
     DataHandle nonTrivialImplicitReference = layer.onUpdate(storageImplicit, NonTrivialReference{0x4444, nonTrivialImplicitReferenceCalled, destructedImplicitReference}, nodeHandle(0xabcde, 0x123));
     DataHandle nonTrivialImplicitValue = layer.onUpdate(storageImplicit, NonTrivialValue{0x4444, nonTrivialImplicitValueCalled, destructedImplicitValue}, nodeHandle(0xabcde, 0x123));
     DataHandle nonTrivialImplicitValueMinMax = layer.onUpdate(storageImplicit, NonTrivialValueMinMax{0x4444, 0x1111, 0x7777, nonTrivialImplicitValueMinMaxCalled, destructedImplicitValueMinMax}, nodeHandle(0xabcde, 0x123));
+    /* Passed handle generation non-triviality tested above already, here
+       expecting just a trivial generation again */
+    DataHandle nonTrivialImplicitHandleReference = layer.onUpdate(storageImplicit, NonTrivialHandleReference{layerDataHandle(dataHandleId(nonTrivialImplicitValueMinMax) + 1, 1), 0x4444, nonTrivialImplicitHandleReferenceCalledDestructed}, nodeHandle(0xabcde, 0x123));
+    DataHandle nonTrivialImplicitHandleValue = layer.onUpdate(storageImplicit, NonTrivialHandleValue{layerDataHandle(dataHandleId(nonTrivialImplicitHandleReference) + 1, 1), 0x4444, nonTrivialImplicitHandleValueCalledDestructed}, nodeHandle(0xabcde, 0x123));
     CORRADE_COMPARE(destructedReference, 1);
     CORRADE_COMPARE(destructedValue, 1);
     CORRADE_COMPARE(destructedValueMinMax, 1);
+    CORRADE_COMPARE(nonTrivialHandleReferenceCalledDestructed[1], 1);
+    CORRADE_COMPARE(nonTrivialHandleValueCalledDestructed[1], 1);
     CORRADE_COMPARE(destructedImplicitReference, 1);
     CORRADE_COMPARE(destructedImplicitValue, 1);
     CORRADE_COMPARE(destructedImplicitValueMinMax, 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 6);
-    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 6);
-    CORRADE_COMPARE(layer.capacity(), 12);
-    CORRADE_COMPARE(layer.usedCount(), 12);
+    CORRADE_COMPARE(nonTrivialImplicitHandleReferenceCalledDestructed[1], 1);
+    CORRADE_COMPARE(nonTrivialImplicitHandleValueCalledDestructed[1], 1);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 10);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 10);
+    CORRADE_COMPARE(layer.capacity(), 20);
+    CORRADE_COMPARE(layer.usedCount(), 20);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
         CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
         #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 6);
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 10);
     }
     CORRADE_COMPARE(layer.node(nonTrivialImplicitReference), nodeHandle(0xabcde, 0x123));
     CORRADE_COMPARE(layer.node(nonTrivialImplicitValue), nodeHandle(0xabcde, 0x123));
+    CORRADE_COMPARE(layer.node(nonTrivialImplicitHandleReference), nodeHandle(0xabcde, 0x123));
+    CORRADE_COMPARE(layer.node(nonTrivialImplicitHandleValue), nodeHandle(0xabcde, 0x123));
     CORRADE_COMPARE(layer.node(nonTrivialImplicitValueMinMax), nodeHandle(0xabcde, 0x123));
     CORRADE_VERIFY(layer.isAllocated(nonTrivialImplicitReference));
     CORRADE_VERIFY(layer.isAllocated(nonTrivialImplicitValue));
     CORRADE_VERIFY(layer.isAllocated(nonTrivialImplicitValueMinMax));
+    CORRADE_VERIFY(layer.isAllocated(nonTrivialImplicitHandleReference));
+    CORRADE_VERIFY(layer.isAllocated(nonTrivialImplicitHandleValue));
     CORRADE_VERIFY(layer.isDirty(nonTrivialImplicitReference));
     CORRADE_VERIFY(layer.isDirty(nonTrivialImplicitValue));
     CORRADE_VERIFY(layer.isDirty(nonTrivialImplicitValueMinMax));
+    CORRADE_VERIFY(layer.isDirty(nonTrivialImplicitHandleReference));
+    CORRADE_VERIFY(layer.isDirty(nonTrivialImplicitHandleValue));
     CORRADE_COMPARE(layer.storage(nonTrivialImplicitReference), storageImplicit);
     CORRADE_COMPARE(layer.storage(nonTrivialImplicitValue), storageImplicit);
     CORRADE_COMPARE(layer.storage(nonTrivialImplicitValueMinMax), storageImplicit);
+    CORRADE_COMPARE(layer.storage(nonTrivialImplicitHandleReference), storageImplicit);
+    CORRADE_COMPARE(layer.storage(nonTrivialImplicitHandleValue), storageImplicit);
     CORRADE_COMPARE(layer.index(nonTrivialImplicitReference), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE(layer.index(nonTrivialImplicitValue), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE(layer.index(nonTrivialImplicitValueMinMax), (Containers::Size3D{0, 0, 0}));
+    CORRADE_COMPARE(layer.index(nonTrivialImplicitHandleReference), (Containers::Size3D{0, 0, 0}));
+    CORRADE_COMPARE(layer.index(nonTrivialImplicitHandleValue), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
 
@@ -2687,41 +2827,57 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(trivialReferenceCalled, 0);
     CORRADE_COMPARE(trivialValueCalled, 0);
     CORRADE_COMPARE(trivialValueMinMaxCalled, 0);
+    CORRADE_COMPARE(trivialHandleReferenceCalled, 0);
+    CORRADE_COMPARE(trivialHandleValueCalled, 0);
     CORRADE_COMPARE(nonTrivialReferenceCalled, 0);
     CORRADE_COMPARE(nonTrivialValueCalled, 0);
     CORRADE_COMPARE(nonTrivialValueMinMaxCalled, 0);
+    CORRADE_COMPARE(nonTrivialHandleReferenceCalledDestructed[0], 0);
+    CORRADE_COMPARE(nonTrivialHandleValueCalledDestructed[0], 0);
     CORRADE_COMPARE(storageImplicitCalled, 0);
     CORRADE_COMPARE(storageImplicitMinCalled, 0);
     CORRADE_COMPARE(storageImplicitMaxCalled, 0);
     CORRADE_COMPARE(trivialImplicitReferenceCalled, 0);
     CORRADE_COMPARE(trivialImplicitValueCalled, 0);
     CORRADE_COMPARE(trivialImplicitValueMinMaxCalled, 0);
+    CORRADE_COMPARE(trivialImplicitHandleReferenceCalled, 0);
+    CORRADE_COMPARE(trivialImplicitHandleValueCalled, 0);
     CORRADE_COMPARE(nonTrivialImplicitReferenceCalled, 0);
     CORRADE_COMPARE(nonTrivialImplicitValueCalled, 0);
     CORRADE_COMPARE(nonTrivialImplicitValueMinMaxCalled, 0);
+    CORRADE_COMPARE(nonTrivialImplicitHandleReferenceCalledDestructed[0], 0);
+    CORRADE_COMPARE(nonTrivialImplicitHandleValueCalledDestructed[0], 0);
 
     /* They should be all called on the very first update however. The called
        functions then verify the corrrect arguments were passed every time.
        Each storage is used by two data so it gets called twice. */
     layer.preUpdate(LayerState::NeedsCommonDataUpdate);
-    CORRADE_COMPARE(storageCalled, 6);
+    CORRADE_COMPARE(storageCalled, 10);
     CORRADE_COMPARE(storageMinCalled, 2);
     CORRADE_COMPARE(storageMaxCalled, 2);
     CORRADE_COMPARE(trivialReferenceCalled, 1);
     CORRADE_COMPARE(trivialValueCalled, 1);
     CORRADE_COMPARE(trivialValueMinMaxCalled, 1);
+    CORRADE_COMPARE(trivialHandleReferenceCalled, 1);
+    CORRADE_COMPARE(trivialHandleValueCalled, 1);
     CORRADE_COMPARE(nonTrivialReferenceCalled, 1);
     CORRADE_COMPARE(nonTrivialValueCalled, 1);
     CORRADE_COMPARE(nonTrivialValueMinMaxCalled, 1);
-    CORRADE_COMPARE(storageImplicitCalled, 6);
+    CORRADE_COMPARE(nonTrivialHandleReferenceCalledDestructed[0], 1);
+    CORRADE_COMPARE(nonTrivialHandleValueCalledDestructed[0], 1);
+    CORRADE_COMPARE(storageImplicitCalled, 10);
     CORRADE_COMPARE(storageImplicitMinCalled, 2);
     CORRADE_COMPARE(storageImplicitMaxCalled, 2);
     CORRADE_COMPARE(trivialImplicitReferenceCalled, 1);
     CORRADE_COMPARE(trivialImplicitValueCalled, 1);
     CORRADE_COMPARE(trivialImplicitValueMinMaxCalled, 1);
+    CORRADE_COMPARE(trivialImplicitHandleReferenceCalled, 1);
+    CORRADE_COMPARE(trivialImplicitHandleValueCalled, 1);
     CORRADE_COMPARE(nonTrivialImplicitReferenceCalled, 1);
     CORRADE_COMPARE(nonTrivialImplicitValueCalled, 1);
     CORRADE_COMPARE(nonTrivialImplicitValueMinMaxCalled, 1);
+    CORRADE_COMPARE(nonTrivialImplicitHandleReferenceCalledDestructed[0], 1);
+    CORRADE_COMPARE(nonTrivialImplicitHandleValueCalledDestructed[0], 1);
 
     /* Removing data with a trivial function doesn't do much apart from
        decreasing reference count */
@@ -2729,19 +2885,23 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(destructedReference, 1);
     CORRADE_COMPARE(destructedValue, 1);
     CORRADE_COMPARE(destructedValueMinMax, 1);
+    CORRADE_COMPARE(nonTrivialHandleReferenceCalledDestructed[1], 1);
+    CORRADE_COMPARE(nonTrivialHandleValueCalledDestructed[1], 1);
     CORRADE_COMPARE(destructedImplicitReference, 1);
     CORRADE_COMPARE(destructedImplicitValue, 1);
     CORRADE_COMPARE(destructedImplicitValueMinMax, 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 6);
-    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 5);
-    CORRADE_COMPARE(layer.capacity(), 12);
-    CORRADE_COMPARE(layer.usedCount(), 11);
+    CORRADE_COMPARE(nonTrivialImplicitHandleReferenceCalledDestructed[1], 1);
+    CORRADE_COMPARE(nonTrivialImplicitHandleValueCalledDestructed[1], 1);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 10);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 9);
+    CORRADE_COMPARE(layer.capacity(), 20);
+    CORRADE_COMPARE(layer.usedCount(), 19);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
         CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
         #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 6);
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 10);
     }
 
     /* Removing data with a non-trivial function calls its destructor, this
@@ -2750,19 +2910,23 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(destructedReference, 2);
     CORRADE_COMPARE(destructedValue, 1);
     CORRADE_COMPARE(destructedValueMinMax, 1);
+    CORRADE_COMPARE(nonTrivialHandleReferenceCalledDestructed[1], 1);
+    CORRADE_COMPARE(nonTrivialHandleValueCalledDestructed[1], 1);
     CORRADE_COMPARE(destructedImplicitReference, 1);
     CORRADE_COMPARE(destructedImplicitValue, 1);
     CORRADE_COMPARE(destructedImplicitValueMinMax, 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 5);
-    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 5);
-    CORRADE_COMPARE(layer.capacity(), 12);
-    CORRADE_COMPARE(layer.usedCount(), 10);
+    CORRADE_COMPARE(nonTrivialImplicitHandleReferenceCalledDestructed[1], 1);
+    CORRADE_COMPARE(nonTrivialImplicitHandleValueCalledDestructed[1], 1);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 9);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 9);
+    CORRADE_COMPARE(layer.capacity(), 20);
+    CORRADE_COMPARE(layer.usedCount(), 18);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
         CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
         #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 5);
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 9);
     }
 
     /* Another trivial function, LayerDataHandle overload */
@@ -2770,19 +2934,23 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(destructedReference, 2);
     CORRADE_COMPARE(destructedValue, 1);
     CORRADE_COMPARE(destructedValueMinMax, 1);
+    CORRADE_COMPARE(nonTrivialHandleReferenceCalledDestructed[1], 1);
+    CORRADE_COMPARE(nonTrivialHandleValueCalledDestructed[1], 1);
     CORRADE_COMPARE(destructedImplicitReference, 1);
     CORRADE_COMPARE(destructedImplicitValue, 1);
     CORRADE_COMPARE(destructedImplicitValueMinMax, 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 4);
-    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 5);
-    CORRADE_COMPARE(layer.capacity(), 12);
-    CORRADE_COMPARE(layer.usedCount(), 9);
+    CORRADE_COMPARE(nonTrivialImplicitHandleReferenceCalledDestructed[1], 1);
+    CORRADE_COMPARE(nonTrivialImplicitHandleValueCalledDestructed[1], 1);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 8);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 9);
+    CORRADE_COMPARE(layer.capacity(), 20);
+    CORRADE_COMPARE(layer.usedCount(), 17);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
         CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
         #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 5);
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 9);
     }
 
     /* Destructing the whole layer instance should destruct all remaining
@@ -2792,9 +2960,13 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(destructedReference, 2);
     CORRADE_COMPARE(destructedValue, 2);
     CORRADE_COMPARE(destructedValueMinMax, 2);
+    CORRADE_COMPARE(nonTrivialHandleReferenceCalledDestructed[1], 2);
+    CORRADE_COMPARE(nonTrivialHandleValueCalledDestructed[1], 2);
     CORRADE_COMPARE(destructedImplicitReference, 2);
     CORRADE_COMPARE(destructedImplicitValue, 2);
     CORRADE_COMPARE(destructedImplicitValueMinMax, 2);
+    CORRADE_COMPARE(nonTrivialImplicitHandleReferenceCalledDestructed[1], 2);
+    CORRADE_COMPARE(nonTrivialImplicitHandleValueCalledDestructed[1], 2);
 }
 
 void DataLayerTest::createRemoveHandleRecycle() {
@@ -2909,21 +3081,31 @@ void DataLayerTest::createInvalid() {
     layer.onUpdate(anotherLayerStorage, [](const Int&) {});
     layer.onUpdate(anotherLayerStorage, [](Int) {});
     layer.onUpdate(anotherLayerStorage, [](Int, Int, Int) {});
+    layer.onUpdate(anotherLayerStorage, [](DataHandle, const Int&) {});
+    layer.onUpdate(anotherLayerStorage, [](DataHandle, Int) {});
     layer.onUpdate(anotherLayerStorage.value(), [](const Float&) {});
     layer.onUpdate(anotherLayerStorage.value(), [](Float) {});
     layer.onUpdate(anotherLayerStorage.value(), [](Float, Float, Float) {});
+    layer.onUpdate(anotherLayerStorage.value(), [](DataHandle, const Float&) {});
+    layer.onUpdate(anotherLayerStorage.value(), [](DataHandle, Float) {});
     /* Can't test with removedStorage or removedStorage.value() directly as
        that'd assert during StorageQuery creation already */
     layer.onUpdate(removedStorageQuery, [](const Int&) {});
     layer.onUpdate(removedStorageQuery, [](Int) {});
     layer.onUpdate(removedStorageQuery, [](Int, Int, Int) {});
+    layer.onUpdate(removedStorageQuery, [](DataHandle, const Int&) {});
+    layer.onUpdate(removedStorageQuery, [](DataHandle, Int) {});
     /* Update being null, all overloads */
     layer.onUpdate(storage, Containers::Function<void(const Int&)>{});
     layer.onUpdate(storage, Containers::Function<void(Int)>{});
     layer.onUpdate(storage, Containers::Function<void(Int, Int, Int)>{});
+    layer.onUpdate(storage, Containers::Function<void(DataHandle, const Int&)>{});
+    layer.onUpdate(storage, Containers::Function<void(DataHandle, Int)>{});
     layer.onUpdate(storage.value(), Containers::Function<void(const Float&)>{});
     layer.onUpdate(storage.value(), Containers::Function<void(Float)>{});
     layer.onUpdate(storage.value(), Containers::Function<void(Float, Float, Float)>{});
+    layer.onUpdate(storage.value(), Containers::Function<void(DataHandle, const Float&)>{});
+    layer.onUpdate(storage.value(), Containers::Function<void(DataHandle, Float)>{});
     /* Min/max overloads but the query doesn't support that */
     layer.onUpdate(storageNoMinMax, [](Int, Int, Int) {});
     layer.onUpdate(storageNoMinMax.value(), [](Float, Float, Float) {});
@@ -2934,10 +3116,20 @@ void DataLayerTest::createInvalid() {
         "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer\n"
         "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer\n"
         "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer\n"
+        "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer\n"
+        "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer\n"
+        "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer\n"
+        "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer\n"
+        "Ui::DataLayer::onUpdate(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x1})\n"
+        "Ui::DataLayer::onUpdate(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x1})\n"
         "Ui::DataLayer::onUpdate(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x1})\n"
         "Ui::DataLayer::onUpdate(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x1})\n"
         "Ui::DataLayer::onUpdate(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x1})\n"
 
+        "Ui::DataLayer::onUpdate(): function is null\n"
+        "Ui::DataLayer::onUpdate(): function is null\n"
+        "Ui::DataLayer::onUpdate(): function is null\n"
+        "Ui::DataLayer::onUpdate(): function is null\n"
         "Ui::DataLayer::onUpdate(): function is null\n"
         "Ui::DataLayer::onUpdate(): function is null\n"
         "Ui::DataLayer::onUpdate(): function is null\n"
