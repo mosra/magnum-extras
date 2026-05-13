@@ -2210,23 +2210,23 @@ namespace Implementation {
         switch(overload) {
             case StorageCallOoverload::ByReference:
                 return [](DataLayer& layer, const DataLayerStorageHandle storageHandle, const Containers::Size3D& index, DataHandle, Containers::FunctionData& result) {
-                    reinterpret_cast<Containers::Function<void(const T&)>&>(result)(StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
+                    static_cast<Containers::Function<void(const T&)>&>(result)(StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
                 };
             case StorageCallOoverload::ByValue:
                 return [](DataLayer& layer, const DataLayerStorageHandle storageHandle, const Containers::Size3D& index, DataHandle, Containers::FunctionData& result) {
-                    reinterpret_cast<Containers::Function<void(T)>&>(result)(StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
+                    static_cast<Containers::Function<void(T)>&>(result)(StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
                 };
             case StorageCallOoverload::ByValueMinMax:
                 return [](DataLayer& layer, const DataLayerStorageHandle storageHandle, const Containers::Size3D& index, DataHandle, Containers::FunctionData& result) {
-                    reinterpret_cast<Containers::Function<void(T, T, T)>&>(result)(StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}), StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation::Min), StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation::Max));
+                    static_cast<Containers::Function<void(T, T, T)>&>(result)(StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}), StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation::Min), StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation::Max));
                 };
             case StorageCallOoverload::HandleByReference:
                 return [](DataLayer& layer, const DataLayerStorageHandle storageHandle, const Containers::Size3D& index, DataHandle dataHandle, Containers::FunctionData& result) {
-                    reinterpret_cast<Containers::Function<void(DataHandle, const T&)>&>(result)(dataHandle, StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
+                    static_cast<Containers::Function<void(DataHandle, const T&)>&>(result)(dataHandle, StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
                 };
             case StorageCallOoverload::HandleByValue:
                 return [](DataLayer& layer, const DataLayerStorageHandle storageHandle, const Containers::Size3D& index, DataHandle dataHandle, Containers::FunctionData& result) {
-                    reinterpret_cast<Containers::Function<void(DataHandle, T)>&>(result)(dataHandle, StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
+                    static_cast<Containers::Function<void(DataHandle, T)>&>(result)(dataHandle, StorageLambda<dimensions, Storage, T, F>::call(layer, storageHandle, index, StorageOperation{}));
                 };
         }
         CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
