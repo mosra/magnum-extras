@@ -76,9 +76,6 @@ struct DataLayerTest: TestSuite::Tester {
     void createRemoveStorageHandleDisable();
     void createStorageNoHandlesLeft();
     void createStorageInvalid();
-    #ifndef CORRADE_TARGET_32BIT
-    void createStorageTooLarge();
-    #endif
     void removeStorageInvalid();
 
     void createStorageImplicitLayer();
@@ -225,9 +222,6 @@ DataLayerTest::DataLayerTest() {
               &DataLayerTest::createRemoveStorageHandleDisable,
               &DataLayerTest::createStorageNoHandlesLeft,
               &DataLayerTest::createStorageInvalid,
-              #ifndef CORRADE_TARGET_32BIT
-              &DataLayerTest::createStorageTooLarge,
-              #endif
               &DataLayerTest::removeStorageInvalid,
 
               &DataLayerTest::createStorageImplicitLayer,
@@ -1259,51 +1253,6 @@ void DataLayerTest::createStorageInvalid() {
         "Ui::AbstractStorage::createAllocated(): deleter is null\n",
         TestSuite::Compare::String);
 }
-
-#ifndef CORRADE_TARGET_32BIT
-void DataLayerTest::createStorageTooLarge() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    DataLayer layer{layerHandle(0, 1)};
-
-    struct CustomStorage: AbstractStorage {
-        explicit CustomStorage(DataLayer& layer, std::size_t size): AbstractStorage{layer, size} {}
-        explicit CustomStorage(DataLayer& layer, const Containers::Size2D& size): AbstractStorage{layer, size} {}
-        explicit CustomStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
-
-        using AbstractStorage::data;
-    };
-
-    /* Size that fits exactly into 43 bits is okay (well a 1 bit and then 43
-       zero bits but you know what I mean, right? 0x80000000000 in hex.) */
-    CustomStorage{layer, std::size_t{1} << 43};
-
-    Containers::String out;
-    Error redirectError{&out};
-    CustomStorage{layer, (std::size_t{1} << 43) + 1};
-    CustomStorage{layer, {1, (std::size_t{1} << 43) + 1}};
-    CustomStorage{layer, {(std::size_t{1} << 43) + 1, 1}};
-    CustomStorage{layer, {1, 1, (std::size_t{1} << 43) + 1}};
-    CustomStorage{layer, {1, (std::size_t{1} << 43) + 1, 1}};
-    CustomStorage{layer, {(std::size_t{1} << 43) + 1, 1, 1}};
-    /* These can't make it exactly "one more than 43 bits" but it verifies that
-       it actually makes a multiplication of all dimensions rather than making
-       a max() or whatever */
-    CustomStorage{layer, {(std::size_t{1} << 21) + 1, std::size_t{1} << 22}};
-    CustomStorage{layer, {std::size_t{1} << 14, (std::size_t{1} << 14) + 1, std::size_t{1} << 15}};
-    CORRADE_COMPARE_AS(out,
-        "Ui::AbstractStorage: expected size to fit into 43 bits but got 8796093022209\n"
-        "Ui::AbstractStorage: expected size to fit into 43 bits but got 8796093022209\n"
-        "Ui::AbstractStorage: expected size to fit into 43 bits but got 8796093022209\n"
-        "Ui::AbstractStorage: expected size to fit into 43 bits but got 8796093022209\n"
-        "Ui::AbstractStorage: expected size to fit into 43 bits but got 8796093022209\n"
-        "Ui::AbstractStorage: expected size to fit into 43 bits but got 8796093022209\n"
-
-        "Ui::AbstractStorage: expected size to fit into 43 bits but got 8796097216512\n"
-        "Ui::AbstractStorage: expected size to fit into 43 bits but got 8796629893120\n",
-        TestSuite::Compare::String);
-}
-#endif
 
 void DataLayerTest::removeStorageInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
@@ -3180,12 +3129,10 @@ void DataLayerTest::setDirty() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Mark the data as dirty. Internally the dirty bit is stored along the
-       index and the storage reference, so verify those didn't get
-       corrupted. */
+       storage reference, so verify it didn't get corrupted. */
     layer.setDirty(data);
     CORRADE_VERIFY(layer.isDirty(data));
     CORRADE_COMPARE(layer.storage(data), storage);
-    CORRADE_COMPARE(layer.index(data), (Containers::Size3D{3, 7, 5}));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
     /* Calling preUpdate() + update() resets the dirty bit and the state */
@@ -3198,7 +3145,6 @@ void DataLayerTest::setDirty() {
     layer.setDirty(dataHandleData(data));
     CORRADE_VERIFY(layer.isDirty(dataHandleData(data)));
     CORRADE_COMPARE(layer.storage(data), storage);
-    CORRADE_COMPARE(layer.index(data), (Containers::Size3D{3, 7, 5}));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
     /* Marking the data as dirty again is a no-op, as all bits and states are
@@ -3206,7 +3152,6 @@ void DataLayerTest::setDirty() {
     layer.setDirty(data);
     CORRADE_VERIFY(layer.isDirty(dataHandleData(data)));
     CORRADE_COMPARE(layer.storage(data), storage);
-    CORRADE_COMPARE(layer.index(data), (Containers::Size3D{3, 7, 5}));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 }
 

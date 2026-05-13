@@ -271,8 +271,8 @@ static_assert(
     offsetof(StorageData::Used, size) == offsetof(StorageData::Free, size),
     "StorageData::Used and Free layout not compatible");
 
-enum: UnsignedLong {
-    /* For Data::storageIdDirtyLinearizedIndex */
+enum: UnsignedInt {
+    /* For Data::storageIdDirty */
     DataIsDirty = 1 << Implementation::DataLayerStorageHandleIdBits,
 };
 
@@ -285,19 +285,15 @@ struct Data {
        The following bit denotes whether the data is dirty, to force an update
        even if the storage itself isn't. Is set upon data creation and after
        changing data properties, such as by DataLayer::setIndex(), and
-       explicitly with DataLayer::setDirty().
-
-       After that (43 bits) is a linearized storage index (basically a linear
-       data position as if the 3D storage would be contiguous). With a
-       byte-sized storage type, 43 bits means there's at most 8 TB of
-       addressable memory, which should be plenty enough for common use
-       cases. */
-    /** @todo if 8 TB isn't enough (for example when doing data recovery using
-        image of a 32 TB drive or some such) or we end up needing to increase
-        DataLayerStorageHandleIdBits, there could be an opt-in DataLayerFlag
-        where the linearized indices are all stored in a separate array of
-        64-bit values and this field only used for the storage ID */
-    UnsignedLong storageIdDirtyLinearizedIndex;
+       explicitly with DataLayer::setDirty(). */
+    UnsignedInt storageIdDirty;
+    /* 0/4 bytes free */
+    /* Linearized storage index (basically a linear data position as if the 3D
+       storage would be contiguous). The logic is that with a byte-sized
+       storage, we wouldn't be able to address more than 32/64 bits anyway, so
+       there's no point in storing 3*4/8 bytes. The value is accessed through
+       linearizeIndex() and delinearizeIndex(). */
+    std::size_t linearizedIndex;
 
     Containers::FunctionData function;
     void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&);
@@ -401,14 +397,6 @@ DataLayerStorageHandle DataLayer::createStorage(const Containers::Size3D& size, 
         example) */
     CORRADE_ASSERT(size[0] && size[1] && size[2],
         "Ui::AbstractStorage: expected non-zero size but got" << size, {});
-    #ifndef CORRADE_TARGET_32BIT
-    /* Restricted because the data index is linearized and has to fit into a
-       64-bit number together with storage ID and the DataIsDirty bit. It's <=
-       and not < so the max size is actually 44 bits long, but that's what
-       makes the index fit into 43 bits. Get it? Yeah? */
-    CORRADE_ASSERT(size[0]*size[1]*size[2] <= (std::size_t{1} << (sizeof(UnsignedLong)*8 - Implementation::DataLayerStorageHandleIdBits - 1)),
-        "Ui::AbstractStorage: expected size to fit into" << (sizeof(UnsignedLong)*8 - Implementation::DataLayerStorageHandleIdBits - 1) << "bits but got" << size[0]*size[1]*size[2], {});
-    #endif
 
     /* Find the first free storage if there is, update the free index to point
        to the next one (or none) */
@@ -676,22 +664,15 @@ std::size_t DataLayer::usedAllocatedCount() const {
 
 namespace {
 
-inline UnsignedLong linearizeIndex(const Containers::Size3D& size, const Containers::Size3D& index) {
+inline std::size_t linearizeIndex(const Containers::Size3D& size, const Containers::Size3D& index) {
     const std::size_t rowSize = size[2];
     const std::size_t sliceSize = size[1]*rowSize;
-    const std::size_t out = index[0]*sliceSize +            /* slices */
-                            index[1]*rowSize +              /* rows */
-                            index[2];                       /* elements */
-    /* Just a sanity check, size fitting into the remaining bits should be
-       guaranteed by createStorage() already. One extra bit is for the dirty
-       state. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(out < (1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)));
-    return UnsignedLong(out) << (Implementation::DataLayerStorageHandleIdBits + 1);
+    return index[0]*sliceSize + /* slices */
+           index[1]*rowSize +   /* rows */
+           index[2];            /* elements */
 }
 
-inline Containers::Size3D delinearizeIndex(const Containers::Size3D& size, const UnsignedLong storageIdDirtyLinearizedIndex) {
-    /* One extra bit for the dirty state */
-    const std::size_t index = storageIdDirtyLinearizedIndex >> (Implementation::DataLayerStorageHandleIdBits + 1);
+inline Containers::Size3D delinearizeIndex(const Containers::Size3D& size, std::size_t index) {
     const std::size_t rowSize = size[2];
     const std::size_t sliceSize = size[1]*rowSize;
     const std::size_t sliceRemainder = index%sliceSize;
@@ -705,8 +686,8 @@ inline Containers::Size3D delinearizeIndex(const Containers::Size3D& size, const
     return out;
 }
 
-inline UnsignedInt extractStorageId(const UnsignedLong storageIdDirtyLinearizedIndex) {
-    return storageIdDirtyLinearizedIndex & ((1 << Implementation::DataLayerStorageHandleIdBits) - 1);
+inline UnsignedInt extractStorageId(const UnsignedInt storageIdDirty) {
+    return storageIdDirty & ((1 << Implementation::DataLayerStorageHandleIdBits) - 1);
 }
 
 }
@@ -745,12 +726,12 @@ DataHandle DataLayer::onUpdateInternal(const DataLayer&
         arrayResize(state.data, ValueInit, id + 1);
     Data& data = state.data[id];
 
-    /* While the size is 3*8 bytes on 64 bits, in practice addressing anything
-       with a >8 byte address is impossible, thus the 3D index gets linearized
-       into a single 64-bit value. To save even more space, we'll combine the
-       linearized index with the (20 bit) storage handle ID. See documentation
-       of the data.storageIdLinearizedIndex member for further reasoning. */
-    data.storageIdDirtyLinearizedIndex = storageId|DataIsDirty|linearizeIndex(storageData.used.size, index);
+    /* The data binding is implicitly dirty upon creation */
+    data.storageIdDirty = storageId|DataIsDirty;
+    /* While the 3D size is 3*4/8 bytes, in practice addressing anything with a
+       >4/8 byte address is impossible, thus the 3D index gets linearized into
+       a single size_t value */
+    data.linearizedIndex = linearizeIndex(storageData.used.size, index);
 
     data.function = Utility::move(function);
     data.call = call;
@@ -780,7 +761,7 @@ void DataLayer::removeInternal(const UnsignedInt id) {
     data.function = {};
 
     /* Decrement storage reference count */
-    const UnsignedInt storageId = extractStorageId(data.storageIdDirtyLinearizedIndex);
+    const UnsignedInt storageId = extractStorageId(data.storageIdDirty);
     StorageData& storage = state.storages[storageId];
     CORRADE_INTERNAL_DEBUG_ASSERT(storage.used.referenceCount > 0);
     --storage.used.referenceCount;
@@ -806,13 +787,13 @@ bool DataLayer::isAllocated(const LayerDataHandle handle) const {
 bool DataLayer::isDirty(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::DataLayer::isDirty(): invalid handle" << handle, {});
-    return _state->data[dataHandleId(handle)].storageIdDirtyLinearizedIndex & DataIsDirty;
+    return _state->data[dataHandleId(handle)].storageIdDirty & DataIsDirty;
 }
 
 bool DataLayer::isDirty(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::DataLayer::isDirty(): invalid handle" << handle, {});
-    return _state->data[layerDataHandleId(handle)].storageIdDirtyLinearizedIndex & DataIsDirty;
+    return _state->data[layerDataHandleId(handle)].storageIdDirty & DataIsDirty;
 }
 
 void DataLayer::setDirty(const DataHandle handle) {
@@ -833,9 +814,9 @@ void DataLayer::setDirtyInternal(const UnsignedInt id) {
     /* If the data is already dirty, the corresponding state should be set as
        well. In other words, we don't need to branch and set the state only if
        not dirty already. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(!(data.storageIdDirtyLinearizedIndex & DataIsDirty) || state() >= LayerState::NeedsCommonDataUpdate);
+    CORRADE_INTERNAL_DEBUG_ASSERT(!(data.storageIdDirty & DataIsDirty) || state() >= LayerState::NeedsCommonDataUpdate);
 
-    data.storageIdDirtyLinearizedIndex |= DataIsDirty;
+    data.storageIdDirty |= DataIsDirty;
     setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
 }
 
@@ -853,7 +834,7 @@ StorageHandle DataLayer::storage(const LayerDataHandle handle) const {
 
 inline StorageHandle DataLayer::storageInternal(const UnsignedInt id) const {
     const State& state = *_state;
-    const UnsignedInt storageId = extractStorageId(state.data[id].storageIdDirtyLinearizedIndex);
+    const UnsignedInt storageId = extractStorageId(state.data[id].storageIdDirty);
     return storageHandle(handle(), storageId, state.storages[storageId].used.generation);
 }
 
@@ -871,8 +852,8 @@ Containers::Size3D DataLayer::index(const LayerDataHandle handle) const {
 
 inline Containers::Size3D DataLayer::indexInternal(const UnsignedInt id) const {
     const State& state = *_state;
-    const UnsignedLong storageIdDirtyLinearizedIndex = state.data[id].storageIdDirtyLinearizedIndex;
-    return delinearizeIndex(state.storages[extractStorageId(storageIdDirtyLinearizedIndex)].used.size, storageIdDirtyLinearizedIndex);
+    const Data& data = state.data[id];
+    return delinearizeIndex(state.storages[extractStorageId(data.storageIdDirty)].used.size, data.linearizedIndex);
 }
 
 void DataLayer::setIndex(const DataHandle handle, const std::size_t index) {
@@ -890,7 +871,7 @@ void DataLayer::setIndex(const LayerDataHandle handle, const std::size_t index) 
 void DataLayer::setIndexInternal(const UnsignedInt id, const std::size_t index) {
     #ifndef CORRADE_NO_ASSERT
     State& state = *_state;
-    const Containers::Size3D& size = state.storages[extractStorageId(state.data[id].storageIdDirtyLinearizedIndex)].used.size;
+    const Containers::Size3D& size = state.storages[extractStorageId(state.data[id].storageIdDirty)].used.size;
     #endif
     CORRADE_ASSERT(size[0] == 1 && size[1] == 1,
         "Ui::DataLayer::setIndex(): expected a 1D storage but got a size of" << size, );
@@ -912,7 +893,7 @@ void DataLayer::setIndex(const LayerDataHandle handle, const Containers::Size2D&
 void DataLayer::setIndexInternal(const UnsignedInt id, const Containers::Size2D& index) {
     #ifndef CORRADE_NO_ASSERT
     State& state = *_state;
-    const Containers::Size3D& size = state.storages[extractStorageId(state.data[id].storageIdDirtyLinearizedIndex)].used.size;
+    const Containers::Size3D& size = state.storages[extractStorageId(state.data[id].storageIdDirty)].used.size;
     #endif
     CORRADE_ASSERT(size[0] == 1,
         "Ui::DataLayer::setIndex(): expected a 2D storage but got a size of" << size, );
@@ -934,25 +915,16 @@ void DataLayer::setIndex(const LayerDataHandle handle, const Containers::Size3D&
 void DataLayer::setIndexInternal(const UnsignedInt id, const Containers::Size3D& index) {
     State& state = *_state;
     Data& data = state.data[id];
-    const UnsignedInt storageId = extractStorageId(data.storageIdDirtyLinearizedIndex);
-    const Containers::Size3D& size = state.storages[storageId].used.size;
+    const Containers::Size3D& size = state.storages[extractStorageId(data.storageIdDirty)].used.size;
     CORRADE_ASSERT(index[0] < size[0] && index[1] < size[1] && index[2] < size[2],
         "Ui::DataLayer::setIndex(): index" << index << "out of range for" << size << "elements", );
-    /* As we had to extract all parts to perform the above check, we can simply
-       recombine them back without having to do a masked update. */
-    const UnsignedLong storageIdDirtyLinearizedIndex = storageId|linearizeIndex(size, index);
+    const std::size_t linearizedIndex = linearizeIndex(size, index);
 
-    /* If the index is different, update it and mark the layer as dirty along
-       with NeedsCommonDataUpdate. Because the storage ID stays the same, we
-       can compare the whole field instead of just the masked ID. Additionally,
-       if the original field has the DataIsDirty bit set but the index the
-       same, the comparison will fail, but ultimately will result in the same
-       value as before (and if the dirty bit is set, NeedsCommonDataUpdate is
-       already set as well) so we don't need to special-case that in any
-       way. */
-    if(data.storageIdDirtyLinearizedIndex != storageIdDirtyLinearizedIndex) {
-        data.storageIdDirtyLinearizedIndex = storageIdDirtyLinearizedIndex|DataIsDirty;
-
+    /* If the index is different, update it and mark the data as dirty along
+       with NeedsCommonDataUpdate */
+    if(data.linearizedIndex != linearizedIndex) {
+        data.linearizedIndex = linearizedIndex;
+        data.storageIdDirty |= DataIsDirty;
         setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
     }
 }
@@ -997,9 +969,9 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
             continue;
 
         /* If neither the data nor the storage is dirty, skip */
-        const UnsignedInt storageId = extractStorageId(data.storageIdDirtyLinearizedIndex);
+        const UnsignedInt storageId = extractStorageId(data.storageIdDirty);
         const StorageData& storage = state.storages[storageId];
-        if(!(data.storageIdDirtyLinearizedIndex & DataIsDirty) &&
+        if(!(data.storageIdDirty & DataIsDirty) &&
            !(storage.used.flags >= StorageFlagDirty))
             continue;
 
@@ -1013,12 +985,12 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
             it'd use the cached value. */
         data.call(
             *this, dataLayerStorageHandle(storageId, storage.used.generation),
-            delinearizeIndex(storage.used.size, data.storageIdDirtyLinearizedIndex),
+            delinearizeIndex(storage.used.size, data.linearizedIndex),
             dataHandle(layerHandle, i, generations[i]),
             data.function);
 
         /* Update got called, reset the data dirty bit if it's set */
-        data.storageIdDirtyLinearizedIndex &= ~DataIsDirty;
+        data.storageIdDirty &= ~DataIsDirty;
     }
 
     /* Once all data are updated, reset the storage dirty bits as well */

@@ -1492,9 +1492,8 @@ class MAGNUM_UI_EXPORT AbstractStorage {
          * @relativeref{AbstractUserInterface,draw()} if its
          * @ref referenceCount() is zero.
          *
-         * The @p size is expected to not be @cpp 0 @ce in any dimension and
-         * its product to be less or equal to @cpp 1ull << 43 @ce. The subclass
-         * is meant to subsequently call @ref createInPlace() or
+         * The @p size is expected to not be @cpp 0 @ce in any dimension. The
+         * subclass is meant to subsequently call @ref createInPlace() or
          * @ref createAllocated() to actually initialize the storage. Calling
          * neither is equivalent to calling @ref createInPlace() and not
          * initializing the memory it returns in any way. If
