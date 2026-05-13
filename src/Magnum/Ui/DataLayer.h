@@ -305,7 +305,7 @@ CORRADE_ENUMSET_OPERATORS(StorageFlags)
 @see @ref StorageOperations, @ref StorageQuery::StorageQuery(),
     @ref StorageQuery::operations(), @ref StorageQuery::updater()
 */
-enum class StorageOperation: UnsignedByte {
+enum class StorageOperation: UnsignedShort {
     /**
      * Set a value.
      * @see @ref StorageQuery::set()
@@ -1820,7 +1820,7 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
         DataLayer* _layer;
         DataLayerStorageHandle _storage;
         StorageOperations _operations;
-        /* 3 bytes free */
+        /* 2 bytes free */
         Containers::Size3D _index;
         /* Function pointer taking StorageCallOoverload returning a void(*)(…)
            function pointer. Yes, I know. Sorry. Done this way so it's possible

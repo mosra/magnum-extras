@@ -433,14 +433,14 @@ void DataLayerTest::debugStorageFlagsPacked() {
 
 void DataLayerTest::debugStorageOperation() {
     Containers::String out;
-    Debug{&out} << StorageOperation::Decrement << StorageOperation(0xbe);
-    CORRADE_COMPARE(out, "Ui::StorageOperation::Decrement Ui::StorageOperation(0xbe)\n");
+    Debug{&out} << StorageOperation::Decrement << StorageOperation(0xbeef);
+    CORRADE_COMPARE(out, "Ui::StorageOperation::Decrement Ui::StorageOperation(0xbeef)\n");
 }
 
 void DataLayerTest::debugStorageOperations() {
     Containers::String out;
-    Debug{&out} << (StorageOperation::Min|StorageOperation::Max|StorageOperation(0x80)) << StorageOperations{};
-    CORRADE_COMPARE(out, "Ui::StorageOperation::Min|Ui::StorageOperation::Max|Ui::StorageOperation(0x80) Ui::StorageOperations{}\n");
+    Debug{&out} << (StorageOperation::Min|StorageOperation::Max|StorageOperation(0x6780)) << StorageOperations{};
+    CORRADE_COMPARE(out, "Ui::StorageOperation::Min|Ui::StorageOperation::Max|Ui::StorageOperation(0x6780) Ui::StorageOperations{}\n");
 }
 
 void DataLayerTest::debugStorageUpdateState() {
