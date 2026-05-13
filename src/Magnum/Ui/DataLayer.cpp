@@ -1039,7 +1039,7 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
     }
 }
 
-AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const StorageOperations operations, const Containers::Size3D& index, void(*(*call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _operations{operations}, _index{index}, _call{call} {
+AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, const StorageOperations operations, void(*(*const call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&), StorageUpdateState(*const updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _operations{operations}, _index{index}, _call{call}, _updater{updater} {
     /* The class is always constructed through the StorageQuery subclass, so
        make the assertions mention that to reduce confusion */
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
@@ -1057,6 +1057,81 @@ AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const
         CORRADE_ASSERT(!(operations & expected) || operations >= expected,
             "Ui::StorageQuery: either both" << expected << "have to be set or neither", );
     #endif
+    /* Min|Max can be used for the query as well */
+    CORRADE_ASSERT(!(operations & ~(StorageOperation::Min|StorageOperation::Max)) || updater,
+        "Ui::StorageQuery:" << (operations & ~(StorageOperation::Min|StorageOperation::Max)) << "requires a non-null updater", );
+}
+
+void AbstractStorageQuery::reset() const {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::StorageQuery::reset():",
+        #endif
+        StorageOperation::Reset, nullptr);
+}
+
+void AbstractStorageQuery::toggle() const {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::StorageQuery::toggle():",
+        #endif
+        StorageOperation::Toggle, nullptr);
+}
+
+void AbstractStorageQuery::increment() const {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::StorageQuery::increment():",
+        #endif
+        StorageOperation::Increment, nullptr);
+}
+
+void AbstractStorageQuery::decrement() const {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::StorageQuery::decrement():",
+        #endif
+        StorageOperation::Decrement, nullptr);
+}
+
+void AbstractStorageQuery::setToMin() const {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::StorageQuery::setToMin():",
+        #endif
+        StorageOperation::Min, nullptr);
+}
+
+void AbstractStorageQuery::setToMax() const {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::StorageQuery::setToMax():",
+        #endif
+        StorageOperation::Max, nullptr);
+}
+
+StorageUpdateState AbstractStorageQuery::updateInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const StorageOperation operation, const void* const value) const
+{
+    CORRADE_ASSERT(_layer->isHandleValid(_storage),
+        messagePrefix << "invalid handle" << storageHandle(_layer->handle(), _storage), {});
+    CORRADE_ASSERT(_operations >= operation,
+        messagePrefix << operation << "not supported", {});
+    const StorageUpdateState state = _updater(*_layer, _storage, _index, operation, value);
+    CORRADE_ASSERT(operation == StorageOperation::Set || state == StorageUpdateState::Success,
+        messagePrefix << "updater implementation expected to return" << StorageUpdateState::Success << "for" << operation << "but got" << state, {});
+    return state;
+}
+
+StorageUpdateState AbstractStorageQuery::setInternal(const void* const value) const {
+    return updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::StorageQuery::set():",
+        #endif
+        StorageOperation::Set, value);
 }
 
 }}
