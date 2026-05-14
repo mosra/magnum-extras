@@ -2182,6 +2182,10 @@ void DataLayerTest::queryValueUpdateInvalid() {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }};
 
+    StorageQuery<Int> queryMinMaxImmutable{storage, StorageOperation::Min|StorageOperation::Max, [](const DummyStorage&, StorageOperation) -> Int {
+        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    }};
+
     StorageQuery<Int> queryNoIncrementDecrement{storage, ~(StorageOperation::Increment|StorageOperation::Decrement), [](const DummyStorage&, StorageOperation) -> Int {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
@@ -2205,6 +2209,8 @@ void DataLayerTest::queryValueUpdateInvalid() {
     queryNoMinMax.setToMin();
     queryNoMinMax.max();
     queryNoMinMax.setToMax();
+    queryMinMaxImmutable.setToMin();
+    queryMinMaxImmutable.setToMax();
 
     queryWrongState.reset();
     queryWrongState.toggle();
@@ -2222,6 +2228,8 @@ void DataLayerTest::queryValueUpdateInvalid() {
         "Ui::StorageQuery::setToMin(): Ui::StorageOperation::Min not supported\n"
         "Ui::StorageQuery::max(): Ui::StorageOperation::Max not supported\n"
         "Ui::StorageQuery::setToMax(): Ui::StorageOperation::Max not supported\n"
+        "Ui::StorageQuery::setToMin(): query is immutable\n"
+        "Ui::StorageQuery::setToMax(): query is immutable\n"
 
         "Ui::StorageQuery::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
         "Ui::StorageQuery::toggle(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Toggle but got Ui::StorageUpdateState::Clamped\n"

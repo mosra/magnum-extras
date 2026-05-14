@@ -1089,6 +1089,12 @@ StorageUpdateState AbstractStorageQuery::updateInternal(
 {
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
         messagePrefix << "invalid handle" << storageHandle(_layer->handle(), _storage), {});
+    /* In case of StorageOperation::Min / Max, only the queries could be
+       supported, so check also for mutability. All other operations are not
+       allowed to be specified if the StorageQuery is constructed without an
+       updater, so for Set, Reset etc. this check wouldn't be needed. */
+    CORRADE_ASSERT(_updater,
+        messagePrefix << "query is immutable", {});
     CORRADE_ASSERT(_operations >= operation,
         messagePrefix << operation << "not supported", {});
     const StorageUpdateState state = _updater(*_layer, _storage, _index, operation, value);
