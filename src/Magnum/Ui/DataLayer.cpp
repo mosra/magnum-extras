@@ -692,19 +692,18 @@ inline UnsignedInt extractStorageId(const UnsignedInt storageIdDirty) {
 
 }
 
-DataHandle DataLayer::onUpdateInternal(const DataLayer&
-    #ifndef CORRADE_NO_ASSERT
-    layer
-    #endif
-    , const DataLayerStorageHandle storage, const Containers::Size3D& index, void(*const call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&), Containers::FunctionData&& function, const NodeHandle node)
-{
+DataHandle DataLayer::onUpdateInternal(const AbstractStorageQuery& query, const Implementation::StorageCallOoverload overload, Containers::FunctionData&& function, const NodeHandle node) {
     State& state = *_state;
-    CORRADE_ASSERT(&layer == this,
+    CORRADE_ASSERT(query._layer == this,
         "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer", {});
     /* Be helpful and print the whole handle including the layer, as that's
        what one gets from AbstractStorage::handle() as well */
-    CORRADE_ASSERT(isHandleValid(storage),
-        "Ui::DataLayer::onUpdate(): invalid handle" << storageHandle(handle(), storage), {});
+    CORRADE_ASSERT(isHandleValid(query._storage),
+        "Ui::DataLayer::onUpdate(): invalid handle" << storageHandle(handle(), query._storage), {});
+    /* The query should support Min/Max if the value, min, max overload is
+       picked */
+    CORRADE_ASSERT(overload != Implementation::StorageCallOoverload::ByValueMinMax || query.operations() >= (StorageOperation::Min|StorageOperation::Max),
+        "Ui::DataLayer::onUpdate(): query doesn't support" << (StorageOperation::Min|StorageOperation::Max) << "for this overload", {});
     CORRADE_ASSERT(function,
         "Ui::DataLayer::onUpdate(): function is null", {});
     /** @todo the index being within storage size is tested by the StorageQuery
@@ -713,7 +712,7 @@ DataHandle DataLayer::onUpdateInternal(const DataLayer&
         their size, as the StorageQuery instance could be stale at the point it
         reaches DataLayer::create() */
 
-    const UnsignedInt storageId = dataLayerStorageHandleId(storage);
+    const UnsignedInt storageId = dataLayerStorageHandleId(query._storage);
     StorageData& storageData = state.storages[storageId];
 
     /* Increase storage reference count */
@@ -731,10 +730,10 @@ DataHandle DataLayer::onUpdateInternal(const DataLayer&
     /* While the 3D size is 3*4/8 bytes, in practice addressing anything with a
        >4/8 byte address is impossible, thus the 3D index gets linearized into
        a single size_t value */
-    data.linearizedIndex = linearizeIndex(storageData.used.size, index);
+    data.linearizedIndex = linearizeIndex(storageData.used.size, query._index);
 
     data.function = Utility::move(function);
-    data.call = call;
+    data.call = query._call(overload);
 
     /* Make sure the update function is called for the new data */
     setNeedsUpdate(LayerState::NeedsCommonDataUpdate);

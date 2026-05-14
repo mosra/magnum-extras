@@ -480,6 +480,7 @@ namespace Implementation {
 }
 
 class AbstractStorage;
+class AbstractStorageQuery;
 
 /**
 @brief Data binding layer
@@ -857,7 +858,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return onUpdateInternal(*query._layer, query._storage, query._index, query._call(Implementation::StorageCallOoverload::ByReference), Utility::move(function), node);
+            return onUpdateInternal(query, Implementation::StorageCallOoverload::ByReference, Utility::move(function), node);
         }
         /** @overload */
         template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
@@ -873,7 +874,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return onUpdateInternal(*query._layer, query._storage, query._index, query._call(Implementation::StorageCallOoverload::ByValue), Utility::move(function), node);
+            return onUpdateInternal(query, Implementation::StorageCallOoverload::ByValue, Utility::move(function), node);
         }
 
         /**
@@ -911,9 +912,8 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            CORRADE_ASSERT(query.operations() >= (StorageOperation::Min|StorageOperation::Max),
-                "Ui::DataLayer::onUpdate(): query doesn't support" << (StorageOperation::Min|StorageOperation::Max) << "for this overload", {});
-            return onUpdateInternal(*query._layer, query._storage, query._index, query._call(Implementation::StorageCallOoverload::ByValueMinMax), Utility::move(function), node);
+            /* Check for StorageOperation::{Min,Max} done inside */
+            return onUpdateInternal(query, Implementation::StorageCallOoverload::ByValueMinMax, Utility::move(function), node);
         }
 
         /**
@@ -943,7 +943,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return onUpdateInternal(*query._layer, query._storage, query._index, query._call(Implementation::StorageCallOoverload::HandleByReference), Utility::move(function), node);
+            return onUpdateInternal(query, Implementation::StorageCallOoverload::HandleByReference, Utility::move(function), node);
         }
         /** @overload */
         template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
@@ -959,7 +959,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return onUpdateInternal(*query._layer, query._storage, query._index, query._call(Implementation::StorageCallOoverload::HandleByValue), Utility::move(function), node);
+            return onUpdateInternal(query, Implementation::StorageCallOoverload::HandleByValue, Utility::move(function), node);
         }
 
         /**
@@ -1330,7 +1330,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
            it cannot be wrapped in #ifdef CORRADE_NO_ASSERT because it'd cause
            linker errors if the library is built with assertions but the user
            project not and vice versa. */
-        DataHandle onUpdateInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&), Containers::FunctionData&& function, NodeHandle node);
+        DataHandle onUpdateInternal(const AbstractStorageQuery& query, Implementation::StorageCallOoverload overload, Containers::FunctionData&& function, NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL void setDirtyInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL StorageHandle storageInternal(UnsignedInt id) const;
