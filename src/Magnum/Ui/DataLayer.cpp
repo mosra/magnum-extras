@@ -287,7 +287,9 @@ struct Data {
        changing data properties, such as by DataLayer::setIndex(), and
        explicitly with DataLayer::setDirty(). */
     UnsignedInt storageIdDirty;
-    /* 0/4 bytes free */
+    /* Operations supported by the updater function */
+    StorageOperations operations;
+    /* 2 bytes free */
     /* Linearized storage index (basically a linear data position as if the 3D
        storage would be contiguous). The logic is that with a byte-sized
        storage, we wouldn't be able to address more than 32/64 bits anyway, so
@@ -297,6 +299,14 @@ struct Data {
 
     Containers::FunctionData function;
     void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&);
+    /* Nullptr if the data binding is immutable */
+    /** @todo to save space the layer could maintain a separate array
+        containing just the updater pointers and have them referenced from here
+        via a 20-byte index; and have a possibility for onUpdate() to say
+        "don't need the updater at all" for labels and other immutable
+        bindings ... but so far it looks like a lot of extra complication for
+        minimal gains */
+    StorageUpdateState(*updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*);
 };
 
 }
@@ -727,6 +737,7 @@ DataHandle DataLayer::onUpdateInternal(const AbstractStorageQuery& query, const 
 
     /* The data binding is implicitly dirty upon creation */
     data.storageIdDirty = storageId|DataIsDirty;
+    data.operations = query._operations;
     /* While the 3D size is 3*4/8 bytes, in practice addressing anything with a
        >4/8 byte address is impossible, thus the 3D index gets linearized into
        a single size_t value */
@@ -734,6 +745,7 @@ DataHandle DataLayer::onUpdateInternal(const AbstractStorageQuery& query, const 
 
     data.function = Utility::move(function);
     data.call = query._call(overload);
+    data.updater = query._updater;
 
     /* Make sure the update function is called for the new data */
     setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
@@ -926,6 +938,201 @@ void DataLayer::setIndexInternal(const UnsignedInt id, const Containers::Size3D&
         data.storageIdDirty |= DataIsDirty;
         setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
     }
+}
+
+bool DataLayer::isMutable(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::DataLayer::isMutable(): invalid handle" << handle, {});
+    return _state->data[dataHandleId(handle)].updater;
+}
+
+bool DataLayer::isMutable(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::DataLayer::isMutable(): invalid handle" << handle, {});
+    return _state->data[layerDataHandleId(handle)].updater;
+}
+
+StorageOperations DataLayer::operations(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::DataLayer::operations(): invalid handle" << handle, {});
+    return _state->data[dataHandleId(handle)].operations;
+}
+
+StorageOperations DataLayer::operations(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::DataLayer::operations(): invalid handle" << handle, {});
+    return _state->data[layerDataHandleId(handle)].operations;
+}
+
+StorageUpdateState DataLayer::setInternal(const DataHandle handle, const void* const value) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::DataLayer::set(): invalid handle" << handle, {});
+    return updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::set():",
+        #endif
+        dataHandleData(handle), StorageOperation::Set, value);
+}
+
+StorageUpdateState DataLayer::setInternal(const LayerDataHandle handle, const void* const value) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::DataLayer::set(): invalid handle" << handle, {});
+    return updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::set():",
+        #endif
+        handle, StorageOperation::Set, value);
+}
+
+void DataLayer::reset(const DataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::reset():",
+        #endif
+        handle, StorageOperation::Reset);
+}
+
+void DataLayer::reset(const LayerDataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::reset():",
+        #endif
+        handle, StorageOperation::Reset);
+}
+
+void DataLayer::toggle(const DataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::toggle():",
+        #endif
+        handle, StorageOperation::Toggle);
+}
+
+void DataLayer::toggle(const LayerDataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::toggle():",
+        #endif
+        handle, StorageOperation::Toggle);
+}
+
+void DataLayer::increment(const DataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::increment():",
+        #endif
+        handle, StorageOperation::Increment);
+}
+
+void DataLayer::increment(const LayerDataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::increment():",
+        #endif
+        handle, StorageOperation::Increment);
+}
+
+void DataLayer::decrement(const DataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::decrement():",
+        #endif
+        handle, StorageOperation::Decrement);
+}
+
+void DataLayer::decrement(const LayerDataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::decrement():",
+        #endif
+        handle, StorageOperation::Decrement);
+}
+
+void DataLayer::setToMin(const DataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::setToMin():",
+        #endif
+        handle, StorageOperation::Min);
+}
+
+void DataLayer::setToMin(const LayerDataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::setToMin():",
+        #endif
+        handle, StorageOperation::Min);
+}
+
+void DataLayer::setToMax(const DataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::setToMax():",
+        #endif
+        handle, StorageOperation::Max);
+}
+
+void DataLayer::setToMax(const LayerDataHandle handle) {
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::DataLayer::setToMax():",
+        #endif
+        handle, StorageOperation::Max);
+}
+
+void DataLayer::updateInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const DataHandle handle, const StorageOperation operation)
+{
+    CORRADE_ASSERT(isHandleValid(handle),
+        messagePrefix << "invalid handle" << handle, );
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        messagePrefix,
+        #endif
+        dataHandleData(handle), operation, nullptr);
+}
+
+void DataLayer::updateInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const LayerDataHandle handle, const StorageOperation operation)
+{
+    CORRADE_ASSERT(isHandleValid(handle),
+        messagePrefix << "invalid handle" << handle, );
+    updateInternal(
+        #ifndef CORRADE_NO_ASSERT
+        messagePrefix,
+        #endif
+        handle, operation, nullptr);
+}
+
+StorageUpdateState DataLayer::updateInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const LayerDataHandle handle, StorageOperation operation, const void* const value)
+{
+    const State& state = *_state;
+    const Data& data = state.data[layerDataHandleId(handle)];
+    /* In case of StorageOperation::Min / Max, only the queries could be
+       supported, so check also for mutability. All other operations are not
+       allowed to be specified if the StorageQuery is constructed without an
+       updater, so for Set, Reset etc. this check wouldn't be needed. */
+    CORRADE_ASSERT(data.updater,
+        messagePrefix << "data binding is immutable", {});
+    CORRADE_ASSERT(data.operations >= operation,
+        messagePrefix << operation << "not supported", {});
+    const UnsignedInt storageId = extractStorageId(data.storageIdDirty);
+    const StorageData& storage = state.storages[storageId];
+    const StorageUpdateState updateState = data.updater(*this, dataLayerStorageHandle(storageId, state.storages[storageId].used.generation), delinearizeIndex(storage.used.size, data.linearizedIndex), operation, value);
+    /* All operations except Set are expected to return only Success */
+    CORRADE_ASSERT(operation == StorageOperation::Set || updateState == StorageUpdateState::Success,
+        messagePrefix << "updater implementation expected to return" << StorageUpdateState::Success << "for" << operation << "but got" << updateState, {});
+    return updateState;
 }
 
 LayerFeatures DataLayer::doFeatures() const {

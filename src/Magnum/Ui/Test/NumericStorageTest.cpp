@@ -1025,10 +1025,10 @@ template<class T> void NumericStorageTest::constructNonOwned3D() {
        variant doesn't have an updater set. */
     StorageQuery<typename decltype(storage1)::Type> query1 = storage1[{0, 0, 0}];
     StorageQuery<typename decltype(storage2)::Type> query2 = storage2[{0, 0, 0}];
+    CORRADE_VERIFY(query1.isMutable());
+    CORRADE_VERIFY(!query2.isMutable());
     CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), StorageOperation::Min|StorageOperation::Max);
-    CORRADE_VERIFY(query1.updater());
-    CORRADE_VERIFY(!query2.updater());
 
     /* The data should be the same views as passed to the constructor */
     Containers::StridedArrayView3D<const T> view1 = storage1.data();
@@ -1098,10 +1098,10 @@ template<class T> void NumericStorageTest::constructNonOwned2D() {
     /* Check just that the const variant doesn't have an updater set */
     StorageQuery<typename decltype(storage1)::Type> query1 = storage1[{0, 0}];
     StorageQuery<typename decltype(storage2)::Type> query2 = storage2[{0, 0}];
+    CORRADE_VERIFY(query1.isMutable());
+    CORRADE_VERIFY(!query2.isMutable());
     CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), StorageOperation::Min|StorageOperation::Max);
-    CORRADE_VERIFY(query1.updater());
-    CORRADE_VERIFY(!query2.updater());
 
     /* The data should be the same views as passed to the constructor, expanded
        to 3D */
@@ -1172,10 +1172,10 @@ template<class T> void NumericStorageTest::constructNonOwned1D() {
     /* Check just that the const variant doesn't have an updater set */
     StorageQuery<typename decltype(storage1)::Type> query1 = storage1[0];
     StorageQuery<typename decltype(storage2)::Type> query2 = storage2[0];
+    CORRADE_VERIFY(query1.isMutable());
+    CORRADE_VERIFY(!query2.isMutable());
     CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), StorageOperation::Min|StorageOperation::Max);
-    CORRADE_VERIFY(query1.updater());
-    CORRADE_VERIFY(!query2.updater());
 
     /* The data should be the same views as passed to the constructor, expanded
        to 3D */
@@ -1235,10 +1235,10 @@ template<class T> void NumericStorageTest::constructNonOwned() {
     /* Check just that the const variant doesn't have an updater set */
     StorageQuery<typename decltype(storage1)::Type> query1 = storage1.value();
     StorageQuery<typename decltype(storage2)::Type> query2 = storage2.value();
+    CORRADE_VERIFY(query1.isMutable());
+    CORRADE_VERIFY(!query2.isMutable());
     CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), StorageOperation::Min|StorageOperation::Max);
-    CORRADE_VERIFY(query1.updater());
-    CORRADE_VERIFY(!query2.updater());
 
     /* The data should point to the value passed to the constructor, with
        trivial size and stride */
@@ -1271,7 +1271,7 @@ void NumericStorageTest::constructHandleRecycle() {
     CORRADE_COMPARE(first.range(), (Containers::Pair<UnsignedShort, UnsignedShort>{13457, 58776}));
     CORRADE_COMPARE(first.step(), 5556);
     /* The query should be immutable also */
-    CORRADE_VERIFY(!first[0].updater());
+    CORRADE_VERIFY(!first[0].isMutable());
 
     /* Remove and create a new storage in the same slot. All properties should
        be reset back to defaults. */
@@ -1282,7 +1282,7 @@ void NumericStorageTest::constructHandleRecycle() {
     CORRADE_COMPARE(second.range(), (Containers::Pair<UnsignedShort, UnsignedShort>{0, 65535}));
     CORRADE_COMPARE(second.step(), 1);
     /* The internal immutable flag should also be reset */
-    CORRADE_VERIFY(second.value().updater());
+    CORRADE_VERIFY(second.value().isMutable());
 }
 
 void NumericStorageTest::access3D() {
@@ -1343,8 +1343,8 @@ void NumericStorageTest::access3D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{3, 4, 1}));
+    CORRADE_VERIFY(query.isMutable());
     CORRADE_COMPARE(query.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
-    CORRADE_VERIFY(query.updater());
     CORRADE_COMPARE(query, 77);
 
     Int called = 0;
@@ -1396,8 +1396,8 @@ void NumericStorageTest::access2D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 3, 4}));
+    CORRADE_VERIFY(query.isMutable());
     CORRADE_COMPARE(query.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
-    CORRADE_VERIFY(query.updater());
     CORRADE_COMPARE(query, 26);
 
     Int called = 0;
@@ -1441,8 +1441,8 @@ void NumericStorageTest::access1D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 0, 4}));
+    CORRADE_VERIFY(query.isMutable());
     CORRADE_COMPARE(query.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
-    CORRADE_VERIFY(query.updater());
     CORRADE_COMPARE(query, 5);
 
     Int called = 0;
@@ -1483,10 +1483,10 @@ void NumericStorageTest::access() {
     CORRADE_COMPARE(query2.storage(), storage.handle());
     CORRADE_COMPARE(query1.index(), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE(query2.index(), (Containers::Size3D{0, 0, 0}));
+    CORRADE_VERIFY(query1.isMutable());
+    CORRADE_VERIFY(query2.isMutable());
     CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
-    CORRADE_VERIFY(query1.updater());
-    CORRADE_VERIFY(query2.updater());
     CORRADE_COMPARE(query1, 1337);
     CORRADE_COMPARE(query2, 1337);
 
@@ -1536,10 +1536,10 @@ void NumericStorageTest::accessNonOwned3D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{1, 2, 1}));
+    CORRADE_COMPARE(query.isMutable(), !data.immutable);
     CORRADE_COMPARE(query.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
         StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
-    CORRADE_COMPARE(query.updater(), !data.immutable);
     CORRADE_COMPARE(query, -17654321);
 
     Int called = 0;
@@ -1590,10 +1590,10 @@ void NumericStorageTest::accessNonOwned2D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 1, 2}));
+    CORRADE_COMPARE(query.isMutable(), !data.immutable);
     CORRADE_COMPARE(query.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
         StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
-    CORRADE_COMPARE(query.updater(), !data.immutable);
     CORRADE_COMPARE(query, -17654);
 
     Int called = 0;
@@ -1639,10 +1639,10 @@ void NumericStorageTest::accessNonOwned1D() {
     CORRADE_COMPARE(&query.layer(), &layer);
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 0, 4}));
+    CORRADE_COMPARE(query.isMutable(), !data.immutable);
     CORRADE_COMPARE(query.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
         StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
-    CORRADE_COMPARE(query.updater(), !data.immutable);
     CORRADE_COMPARE(query, -114);
 
     Int called = 0;
@@ -1687,14 +1687,14 @@ void NumericStorageTest::accessNonOwned() {
     CORRADE_COMPARE(query2.storage(), storage.handle());
     CORRADE_COMPARE(query1.index(), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE(query2.index(), (Containers::Size3D{0, 0, 0}));
+    CORRADE_COMPARE(query1.isMutable(), !data.immutable);
+    CORRADE_COMPARE(query2.isMutable(), !data.immutable);
     CORRADE_COMPARE(query1.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
         StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
         StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
-    CORRADE_COMPARE(query1.updater(), !data.immutable);
-    CORRADE_COMPARE(query2.updater(), !data.immutable);
     CORRADE_COMPARE(query1, -9876543210ll);
     CORRADE_COMPARE(query2, -9876543210ll);
 

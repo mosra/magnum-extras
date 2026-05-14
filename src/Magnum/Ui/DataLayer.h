@@ -303,7 +303,7 @@ CORRADE_ENUMSET_OPERATORS(StorageFlags)
 @m_since_latest_{extras}
 
 @see @ref StorageOperations, @ref StorageQuery::StorageQuery(),
-    @ref StorageQuery::operations(), @ref StorageQuery::updater()
+    @ref StorageQuery::operations(), @ref DataLayer::operations()
 */
 enum class StorageOperation: UnsignedShort {
     /**
@@ -384,7 +384,7 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StorageOperation value);
 @m_since_latest_{extras}
 
 @see @ref StorageQuery::StorageQuery(), @ref StorageQuery::operations(),
-    @ref StorageQuery::updater()
+    @ref DataLayer::operations()
 */
 typedef Containers::EnumSet<StorageOperation> StorageOperations;
 
@@ -400,7 +400,8 @@ CORRADE_ENUMSET_OPERATORS(StorageOperations)
 @brief Storage update state
 @m_since_latest_{extras}
 
-@see @ref StorageQuery::updater(), @ref StorageQuery::set()
+@see @ref StorageQuery::StorageQuery(), @ref StorageQuery::set(),
+    @ref DataLayer::set()
 */
 enum class StorageUpdateState: UnsignedByte {
     /**
@@ -1311,6 +1312,246 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         void setIndex(LayerDataHandle handle, const Containers::Size3D& index);
 
+        /**
+         * @brief Whether given data binding is mutable
+         *
+         * Expects that @p handle is valid. Mutable queries allow
+         * @ref set(), @ref reset(), @ref toggle(), @ref increment(),
+         * @ref decrement(), @ref setToMin() and @ref setToMax() to be called
+         * based on which @ref operations() are available. Immutable queries
+         * allow only getting the current value through @ref onUpdate(),
+         * potentially along with min / max if @ref operations() expose them.
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref storage(DataHandle) const, @ref StorageQuery::isMutable()
+         */
+        bool isMutable(DataHandle handle) const;
+
+        /**
+         * @brief Whether given data binding is mutable assuming it belongs to this layer
+         *
+         * Like @ref isMutable(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        bool isMutable(LayerDataHandle handle) const;
+
+        /**
+         * @brief Available data binding operations
+         *
+         * Expects that @p handle is valid.
+         * @see @ref isMutable(), @ref set(), @ref reset(), @ref toggle(),
+         *      @ref increment(), @ref decrement(), @ref setToMin(),
+         *      @ref setToMax(), @ref StorageQuery::operations()
+         */
+        StorageOperations operations(DataHandle handle) const;
+
+        /**
+         * @brief Available data binding operations assuming it belongs to this layer
+         *
+         * Like @ref operations(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        StorageOperations operations(LayerDataHandle handle) const;
+
+        /**
+         * @brief Update the storage value for given data binding
+         *
+         * Expects that @p handle is valid, mutable and @ref operations() list
+         * @ref StorageOperation::Set. It's the user responsibility to ensure
+         * that @p T matches the @ref StorageQuery type that was passed to
+         * @ref onUpdate() the @p handle is coming from.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
+         * actually changed.
+         * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
+         *      @ref operations(), @ref reset(), @ref toggle(),
+         *      @ref isStorageDirty(), @ref StorageQuery::set()
+         */
+        template<class T> StorageUpdateState set(DataHandle handle, const T& value) {
+            return setInternal(handle, &value);
+        }
+
+        /**
+         * @brief Update the storage value for given data binding assuming it belongs to this layer
+         *
+         * Like @ref set(DataHandle, const T&) but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        template<class T> StorageUpdateState set(LayerDataHandle handle, const T& value) {
+            return setInternal(handle, &value);
+        }
+
+        /**
+         * @brief Reset the storage value for given data binding
+         *
+         * Expects that @p handle is valid, mutable and @ref operations() list
+         * @ref StorageOperation::Reset.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
+         * actually changed.
+         * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
+         *      @ref set(), @ref toggle(), @ref isStorageDirty(),
+         *      @ref StorageQuery::reset()
+         */
+        void reset(DataHandle handle);
+
+        /**
+         * @brief Reset the storage value for given data binding assuming it belongs to this layer
+         *
+         * Like @ref reset(DataHandle) but without checking that @p handle
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void reset(LayerDataHandle handle);
+
+        /**
+         * @brief Toggle the storage value for given data binding
+         *
+         * Expects that @p handle is valid, mutable and @ref operations() list
+         * @ref StorageOperation::Toggle.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
+         * actually changed.
+         * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
+         *      @ref set(), @ref reset(), @ref isStorageDirty(),
+         *      @ref StorageQuery::toggle()
+         */
+        void toggle(DataHandle handle);
+
+        /**
+         * @brief Toggle the storage value for given data binding assuming it belongs to this layer
+         *
+         * Like @ref toggle(DataHandle) but without checking that @p handle
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void toggle(LayerDataHandle handle);
+
+        /**
+         * @brief Increment the storage value for given data binding
+         *
+         * Expects that @p handle is valid, mutable and @ref operations() list
+         * @ref StorageOperation::Increment.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
+         * actually changed.
+         * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
+         *      @ref decrement(), @ref isStorageDirty(),
+         *      @ref StorageQuery::increment()
+         */
+        void increment(DataHandle handle);
+
+        /**
+         * @brief Increment the storage value for given data binding assuming it belongs to this layer
+         *
+         * Like @ref increment(DataHandle) but without checking that @p handle
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void increment(LayerDataHandle handle);
+
+        /**
+         * @brief Decrement the storage value for given data binding
+         *
+         * Expects that @p handle is valid, mutable and @ref operations() list
+         * @ref StorageOperation::Decrement.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
+         * actually changed.
+         * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
+         *      @ref increment(), @ref isStorageDirty(),
+         *      @ref StorageQuery::decrement()
+         */
+        void decrement(DataHandle handle);
+
+        /**
+         * @brief Decrement the storage value for given data binding assuming it belongs to this layer
+         *
+         * Like @ref decrement(DataHandle) but without checking that @p handle
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void decrement(LayerDataHandle handle);
+
+        /**
+         * @brief Set the storage value to a minimum for given data binding
+         *
+         * Expects that @p handle is valid, mutable and @ref operations() list
+         * @ref StorageOperation::Min. Note that unlike with
+         * @ref StorageQuery::min() there's no way to query the minimum allowed
+         * value from the @ref DataLayer --- instead use @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(T value, T min, T max)>&&, NodeHandle)
+         * to have the min and max value passed to the data binding on update.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if
+         * appropriate.
+         * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
+         *      @ref setToMax(), @ref isStorageDirty(),
+         *      @ref StorageQuery::setToMin()
+         */
+        void setToMin(DataHandle handle);
+
+        /**
+         * @brief Set the storage value to a minimum for given data binding assuming it belongs to this layer
+         *
+         * Like @ref setToMin(DataHandle) but without checking that @p handle
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void setToMin(LayerDataHandle handle);
+
+        /**
+         * @brief Set the storage value to a maximum for given data binding
+         *
+         * Expects that @p handle is valid, mutable and @ref operations() list
+         * @ref StorageOperation::Max. Note that unlike with
+         * @ref StorageQuery::max() there's no way to query the maximum allowed
+         * value from the @ref DataLayer --- instead use @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(T value, T min, T max)>&&, NodeHandle)
+         * to have the min and max value passed to the data binding on update.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if
+         * appropriate.
+         * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
+         *      @ref setToMin(), @ref isStorageDirty(),
+         *      @ref StorageQuery::setToMax()
+         */
+        void setToMax(DataHandle handle);
+
+        /**
+         * @brief Set the storage value to a maximum for given data binding assuming it belongs to this layer
+         *
+         * Like @ref setToMax(DataHandle) but without checking that @p handle
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void setToMax(LayerDataHandle handle);
+
     private:
         friend AbstractStorage;
 
@@ -1338,6 +1579,24 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, std::size_t index);
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, const Containers::Size2D& index);
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, const Containers::Size3D& index);
+        StorageUpdateState setInternal(DataHandle handle, const void* value);
+        StorageUpdateState setInternal(LayerDataHandle handle, const void* value);
+        MAGNUM_UI_LOCAL void updateInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            DataHandle handle, StorageOperation operation);
+        MAGNUM_UI_LOCAL void updateInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            LayerDataHandle handle, StorageOperation operation);
+        /* Called from both setInternal() and updateInternal() above */
+        MAGNUM_UI_LOCAL StorageUpdateState updateInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            LayerDataHandle handle, StorageOperation operation, const void* value);
 
         MAGNUM_UI_LOCAL LayerFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL void doClean(Containers::BitArrayView dataIdsToRemove) override;
@@ -1686,49 +1945,40 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
         Containers::Size3D index() const { return _index; }
 
         /**
-         * @brief Available storage operations
+         * @brief Whether the query is mutable
          *
-         * @see @ref updater(), @ref StorageQuery::set(), @ref reset(),
-         *      @ref toggle(), @ref increment(), @ref decrement(),
-         *      @ref StorageQuery::min(), @ref setToMin(),
-         *      @ref StorageQuery::max(), @ref setToMax()
+         * Mutable queries allow @ref StorageQuery::set(), @ref reset(),
+         * @ref toggle(), @ref increment(), @ref decrement(), @ref setToMin()
+         * and @ref setToMax() to be called based on which @ref operations()
+         * are available. Immutable queries allow only getting the current
+         * value, potentially along with @ref StorageQuery::min() and
+         * @ref StorageQuery::max() if @ref operations() expose them.
          */
-        StorageOperations operations() const { return _operations; }
+        bool isMutable() const { return _updater; }
 
         /**
-         * @brief Updater implementation
+         * @brief Available storage operations
          *
-         * The returned function can be used in various event callbacks to have
-         * changes reflected back to the storage. If the function is
-         * @cpp nullptr @ce, no updating is possible, likely because the
-         * storage is immutable.
-         *
-         * If the function doesn't return @cpp nullptr @ce, the set of
-         * operations supported by the implementation is exposed via
-         * @ref operations(). If @ref operations() return an empty set, no
-         * updater is available, and the pointer returned by this function may
-         * likely also be @cpp nullptr @ce.
-         *
-         * When called, the updater updates @p storage at @p index, marking the
-         * storage as dirty as appropriate. Implementations commonly expect
-         * @p value to be not @cpp nullptr @ce when @p operation is
-         * @ref StorageOperation::Set, it can be null in other cases. See
-         * documentation of a particular storage implementation for details.
+         * @see @ref isMutable(), @ref StorageQuery::set(), @ref reset(),
+         *      @ref toggle(), @ref increment(), @ref decrement(),
+         *      @ref StorageQuery::min(), @ref setToMin(),
+         *      @ref StorageQuery::max(), @ref setToMax(),
+         *      @ref DataLayer::operations()
          */
-        auto updater() const -> StorageUpdateState(*)(DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, StorageOperation operation, const void* value) {
-            return _updater;
-        }
+        StorageOperations operations() const { return _operations; }
 
         /**
          * @brief Reset the storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Reset. Internally
-         * calls @ref updater() with @ref layer(), @ref storage(),
-         * @ref index(), @ref StorageOperation::Reset and a @cpp nullptr @ce
-         * value pointer. See documentation of @ref updater() for more
-         * information.
-         * @see @ref StorageQuery::set(), @ref toggle()
+         * @ref operations() list @ref StorageOperation::Reset.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
+         * stored value actually changed.
+         * @see @ref StorageQuery::set(), @ref toggle(),
+         *      @ref DataLayer::isStorageDirty(),
+         *      @ref DataLayer::reset(DataHandle)
          */
         void reset() const;
 
@@ -1736,12 +1986,14 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * @brief Toggle the storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Toggle. Internally
-         * calls @ref updater() with @ref layer(), @ref storage(),
-         * @ref index(), @ref StorageOperation::Toggle and a @cpp nullptr @ce
-         * value pointer. See documentation of @ref updater() for more
-         * information.
-         * @see @ref StorageQuery::set(), @ref reset()
+         * @ref operations() list @ref StorageOperation::Toggle.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
+         * stored value actually changed.
+         * @see @ref StorageQuery::set(), @ref reset(),
+         *      @ref DataLayer::isStorageDirty(),
+         *      @ref DataLayer::toggle(DataHandle)
          */
         void toggle() const;
 
@@ -1749,12 +2001,13 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * @brief Increment the storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Increment. Internally
-         * calls @ref updater() with @ref layer(), @ref storage(),
-         * @ref index(), @ref StorageOperation::Increment and a
-         * @cpp nullptr @ce value pointer. See documentation of @ref updater()
-         * for more information.
-         * @see @ref decrement()
+         * @ref operations() list @ref StorageOperation::Increment.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
+         * stored value actually changed.
+         * @see @ref decrement(), @ref DataLayer::isStorageDirty(),
+         *      @ref DataLayer::increment(DataHandle)
          */
         void increment() const;
 
@@ -1762,12 +2015,13 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * @brief Decrement the storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Decrement. Internally
-         * calls @ref updater() with @ref layer(), @ref storage(),
-         * @ref index(), @ref StorageOperation::Decrement and a
-         * @cpp nullptr @ce value pointer. See documentation of @ref updater()
-         * for more information.
-         * @see @ref increment()
+         * @ref operations() list @ref StorageOperation::Decrement.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
+         * stored value actually changed.
+         * @see @ref increment(), @ref DataLayer::isStorageDirty(),
+         *      @ref DataLayer::decrement(DataHandle)
          */
         void decrement() const;
 
@@ -1775,11 +2029,14 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * @brief Set the storage value to a minimum
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Min. Internally calls
-         * @ref updater() with @ref layer(), @ref storage(), @ref index(),
-         * @ref StorageOperation::Min and a @cpp nullptr @ce value pointer. See
-         * documentation of @ref updater() for more information.
-         * @see @ref StorageQuery::min(), @ref setToMax()
+         * @ref operations() list @ref StorageOperation::Min.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
+         * stored value actually changed.
+         * @see @ref StorageQuery::min(), @ref setToMax(),
+         *      @ref DataLayer::isStorageDirty(),
+         *      @ref DataLayer::setToMin(DataHandle)
          */
         void setToMin() const;
 
@@ -1787,11 +2044,14 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * @brief Set the storage value to a maximum
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Max. Internally calls
-         * @ref updater() with @ref layer(), @ref storage(), @ref index(),
-         * @ref StorageOperation::Max and a @cpp nullptr @ce value pointer. See
-         * documentation of @ref updater() for more information.
-         * @see @ref StorageQuery::max(), @ref setToMin()
+         * @ref operations() list @ref StorageOperation::Max.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
+         * stored value actually changed.
+         * @see @ref StorageQuery::max(), @ref setToMin(),
+         *      @ref DataLayer::isStorageDirty(),
+         *      @ref DataLayer::setToMax(DataHandle)
          */
         void setToMax() const;
 
@@ -2018,22 +2278,6 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
         );
 
         /**
-         * @brief Query implementation
-         *
-         * The returned function can be used to directly query the storage
-         * values. If @ref operations() contain @ref StorageOperation::Min or
-         * @relativeref{StorageOperation,Max}, passing these as the
-         * @p operation argument will return the minimum or maximum allowed
-         * value, otherwise the query returns the currently stored value.
-         *
-         * Unlike @ref updater(), the function is guaranteed to never be
-         * @cpp nullptr @ce.
-         */
-        auto query() const -> T(*)(DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, StorageOperation operation) {
-            return _query;
-        }
-
-        /**
          * @brief Storage value
          *
          * Returns value of given @ref storage() at @ref index(). Expects that
@@ -2047,12 +2291,14 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @brief Update the storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Set. Internally calls
-         * @ref updater() with @ref layer(), @ref storage(), @ref index(),
-         * @ref StorageOperation::Set and a pointer to @p value, and propagates
-         * its return value. See documentation of @ref updater() and
-         * @ref StorageUpdateState for more information.
-         * @see @ref reset(), @ref toggle()
+         * @ref operations() list @ref StorageOperation::Set. The return value
+         * describes whether the update succeeded.
+         *
+         * Calling this function causes the storage to get marked as dirty and
+         * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if
+         * the stored value actually changed.
+         * @see @ref reset(), @ref toggle(),
+         *      @ref DataLayer::set(DataHandle, const T&)
          */
         StorageUpdateState set(const T& value) const {
             return setInternal(&value);
@@ -2062,10 +2308,7 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @brief Minimum allowed storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Min. Internally calls
-         * @ref query() with @ref layer(), @ref storage(), @ref index() and
-         * @ref StorageOperation::Min. See documentation of @ref query() for
-         * more information.
+         * @ref operations() list @ref StorageOperation::Min.
          * @see @ref setToMin(), @ref max()
          */
         T min() const;
@@ -2074,10 +2317,7 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @brief Maximum allowed storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Max. Internally calls
-         * @ref query() with @ref layer(), @ref storage(), @ref index() and
-         * @ref StorageOperation::Max. See documentation of @ref query() for
-         * more information.
+         * @ref operations() list @ref StorageOperation::Max.
          * @see @ref setToMax(), @ref min()
          */
         T max() const;
