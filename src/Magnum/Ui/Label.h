@@ -396,7 +396,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         }
 
         /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
-        explicit Label(NoCreateT): Widget{NoCreate}, _style{}, _icon{}, _data{}, _dataBindingData{}, _layoutData{} {}
+        explicit Label(NoCreateT): Widget{NoCreate}, _style{}, _icon{}, _textData{}, _dataBindingData{}, _layoutData{} {}
 
         /**
          * @brief Whether the label has a data binding
@@ -485,7 +485,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * Exposed mainly for testing purposes, not meant to be modified
          * directly.
          */
-        DataHandle data() const;
+        DataHandle textData() const;
 
         /**
          * @brief Layout data
@@ -516,7 +516,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         LabelStyle _style;
         /* 2 bytes free (_style fits into padding of Widget) */
         Icon _icon;
-        LayerDataHandle _data;
+        LayerDataHandle _textData;
         /* Unlike with other data, here the layer can be arbitrary, so storing
            a full handle */
         DataHandle _dataBindingData;

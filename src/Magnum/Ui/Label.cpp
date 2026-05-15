@@ -130,7 +130,7 @@ LayoutStyle layoutStyle(const LabelStyle style) {
 Label::Label(const Anchor anchor, const Icon icon, const LabelStyle style): Widget{anchor}, _style{style}, _icon{icon} {
     _layoutData = dataHandleData(ui().layoutLayer().create(layoutStyle(style), node()));
 
-    _data = icon == Icon::None ? LayerDataHandle::Null :
+    _textData = icon == Icon::None ? LayerDataHandle::Null :
         dataHandleData(ui().textLayer().createGlyph(textStyleIcon(style), icon, {}, node()));
 
     /* No data binding in this case */
@@ -140,7 +140,7 @@ Label::Label(const Anchor anchor, const Icon icon, const LabelStyle style): Widg
 Label::Label(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style): Widget{anchor}, _style{style}, _icon{Icon::None} {
     _layoutData = dataHandleData(ui().layoutLayer().create(layoutStyle(style), node()));
 
-    _data = !text ? LayerDataHandle::Null :
+    _textData = !text ? LayerDataHandle::Null :
         dataHandleData(ui().textLayer().create(textStyleText(style), text, textProperties, node()));
 
     /* No data binding in this case */
@@ -156,15 +156,15 @@ template<class T, class Formatter> Label::Label(std::nullptr_t, const Anchor anc
 
     _layoutData = dataHandleData(ui().layoutLayer().create(layoutStyle(style), node()));
 
-    _data = dataHandleData(ui().textLayer().create(textStyleText(style), {}, {}, node()));
+    _textData = dataHandleData(ui().textLayer().create(textStyleText(style), {}, {}, node()));
     {
         /** @todo clean this up once I can use C++14 named captures */
         TextLayer& textLayer = ui().textLayer();
-        const LayerDataHandle data = _data;
+        const LayerDataHandle textData = _textData;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = query.layer().onUpdate(query, [&textLayer, data, formatter](const T value) {
-            formatter(textLayer, data, value);
+        _dataBindingData = query.layer().onUpdate(query, [&textLayer, textData, formatter](const T value) {
+            formatter(textLayer, textData, value);
         }, node());
     }
 }
@@ -208,15 +208,15 @@ Label::Label(const Anchor anchor, const StorageQuery<Containers::StringView>& qu
 
     _layoutData = dataHandleData(ui().layoutLayer().create(layoutStyle(style), node()));
 
-    _data = dataHandleData(ui().textLayer().create(textStyleText(style), {}, {}, node()));
+    _textData = dataHandleData(ui().textLayer().create(textStyleText(style), {}, {}, node()));
     {
         /** @todo clean this up once I can use C++14 named captures */
         TextLayer& textLayer = ui().textLayer();
-        const LayerDataHandle data = _data;
+        const LayerDataHandle textData = _textData;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = query.layer().onUpdate(query, [&textLayer, data](const Containers::StringView value) {
-            textLayer.setText(data, value, {});
+        _dataBindingData = query.layer().onUpdate(query, [&textLayer, textData](const Containers::StringView value) {
+            textLayer.setText(textData, value, {});
         }, node());
     }
 }
@@ -228,15 +228,15 @@ Label::Label(const Anchor anchor, const StorageQuery<Icon>& query, const LabelSt
 
     _layoutData = dataHandleData(ui().layoutLayer().create(layoutStyle(style), node()));
 
-    _data = dataHandleData(ui().textLayer().createGlyph(textStyleIcon(style), 0, {}, node()));
+    _textData = dataHandleData(ui().textLayer().createGlyph(textStyleIcon(style), 0, {}, node()));
     {
         /** @todo clean this up once I can use C++14 named captures */
         TextLayer& textLayer = ui().textLayer();
-        const LayerDataHandle data = _data;
+        const LayerDataHandle textData = _textData;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = query.layer().onUpdate(query, [&textLayer, data](const Icon value) {
-            textLayer.setGlyph(data, value, {});
+        _dataBindingData = query.layer().onUpdate(query, [&textLayer, textData](const Icon value) {
+            textLayer.setGlyph(textData, value, {});
         }, node());
     }
 }
@@ -264,8 +264,8 @@ Label& Label::setStyle(const LabelStyle style, const Nanoseconds time) {
 template<class ...Args> Label& Label::setStyleInternal(const LabelStyle style, Args... args) {
     _style = style;
     ui().layoutLayer().setStyle(_layoutData, layoutStyle(style));
-    if(_data != LayerDataHandle::Null)
-        ui().textLayer().transitionStyle(_data, (_icon == Icon::None ? textStyleText : textStyleIcon)(style), args...);
+    if(_textData != LayerDataHandle::Null)
+        ui().textLayer().transitionStyle(_textData, (_icon == Icon::None ? textStyleText : textStyleIcon)(style), args...);
     return *this;
 }
 
@@ -277,12 +277,12 @@ Label& Label::setIcon(const Icon icon) {
 
     _icon = icon;
     if(icon != Icon::None) {
-        if(_data == LayerDataHandle::Null)
-            _data = dataHandleData(textLayer.createGlyph(textStyleIcon(_style), icon, {}, node()));
-        else textLayer.setGlyph(_data, icon, {});
-    } else if(_data != LayerDataHandle::Null) {
-        textLayer.remove(_data);
-        _data = LayerDataHandle::Null;
+        if(_textData == LayerDataHandle::Null)
+            _textData = dataHandleData(textLayer.createGlyph(textStyleIcon(_style), icon, {}, node()));
+        else textLayer.setGlyph(_textData, icon, {});
+    } else if(_textData != LayerDataHandle::Null) {
+        textLayer.remove(_textData);
+        _textData = LayerDataHandle::Null;
     }
 
     return *this;
@@ -296,13 +296,13 @@ Label& Label::setText(const Containers::StringView text, const TextProperties& t
 
     _icon = Icon::None;
     if(text) {
-        if(_data == LayerDataHandle::Null)
-            _data = dataHandleData(textLayer.create(textStyleText(_style), text, textProperties, node()));
+        if(_textData == LayerDataHandle::Null)
+            _textData = dataHandleData(textLayer.create(textStyleText(_style), text, textProperties, node()));
         else
-            textLayer.setText(_data, text, textProperties);
-    } else if(_data != LayerDataHandle::Null) {
-        textLayer.remove(_data);
-        _data = LayerDataHandle::Null;
+            textLayer.setText(_textData, text, textProperties);
+    } else if(_textData != LayerDataHandle::Null) {
+        textLayer.remove(_textData);
+        _textData = LayerDataHandle::Null;
     }
 
     return *this;
@@ -312,10 +312,10 @@ Label& Label::setText(const Containers::StringView text) {
     return setText(text, {});
 }
 
-DataHandle Label::data() const {
+DataHandle Label::textData() const {
     /* The data is implicitly from the text layer */
-    return _data == LayerDataHandle::Null ? DataHandle::Null :
-        dataHandle(ui().textLayer(), _data);
+    return _textData == LayerDataHandle::Null ? DataHandle::Null :
+        dataHandle(ui().textLayer(), _textData);
 }
 
 DataHandle Label::layoutData() const {

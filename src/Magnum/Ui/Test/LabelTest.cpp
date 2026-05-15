@@ -260,8 +260,8 @@ void LabelTest::constructEmpty() {
     CORRADE_COMPARE(label2.style(), LabelStyle::Success);
     CORRADE_COMPARE(label1.icon(), Icon::None);
     CORRADE_COMPARE(label2.icon(), Icon::None);
-    CORRADE_COMPARE(label1.data(), DataHandle::Null);
-    CORRADE_COMPARE(label2.data(), DataHandle::Null);
+    CORRADE_COMPARE(label1.textData(), DataHandle::Null);
+    CORRADE_COMPARE(label2.textData(), DataHandle::Null);
     CORRADE_VERIFY(ui.isHandleValid(label1.layoutData()));
     CORRADE_VERIFY(ui.isHandleValid(label2.layoutData()));
     CORRADE_COMPARE(label1.dataBindingData(), DataHandle::Null);
@@ -298,10 +298,10 @@ void LabelTest::constructIcon() {
     CORRADE_COMPARE(label.style(), LabelStyle::Warning);
     CORRADE_COMPARE(label.icon(), Icon::Yes);
 
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
     CORRADE_COMPARE(label.dataBindingData(), DataHandle::Null);
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 1);
 }
 
 void LabelTest::constructIconNonOwned() {
@@ -345,10 +345,10 @@ void LabelTest::constructText() {
     CORRADE_COMPARE(label.style(), LabelStyle::Danger);
     CORRADE_COMPARE(label.icon(), Icon::None);
 
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
     CORRADE_COMPARE(label.dataBindingData(), DataHandle::Null);
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 6);
 }
 
 void LabelTest::constructTextNonOwned() {
@@ -362,7 +362,7 @@ void LabelTest::constructTextNonOwned() {
     CORRADE_VERIFY(!label.isOwned());
 
     CORRADE_COMPARE(label.style(), LabelStyle::Danger);
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 6);
 }
 
 void LabelTest::constructTextStateless() {
@@ -396,11 +396,11 @@ void LabelTest::constructTextTextProperties() {
     CORRADE_COMPARE(label.style(), LabelStyle::Info);
     CORRADE_COMPARE(label.icon(), Icon::None);
 
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
     CORRADE_COMPARE(label.dataBindingData(), DataHandle::Null);
     /* Multiplied by 6 because of the Braille script */
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 6*6);
 }
 
 void LabelTest::constructTextTextPropertiesNonOwned() {
@@ -414,7 +414,7 @@ void LabelTest::constructTextTextPropertiesNonOwned() {
 
     CORRADE_COMPARE(label.style(), LabelStyle::Info);
     /* Multiplied by 6 because of the Braille script */
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 6*6);
 }
 
 void LabelTest::constructTextTextPropertiesStateless() {
@@ -488,12 +488,12 @@ template<class T> void LabelTest::constructStorageQuery() {
     CORRADE_COMPARE(label.style(), LabelStyle::Danger);
     CORRADE_COMPARE(label.icon(), Icon::None);
 
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
     CORRADE_VERIFY(ui.isHandleValid(label.dataBindingData()));
     /* Initially there's nothing set. In case of an icon, there's a single
        empty glyph. */
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()),
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()),
         StorageQueryTraits<T>::expected() ? 0 : 1);
     /* The data binding should be attached to the label so it cleans up
        properly */
@@ -501,16 +501,16 @@ template<class T> void LabelTest::constructStorageQuery() {
 
     /* Mark the text data as editable so we can subsequently query the contents
        set by the DataLayer */
-    ui.textLayer().setText(label.data(), "nothing here!", {}, TextDataFlag::Editable);
-    CORRADE_COMPARE(ui.textLayer().text(label.data()), "nothing here!");
+    ui.textLayer().setText(label.textData(), "nothing here!", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(ui.textLayer().text(label.textData()), "nothing here!");
 
     /* The contents are set during the first update. In case of an icon,
        there's no text, just a single glyph set instead. */
     ui.update();
     if(const char* expected = StorageQueryTraits<T>::expected())
-        CORRADE_COMPARE(ui.textLayer().text(label.data()), expected);
+        CORRADE_COMPARE(ui.textLayer().text(label.textData()), expected);
     else
-        CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+        CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 1);
     /* The icon getter on the instance isn't / cannot be updated by the data
        binding */
     CORRADE_COMPARE(label.icon(), Icon::None);
@@ -539,7 +539,7 @@ template<class T> void LabelTest::constructStorageQueryNonOwned() {
 
     /* The contents are set during the first update */
     ui.update();
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), StorageQueryTraits<T>::expected() ?
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), StorageQueryTraits<T>::expected() ?
         Containers::StringView{StorageQueryTraits<T>::expected()}.size() : 1);
 }
 
@@ -596,24 +596,24 @@ template<class T, class Formatter> void LabelTest::constructStorageQueryFormatte
     CORRADE_COMPARE(label.style(), LabelStyle::Warning);
     CORRADE_COMPARE(label.icon(), Icon::None);
 
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
     CORRADE_VERIFY(ui.isHandleValid(label.dataBindingData()));
     /* Initially there's nothing set */
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 0);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 0);
     /* The data binding should be attached to the label so it cleans up
        properly */
     CORRADE_COMPARE((data.customDataLayer ? *customDataLayer : ui.dataLayer()).node(label.dataBindingData()), label.node());
 
     /* Mark the text data as editable so we can subsequently query the contents
     set by the DataLayer */
-    ui.textLayer().setText(label.data(), "nothing here!", {}, TextDataFlag::Editable);
-    CORRADE_COMPARE(ui.textLayer().text(label.data()), "nothing here!");
+    ui.textLayer().setText(label.textData(), "nothing here!", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(ui.textLayer().text(label.textData()), "nothing here!");
 
     /* The contents are set during the first update. In case of an icon,
        there's no text, just a single glyph set instead. */
     ui.update();
-    CORRADE_COMPARE(ui.textLayer().text(label.data()), FormatterTraits<Formatter>::expected());
+    CORRADE_COMPARE(ui.textLayer().text(label.textData()), FormatterTraits<Formatter>::expected());
 }
 
 template<class T, class Formatter> void LabelTest::constructStorageQueryFormatterNonOwned() {
@@ -641,7 +641,7 @@ template<class T, class Formatter> void LabelTest::constructStorageQueryFormatte
 
     /* The contents are set during the first update */
     ui.update();
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), Containers::StringView{FormatterTraits<Formatter>::expected()}.size());
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), Containers::StringView{FormatterTraits<Formatter>::expected()}.size());
 }
 
 template<class T, class Formatter> void LabelTest::constructStorageQueryFormatterStateless() {
@@ -677,7 +677,7 @@ void LabelTest::constructNoCreate() {
     Label label{NoCreate};
     CORRADE_VERIFY(!label.hasDataBinding());
     CORRADE_COMPARE(label.node(), NodeHandle::Null);
-    CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(label.textData(), DataHandle::Null);
     CORRADE_COMPARE(label.layoutData(), DataHandle::Null);
     CORRADE_COMPARE(label.dataBindingData(), DataHandle::Null);
 }
@@ -694,8 +694,8 @@ void LabelTest::setStyle() {
     UnsignedInt previousLayoutStyle = ui.layoutLayer().style(label.layoutData());
     UnsignedInt previousStyle;
     if(data.text || data.icon != Icon::None)
-        previousStyle = ui.textLayer().style(label.data());
-    else CORRADE_COMPARE(label.data(), DataHandle::Null);
+        previousStyle = ui.textLayer().style(label.textData());
+    else CORRADE_COMPARE(label.textData(), DataHandle::Null);
 
     /* The style change should result in different text layer style being
        used. The time overload should behave exactly the same assuming no
@@ -707,10 +707,10 @@ void LabelTest::setStyle() {
         label.setStyle(data.changedStyle);
     CORRADE_COMPARE(label.style(), data.changedStyle);
     if(data.text || data.icon != Icon::None)
-        CORRADE_COMPARE_AS(ui.textLayer().style(label.data()),
+        CORRADE_COMPARE_AS(ui.textLayer().style(label.textData()),
             previousStyle,
             TestSuite::Compare::NotEqual);
-    else CORRADE_COMPARE(label.data(), DataHandle::Null);
+    else CORRADE_COMPARE(label.textData(), DataHandle::Null);
 
     /* ... and optionally layout layer style as well */
     if(data.expectLayoutStyleChange)
@@ -722,134 +722,134 @@ void LabelTest::setStyle() {
 void LabelTest::setIcon() {
     Label label{Anchor{root, {}, {16, 32}}, Icon::No, LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::No);
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 1);
 
     /* Clear the icon data to be able to verify that it gets updated */
-    ui.textLayer().setText(label.data(), "", {});
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 0);
+    ui.textLayer().setText(label.textData(), "", {});
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 0);
 
     label.setIcon(Icon::Yes);
     CORRADE_COMPARE(label.icon(), Icon::Yes);
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 1);
 }
 
 void LabelTest::setIconFromText() {
     Label label{Anchor{root, {}, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::None);
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
 
     /* It should reuse the same data instead of recreating */
-    DataHandle previousData = label.data();
+    DataHandle previousData = label.textData();
     label.setIcon(Icon::Yes);
     CORRADE_COMPARE(label.icon(), Icon::Yes);
-    CORRADE_COMPARE(label.data(), previousData);
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+    CORRADE_COMPARE(label.textData(), previousData);
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 1);
 }
 
 void LabelTest::setIconFromEmpty() {
     Label label{Anchor{root, {}, {16, 32}}, Icon::None, LabelStyle::Danger};
     CORRADE_COMPARE(label.icon(), Icon::None);
-    CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(label.textData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
 
     label.setIcon(Icon::Yes);
     CORRADE_COMPARE(label.icon(), Icon::Yes);
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 1);
 }
 
 void LabelTest::setIconEmpty() {
     Label label{Anchor{root, {}, {16, 32}}, Icon::No, LabelStyle::Primary};
     CORRADE_COMPARE(label.icon(), Icon::No);
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
     /* The original icon data should be removed */
     label.setIcon(Icon::None);
     CORRADE_COMPARE(label.icon(), Icon::None);
-    CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(label.textData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
 }
 
 void LabelTest::setIconEmptyFromText() {
     Label label{Anchor{root, {}, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::None);
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
     /* The original text data should be removed */
     label.setIcon(Icon::None);
     CORRADE_COMPARE(label.icon(), Icon::None);
-    CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(label.textData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
 }
 
 void LabelTest::setText() {
     Label label{Anchor{root, {}, {16, 32}}, "hello", LabelStyle::Default};
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 5);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 5);
 
     label.setText("wonderful!!");
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 11);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 11);
 }
 
 void LabelTest::setTextTextProperties() {
     Label label{Anchor{root, {}, {16, 32}}, "hello", LabelStyle::Default};
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 5);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 5);
 
     label.setText("wonderful!!",
         TextProperties{}.setScript(Text::Script::Braille));
     /* Multiplied by 6 because of the Braille script */
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 11*6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 11*6);
 }
 
 void LabelTest::setTextFromIcon() {
     Label label{Anchor{root, {}, {16, 32}}, Icon::No, LabelStyle::Default};
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
     /* It should reuse the same data instead of recreating */
-    DataHandle previousData = label.data();
+    DataHandle previousData = label.textData();
     label.setText("wonderful!!");
     CORRADE_COMPARE(label.icon(), Icon::None);
-    CORRADE_COMPARE(label.data(), previousData);
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 11);
+    CORRADE_COMPARE(label.textData(), previousData);
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 11);
 }
 
 void LabelTest::setTextFromEmpty() {
     Label label{Anchor{root, {}, {16, 32}}, ""};
-    CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(label.textData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
 
     label.setText("wonderful!!");
     CORRADE_COMPARE(label.icon(), Icon::None);
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
-    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 11);
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.textData()), 11);
 }
 
 void LabelTest::setTextEmpty() {
     Label label{Anchor{root, {}, {16, 32}}, "hello", LabelStyle::Default};
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
     /* The original text data should be removed */
     label.setText("");
     CORRADE_COMPARE(label.icon(), Icon::None);
-    CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(label.textData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
 }
 
 void LabelTest::setTextEmptyFromIcon() {
     Label label{Anchor{root, {}, {16, 32}}, Icon::No, LabelStyle::Info};
     CORRADE_COMPARE(label.icon(), Icon::No);
-    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.textData()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
     /* The original icon data should be removed */
     label.setText("");
     CORRADE_COMPARE(label.icon(), Icon::None);
-    CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(label.textData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
 }
 
