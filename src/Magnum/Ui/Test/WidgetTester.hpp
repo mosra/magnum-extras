@@ -208,6 +208,9 @@ struct WidgetTester: TestSuite::Tester {
     TestBaseLayerShared baseLayerShared;
     TestTextLayerShared textLayerShared;
     TestUserInterface ui{NoCreate};
+    /* For testing that data binding APIs don't accept just the builtin data
+       layer */
+    DataLayer* customDataLayer;
     /* Deliberately an invalid anchor initially, to make sure nothing uses it
        before it's populated in setup(). Yeah, I know, this is abusing a
        construction path that shouldn't be used. There's (deliberately) no
@@ -219,6 +222,10 @@ struct WidgetTester: TestSuite::Tester {
 };
 
 WidgetTester::WidgetTester() {
+    /* Adding the secondary data layer before everything else so it can
+       properly affect other layers in doUpdate() callbacks */
+    customDataLayer = &ui.setLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
+
     ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()))
       .setBaseLayerInstance(Containers::pointer<TestBaseLayer>(ui.createLayer(), baseLayerShared))
       .setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared))
@@ -247,6 +254,8 @@ WidgetTester::~WidgetTester() {
 void WidgetTester::setup() {
     CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(root));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(customDataLayer->storageUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(customDataLayer->usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
@@ -263,10 +272,13 @@ void WidgetTester::teardown() {
     ui.clean();
     /* Unreferenced storages are removed in update(), not clean() */
     /** @todo remove this once unused storages are removed in clean() also */
-    if(ui.dataLayer().storageUsedCount())
+    if(customDataLayer->storageUsedCount() ||
+       ui.dataLayer().storageUsedCount())
         ui.update();
     CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(root));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(customDataLayer->storageUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(customDataLayer->usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
@@ -283,6 +295,8 @@ void WidgetTester::teardown() {
 void WidgetTester::setupNoCreate() {
     CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(root));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(customDataLayer->storageUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(customDataLayer->usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
@@ -299,6 +313,8 @@ void WidgetTester::setupNoCreate() {
 void WidgetTester::teardownNoCreate() {
     CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(root));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(customDataLayer->storageUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(customDataLayer->usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
