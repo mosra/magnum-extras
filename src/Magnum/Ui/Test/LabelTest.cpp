@@ -87,6 +87,14 @@ using namespace Math::Literals;
 
 const struct {
     const char* name;
+    bool customDataLayer;
+} ConstructStorageQueryData[]{
+    {"", false},
+    {"custom data layer", true}
+};
+
+const struct {
+    const char* name;
     bool timeOverload;
     Icon icon;
     const char* text;
@@ -139,7 +147,11 @@ LabelTest::LabelTest() {
         &LabelTest::constructTextStateless,
         &LabelTest::constructTextTextProperties,
         &LabelTest::constructTextTextPropertiesNonOwned,
-        &LabelTest::constructTextTextPropertiesStateless,
+        &LabelTest::constructTextTextPropertiesStateless
+    }, &WidgetTester::setup,
+       &WidgetTester::teardown);
+
+    addInstancedTests<LabelTest>({
         &LabelTest::constructStorageQuery<Int>,
         &LabelTest::constructStorageQuery<UnsignedInt>,
         &LabelTest::constructStorageQuery<Long>,
@@ -194,7 +206,8 @@ LabelTest::LabelTest() {
         &LabelTest::constructStorageQueryFormatterStateless<UnsignedLong, HexadecimalFormatter>,
         &LabelTest::constructStorageQueryFormatterStateless<Float, FloatFormatter>,
         &LabelTest::constructStorageQueryFormatterStateless<Double, FloatFormatter>,
-    }, &WidgetTester::setup,
+    }, Containers::arraySize(ConstructStorageQueryData),
+       &WidgetTester::setup,
        &WidgetTester::teardown);
 
     addTests<LabelTest>({&LabelTest::constructNoCreate},
@@ -455,11 +468,15 @@ template<> struct FormatterTraits<FloatFormatter> {
 };
 
 template<class T> void LabelTest::constructStorageQuery() {
+    auto&& data = ConstructStorageQueryData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
     setTestCaseTemplateName(StorageQueryTraits<T>::name());
 
     /* Once the label is gone, the storage gets removed as well */
     T value = StorageQueryTraits<T>::value();
-    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+    Storage<T> storage = data.customDataLayer ?
+        Storage<T>{*customDataLayer, value, StorageFlag::ReferenceCounted} :
+        Storage<T>{ui, value, StorageFlag::ReferenceCounted};
 
     Label label{Anchor{root, {}, {32, 16}}, storage, LabelStyle::Danger};
     CORRADE_COMPARE(ui.nodeParent(label), root);
@@ -480,7 +497,7 @@ template<class T> void LabelTest::constructStorageQuery() {
         StorageQueryTraits<T>::expected() ? 0 : 1);
     /* The data binding should be attached to the label so it cleans up
        properly */
-    CORRADE_COMPARE(ui.dataLayer().node(label.dataBindingData()), label.node());
+    CORRADE_COMPARE((data.customDataLayer ? *customDataLayer : ui.dataLayer()).node(label.dataBindingData()), label.node());
 
     /* Mark the text data as editable so we can subsequently query the contents
        set by the DataLayer */
@@ -500,13 +517,17 @@ template<class T> void LabelTest::constructStorageQuery() {
 }
 
 template<class T> void LabelTest::constructStorageQueryNonOwned() {
+    auto&& data = ConstructStorageQueryData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
     setTestCaseTemplateName(StorageQueryTraits<T>::name());
 
     /* Like *NonOwned() tests above, just verifying that the arguments are all
        propagated */
 
     T value = StorageQueryTraits<T>::value();
-    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+    Storage<T> storage = data.customDataLayer ?
+        Storage<T>{*customDataLayer, value, StorageFlag::ReferenceCounted} :
+        Storage<T>{ui, value, StorageFlag::ReferenceCounted};
 
     Label label{NonOwned, Anchor{root, {}, {32, 16}}, storage, LabelStyle::Danger};
     CORRADE_COMPARE(ui.nodeParent(label), root);
@@ -523,10 +544,14 @@ template<class T> void LabelTest::constructStorageQueryNonOwned() {
 }
 
 template<class T> void LabelTest::constructStorageQueryStateless() {
+    auto&& data = ConstructStorageQueryData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
     setTestCaseTemplateName(StorageQueryTraits<T>::name());
 
     T value = StorageQueryTraits<T>::value();
-    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+    Storage<T> storage = data.customDataLayer ?
+        Storage<T>{*customDataLayer, value, StorageFlag::ReferenceCounted} :
+        Storage<T>{ui, value, StorageFlag::ReferenceCounted};
 
     NodeHandle node = label(Anchor{root, {}, {32, 16}}, storage, LabelStyle::Success);
     CORRADE_COMPARE(ui.nodeParent(node), root);
@@ -542,10 +567,12 @@ template<class T> void LabelTest::constructStorageQueryStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
-    CORRADE_COMPARE(ui.dataLayer().usedCount(), 1);
+    CORRADE_COMPARE((data.customDataLayer ? *customDataLayer : ui.dataLayer()).usedCount(), 1);
 }
 
 template<class T, class Formatter> void LabelTest::constructStorageQueryFormatter() {
+    auto&& data = ConstructStorageQueryData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
     setTestCaseTemplateName({StorageQueryTraits<T>::name(), FormatterTraits<Formatter>::name()});
 
     /* Like constructStorageQuery(), just additionally passing an explicit
@@ -553,7 +580,9 @@ template<class T, class Formatter> void LabelTest::constructStorageQueryFormatte
 
     /* Once the label is gone, the storage gets removed as well */
     T value = StorageQueryTraits<T>::value();
-    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+    Storage<T> storage = data.customDataLayer ?
+        Storage<T>{*customDataLayer, value, StorageFlag::ReferenceCounted} :
+        Storage<T>{ui, value, StorageFlag::ReferenceCounted};
 
     Label label{Anchor{root, {}, {32, 16}}, storage,
         Formatter{Formatter::Flag::ExplicitPlus},
@@ -574,7 +603,7 @@ template<class T, class Formatter> void LabelTest::constructStorageQueryFormatte
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 0);
     /* The data binding should be attached to the label so it cleans up
        properly */
-    CORRADE_COMPARE(ui.dataLayer().node(label.dataBindingData()), label.node());
+    CORRADE_COMPARE((data.customDataLayer ? *customDataLayer : ui.dataLayer()).node(label.dataBindingData()), label.node());
 
     /* Mark the text data as editable so we can subsequently query the contents
     set by the DataLayer */
@@ -588,13 +617,17 @@ template<class T, class Formatter> void LabelTest::constructStorageQueryFormatte
 }
 
 template<class T, class Formatter> void LabelTest::constructStorageQueryFormatterNonOwned() {
+    auto&& data = ConstructStorageQueryData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
     setTestCaseTemplateName({StorageQueryTraits<T>::name(), FormatterTraits<Formatter>::name()});
 
     /* Like *NonOwned() tests above, just verifying that the arguments are all
        propagated */
 
     T value = StorageQueryTraits<T>::value();
-    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+    Storage<T> storage = data.customDataLayer ?
+        Storage<T>{*customDataLayer, value, StorageFlag::ReferenceCounted} :
+        Storage<T>{ui, value, StorageFlag::ReferenceCounted};
 
     Label label{NonOwned, Anchor{root, {}, {32, 16}}, storage,
         Formatter{Formatter::Flag::ExplicitPlus},
@@ -612,10 +645,14 @@ template<class T, class Formatter> void LabelTest::constructStorageQueryFormatte
 }
 
 template<class T, class Formatter> void LabelTest::constructStorageQueryFormatterStateless() {
+    auto&& data = ConstructStorageQueryData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
     setTestCaseTemplateName({StorageQueryTraits<T>::name(), FormatterTraits<Formatter>::name()});
 
     T value = StorageQueryTraits<T>::value();
-    Storage<T> storage{ui, value, StorageFlag::ReferenceCounted};
+    Storage<T> storage = data.customDataLayer ?
+        Storage<T>{*customDataLayer, value, StorageFlag::ReferenceCounted} :
+        Storage<T>{ui, value, StorageFlag::ReferenceCounted};
 
     NodeHandle node = label(Anchor{root, {}, {32, 16}}, storage,
         Formatter{Formatter::Flag::ExplicitPlus},
@@ -633,7 +670,7 @@ template<class T, class Formatter> void LabelTest::constructStorageQueryFormatte
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
-    CORRADE_COMPARE(ui.dataLayer().usedCount(), 1);
+    CORRADE_COMPARE((data.customDataLayer ? *customDataLayer : ui.dataLayer()).usedCount(), 1);
 }
 
 void LabelTest::constructNoCreate() {

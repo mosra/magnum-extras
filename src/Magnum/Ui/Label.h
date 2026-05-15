@@ -396,7 +396,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         }
 
         /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
-        explicit Label(NoCreateT): Widget{NoCreate}, _style{}, _icon{}, _data{}, _layoutData{}, _dataBindingData{} {}
+        explicit Label(NoCreateT): Widget{NoCreate}, _style{}, _icon{}, _data{}, _dataBindingData{}, _layoutData{} {}
 
         /**
          * @brief Whether the label has a data binding
@@ -404,9 +404,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * Returns @cpp true @ce if the label was constructed using a
          * @ref StorageQuery, @cpp false @ce otherwise.
          */
-        bool hasDataBinding() const {
-            return _dataBindingData != LayerDataHandle{};
-        }
+        bool hasDataBinding() const { return _dataBindingData != DataHandle{}; }
 
         /** @brief Style */
         LabelStyle style() const { return _style; }
@@ -503,7 +501,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * Exposed mainly for testing purposes, not meant to be modified
          * directly.
          */
-        DataHandle dataBindingData() const;
+        DataHandle dataBindingData() const { return _dataBindingData; }
 
         #ifndef DOXYGEN_GENERATING_OUTPUT
         _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Label) /* LCOV_EXCL_LINE */
@@ -519,8 +517,10 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         /* 2 bytes free (_style fits into padding of Widget) */
         Icon _icon;
         LayerDataHandle _data;
+        /* Unlike with other data, here the layer can be arbitrary, so storing
+           a full handle */
+        DataHandle _dataBindingData;
         LayerDataHandle _layoutData;
-        LayerDataHandle _dataBindingData;
 };
 
 /**

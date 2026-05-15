@@ -134,7 +134,7 @@ Label::Label(const Anchor anchor, const Icon icon, const LabelStyle style): Widg
         dataHandleData(ui().textLayer().createGlyph(textStyleIcon(style), icon, {}, node()));
 
     /* No data binding in this case */
-    _dataBindingData = LayerDataHandle::Null;
+    _dataBindingData = DataHandle::Null;
 }
 
 Label::Label(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style): Widget{anchor}, _style{style}, _icon{Icon::None} {
@@ -144,7 +144,7 @@ Label::Label(const Anchor anchor, const Containers::StringView text, const TextP
         dataHandleData(ui().textLayer().create(textStyleText(style), text, textProperties, node()));
 
     /* No data binding in this case */
-    _dataBindingData = LayerDataHandle::Null;
+    _dataBindingData = DataHandle::Null;
 }
 
 Label::Label(const Anchor anchor, const Containers::StringView text, const LabelStyle style): Label{anchor, text, {}, style} {}
@@ -163,9 +163,9 @@ template<class T, class Formatter> Label::Label(std::nullptr_t, const Anchor anc
         const LayerDataHandle data = _data;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = dataHandleData(ui().dataLayer().onUpdate(query, [&textLayer, data, formatter](const T value) {
+        _dataBindingData = query.layer().onUpdate(query, [&textLayer, data, formatter](const T value) {
             formatter(textLayer, data, value);
-        }, node()));
+        }, node());
     }
 }
 
@@ -215,9 +215,9 @@ Label::Label(const Anchor anchor, const StorageQuery<Containers::StringView>& qu
         const LayerDataHandle data = _data;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = dataHandleData(ui().dataLayer().onUpdate(query, [&textLayer, data](const Containers::StringView value) {
+        _dataBindingData = query.layer().onUpdate(query, [&textLayer, data](const Containers::StringView value) {
             textLayer.setText(data, value, {});
-        }, node()));
+        }, node());
     }
 }
 
@@ -235,9 +235,9 @@ Label::Label(const Anchor anchor, const StorageQuery<Icon>& query, const LabelSt
         const LayerDataHandle data = _data;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = dataHandleData(ui().dataLayer().onUpdate(query, [&textLayer, data](const Icon value) {
+        _dataBindingData = query.layer().onUpdate(query, [&textLayer, data](const Icon value) {
             textLayer.setGlyph(data, value, {});
-        }, node()));
+        }, node());
     }
 }
 
@@ -270,7 +270,7 @@ template<class ...Args> Label& Label::setStyleInternal(const LabelStyle style, A
 }
 
 Label& Label::setIcon(const Icon icon) {
-    CORRADE_ASSERT(_dataBindingData == LayerDataHandle::Null,
+    CORRADE_ASSERT(_dataBindingData == DataHandle::Null,
         "Ui::Label::setIcon(): can't be called with a data binding present", *this);
 
     TextLayer& textLayer = ui().textLayer();
@@ -289,7 +289,7 @@ Label& Label::setIcon(const Icon icon) {
 }
 
 Label& Label::setText(const Containers::StringView text, const TextProperties& textProperties) {
-    CORRADE_ASSERT(_dataBindingData == LayerDataHandle::Null,
+    CORRADE_ASSERT(_dataBindingData == DataHandle::Null,
         "Ui::Label::setText(): can't be called with a data binding present", *this);
 
     TextLayer& textLayer = ui().textLayer();
@@ -323,12 +323,6 @@ DataHandle Label::layoutData() const {
        null only with a NoCreated instance. */
     return _layoutData == LayerDataHandle::Null ? DataHandle::Null :
         dataHandle(ui().layoutLayer(), _layoutData);
-}
-
-DataHandle Label::dataBindingData() const {
-    /* The data is implicitly from the data layer */
-    return _dataBindingData == LayerDataHandle::Null ? DataHandle::Null :
-        dataHandle(ui().dataLayer(), _dataBindingData);
 }
 
 Anchor label(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style) {
