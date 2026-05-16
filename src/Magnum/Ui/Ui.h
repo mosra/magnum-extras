@@ -87,6 +87,7 @@ typedef Containers::EnumSet<BaseLayerSharedFlag> BaseLayerSharedFlags;
 class DataLayer;
 enum class DataLayerStorageHandle: UnsignedInt;
 enum class StorageHandle: UnsignedLong;
+class AbstractStorageQuery;
 template<class T> class StorageQuery;
 
 class DebugLayer;
@@ -97,6 +98,7 @@ class DebugLayerGL;
 class EventConnection;
 class EventLayer;
 
+enum class ParseState: UnsignedByte;
 class DecimalFormatter;
 class HexadecimalFormatter;
 class FloatFormatter;

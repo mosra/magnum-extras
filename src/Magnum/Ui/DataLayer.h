@@ -491,7 +491,6 @@ namespace Implementation {
 }
 
 class AbstractStorage;
-class AbstractStorageQuery;
 
 /**
 @brief Data binding layer
