@@ -1625,7 +1625,8 @@ will inherit @ref Ui-AbstractVisualLayer-debug-integration "debug integration fr
 which shows style assignments. For @ref TextLayer the output additionally shows
 if given data has custom color or padding, to clearly distinguish it from just
 a vanilla style, as well as custom transformation if
-@ref TextLayerFlag::Transformable is enabled. For example:
+@ref TextLayerFlag::Transformable is enabled, and editing-related properties.
+For example:
 
 @include ui-debuglayer-textlayer.ansi
 */

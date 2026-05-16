@@ -1477,39 +1477,53 @@ const struct {
     Vector4 padding;
     Vector2 translation;
     Complex rotationScaling;
+    /* 0 is none, 1 is trivial, 2 is allocated */
+    Int textEditCallback;
     const char* expected;
 } DebugIntegrationData[]{
     {"",
-        {}, {}, false, {}, {}, {}, {},
+        {}, {}, false, {}, {}, {}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3"},
     {"style name mapping",
-        {}, {}, true, {}, {}, {}, {},
+        {}, {}, true, {}, {}, {}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style StyleName (3)"},
     {"editable",
-        {}, TextDataFlag::Editable, false, {}, {}, {}, {},
+        {}, TextDataFlag::Editable, false, {}, {}, {}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Flags: Editable"},
+    {"editable, callback",
+        {}, TextDataFlag::Editable, false, {}, {}, {}, {}, 1,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Flags: Editable\n"
+        "    Text edit callback"},
+    {"editable, callback, allocated",
+        {}, TextDataFlag::Editable, false, {}, {}, {}, {}, 2,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Flags: Editable\n"
+        "    Text edit callback, allocated"},
     {"custom color",
-        {}, {}, false, 0x3bd26799_rgbaf, {}, {}, {},
+        {}, {}, false, 0x3bd26799_rgbaf, {}, {}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Color: #3bd26799"},
     {"editable, custom padding",
-        {}, TextDataFlag::Editable, false, {}, {0.5f, 2.0f, 1.5f, 1.0f}, {}, {},
+        {}, TextDataFlag::Editable, false, {}, {0.5f, 2.0f, 1.5f, 1.0f}, {}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Flags: Editable\n"
         "    Padding: {0.5, 2, 1.5, 1}"},
     {"custom padding, all sides same",
-        {}, {}, false, {}, Vector4{2.5f}, {}, {},
+        {}, {}, false, {}, Vector4{2.5f}, {}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Padding: 2.5"},
     {"custom color + padding",
-        {}, {}, false, 0x3bd26799_rgbaf, {0.5f, 2.0f, 1.5f, 1.0f}, {}, {},
+        {}, {}, false, 0x3bd26799_rgbaf, {0.5f, 2.0f, 1.5f, 1.0f}, {}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Color: #3bd26799\n"
@@ -1517,41 +1531,42 @@ const struct {
     /* The Transformable flag alone doesn't change the output, only if custom
        transformation is used */
     {"transformable",
-        TextLayerFlag::Transformable, {}, false, {}, {}, {}, {},
+        TextLayerFlag::Transformable, {}, false, {}, {}, {}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3"},
     {"transformable, custom color",
-        TextLayerFlag::Transformable, {}, false, 0x3bd26799_rgbaf, {}, {}, {},
+        TextLayerFlag::Transformable, {}, false, 0x3bd26799_rgbaf, {}, {}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Color: #3bd26799"},
     {"transformable, custom transformation",
-        TextLayerFlag::Transformable, {}, false, {}, {}, {-3.5f, 2.5f}, Complex::rotation(35.0_degf)*15.0f,
+        TextLayerFlag::Transformable, {}, false, {}, {}, {-3.5f, 2.5f}, Complex::rotation(35.0_degf)*15.0f, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Translation: {-3.5, 2.5}, rotation: 35°, scaling: 15"},
     {"transformable, custom translation only",
-        TextLayerFlag::Transformable, {}, false, {}, {}, {-3.5f, 2.5f}, {},
+        TextLayerFlag::Transformable, {}, false, {}, {}, {-3.5f, 2.5f}, {}, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Translation: {-3.5, 2.5}, rotation: 0°, scaling: 1"},
     {"transformable, custom rotation only",
-        TextLayerFlag::Transformable, {}, false, {}, {}, {}, Complex::rotation(35.0_degf),
+        TextLayerFlag::Transformable, {}, false, {}, {}, {}, Complex::rotation(35.0_degf), 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Translation: {0, 0}, rotation: 35°, scaling: 1"},
     {"transformable, custom scaling only",
-        TextLayerFlag::Transformable, {}, false, {}, {}, {}, Complex{}*15.0f,
+        TextLayerFlag::Transformable, {}, false, {}, {}, {}, Complex{}*15.0f, 0,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Translation: {0, 0}, rotation: 0°, scaling: 15"},
-    {"style name mapping, editable, custom color + padding",
-        {}, TextDataFlag::Editable, true, 0x3bd26799_rgbaf, {0.5f, 2.0f, 1.5f, 1.0f}, {}, {},
+    {"style name mapping, editable w/ allocated callback, custom color + padding",
+        {}, TextDataFlag::Editable, true, 0x3bd26799_rgbaf, {0.5f, 2.0f, 1.5f, 1.0f}, {}, {}, 2,
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style StyleName (3)\n"
         "    Flags: Editable\n"
         "    Color: #3bd26799\n"
-        "    Padding: {0.5, 2, 1.5, 1}"},
+        "    Padding: {0.5, 2, 1.5, 1}\n"
+        "    Text edit callback, allocated"},
     /* The last case here is used in debugIntegrationNoCallback() to verify
        output w/o a callback and for visual color verification, it's expected
        to be the most complete, executing all coloring code paths */
@@ -12893,6 +12908,18 @@ void TextLayerTest::debugIntegration() {
         layer.translate(layerData, data.translation);
         layer.setTransformation(layerData, data.translation, data.rotationScaling, 1.0f);
     } else layer.setPadding(layerData, data.padding);
+    if(data.textEditCallback == 1)
+        layer.setTextEditCallback(layerData, [](Containers::StringView) {});
+    else if(data.textEditCallback == 2) {
+        /* MSVC 2015 can't copy this as a lambda capture below, have to wrap in
+           a struct */
+        struct {
+            char a[128];
+        } large{};
+        layer.setTextEditCallback(layerData, [large](Containers::StringView) mutable {
+            ++large.a[71];
+        });
+    }
 
     DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
@@ -12977,6 +13004,14 @@ void TextLayerTest::debugIntegrationNoCallback() {
     DataHandle layerData = layer.create(3, "", {}, TextDataFlag::Editable, node);
     layer.setColor(layerData, 0x3bd26799_rgbaf);
     layer.setPadding(layerData, {0.5f, 2.0f, 1.5f, 1.0f});
+    /* MSVC 2015 can't copy this as a lambda capture below, have to wrap in a
+       struct */
+    struct {
+        char a[128];
+    } large{};
+    layer.setTextEditCallback(layerData, [large](Containers::StringView) mutable {
+        ++large.a[71];
+    });
 
     DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 

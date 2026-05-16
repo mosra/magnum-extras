@@ -3084,6 +3084,14 @@ void TextLayer::DebugIntegration::print(Debug& debug, const TextLayer& layer, co
             debug << Debug::newline;
         }
     }
+
+    /* Editable text properties */
+    if(layer.flags(data) >= TextDataFlag::Editable && layer.hasTextEditCallback(data)) {
+        debug << "    Text edit callback";
+        if(layer.hasAllocatedTextEditCallback(data))
+            debug << Debug::nospace << "," << Debug::color(Debug::Color::Magenta) << "allocated" << Debug::resetColor;
+        debug << Debug::newline;
+    }
 }
 
 }}
