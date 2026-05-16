@@ -287,7 +287,7 @@ void ButtonTest::constructEmptyStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in ButtonGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 3);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 3);
@@ -373,7 +373,7 @@ void ButtonTest::constructIconOnlyStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in ButtonGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
@@ -460,7 +460,7 @@ void ButtonTest::constructTextOnlyStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in ButtonGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
@@ -561,7 +561,7 @@ void ButtonTest::constructTextOnlyTextPropertiesStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in ButtonGLTest. */
     /** @todo this doesn't verify that the properties were passed :/ */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
@@ -630,7 +630,7 @@ void ButtonTest::constructIconTextStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in ButtonGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
@@ -703,7 +703,7 @@ void ButtonTest::constructIconTextTextPropertiesStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in ButtonGLTest. */
     /** @todo this doesn't verify that the properties were passed :/ */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
@@ -863,7 +863,7 @@ void ButtonTest::setStyle() {
     CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()),
         UnsignedInt(BaseStyle::ButtonSuccess));
     /* These have different combinations based on whether just one or both are
-       present, verifying just that it's different. StyleGLTest verifies the
+       present, verifying just that it's different. ButtonGLTest verifies the
        actual visuals and thus also catches potential mismatches. */
     if(data.icon != Icon::None)
         CORRADE_COMPARE_AS(ui.textLayer().style(button.iconData()),

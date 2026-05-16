@@ -193,6 +193,8 @@ class MAGNUM_UI_EXPORT GenericLayouter: public AbstractLayouter {
          * Returns @cpp true @ce if given layout function captures
          * non-trivially-copyable state or state that's too large to be stored
          * in-place, @cpp false @ce otherwise. Expects that @p handle is valid.
+         * @todoc fix the isAllocated link once Doxygen stops being shit -- it
+         *      works only from Containers themselves
          * @see @ref isHandleValid(LayoutHandle) const,
          *      @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
          *      @ref usedAllocatedCount()

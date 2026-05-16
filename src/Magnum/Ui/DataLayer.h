@@ -329,7 +329,9 @@ enum class StorageOperation: UnsignedShort {
     /**
      * Increment a value, such as in a numeric input, but for example also
      * changing to the next value in a drop-down select, scrolling a view
-     * further or seeking an audio / video track forward.
+     * further or seeking an audio / video track forward. In contrast, this
+     * operation likely doesn't make sense with various numeric identifiers
+     * like phone numbers or credit card IDs.
      *
      * When passed to the @ref StorageQuery constructor, either both
      * @ref StorageOperation::Increment and
@@ -341,7 +343,9 @@ enum class StorageOperation: UnsignedShort {
     /**
      * Decrement a value, such as in a numeric input, but for example also
      * changing to the previous value in a drop-down select, scrolling a view
-     * back or seeking an audio / video track backward.
+     * back or seeking an audio / video track backward. In contrast, this
+     * operation likely doesn't make sense with various numeric identifiers
+     * like phone numbers or credit card IDs.
      *
      * When passed to the @ref StorageQuery constructor, either both
      * @ref StorageOperation::Increment and
@@ -352,7 +356,10 @@ enum class StorageOperation: UnsignedShort {
 
     /**
      * Query or set a minimum possible value, but for example also scrolling to
-     * begin of a view or seeking to begin of an audio / video track.
+     * begin of a view or seeking to begin of an audio / video track. Similarly
+     * to @ref StorageOperation::Decrement, this operation likely doesn't make
+     * sense with various numeric identifiers like phone numbers or credit card
+     * IDs.
      *
      * When passed to the @ref StorageQuery constructor, either both
      * @ref StorageOperation::Min and @relativeref{StorageOperation,Max} have
@@ -363,7 +370,10 @@ enum class StorageOperation: UnsignedShort {
 
     /**
      * Query or set a maximum possible value, but for example also scrolling to
-     * end of a view or seeking to end of an audio / video track.
+     * end of a view or seeking to end of an audio / video track. Similarly
+     * to @ref StorageOperation::Increment, this operation likely doesn't make
+     * sense with various numeric identifiers like phone numbers or credit card
+     * IDs.
      *
      * When passed to the @ref StorageQuery constructor, either both
      * @ref StorageOperation::Min and @relativeref{StorageOperation,Max} have

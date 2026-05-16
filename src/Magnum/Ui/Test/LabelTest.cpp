@@ -281,7 +281,7 @@ void LabelTest::constructEmptyStateless() {
     ui.clean();
 
     /* Can only verify that the data were (not) created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in LabelGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
@@ -327,7 +327,7 @@ void LabelTest::constructIconStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in LabelGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
@@ -376,7 +376,7 @@ void LabelTest::constructTextStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in LabelGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
@@ -404,6 +404,9 @@ void LabelTest::constructTextTextProperties() {
 }
 
 void LabelTest::constructTextTextPropertiesNonOwned() {
+    /* All the properties are verified in constructTextTextProperties() above,
+       check just that it propagates all arguments properly */
+
     Label label{NonOwned, Anchor{root, {}, {32, 16}}, "hello!",
         TextProperties{}.setScript(Text::Script::Braille),
         LabelStyle::Info};
@@ -430,7 +433,7 @@ void LabelTest::constructTextTextPropertiesStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in LabelGLTest. */
     /** @todo this doesn't verify that the properties were passed :/ */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
@@ -563,7 +566,7 @@ template<class T> void LabelTest::constructStorageQueryStateless() {
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in LabelGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
@@ -606,7 +609,7 @@ template<class T, class Formatter> void LabelTest::constructStorageQueryFormatte
     CORRADE_COMPARE((data.customDataLayer ? *customDataLayer : ui.dataLayer()).node(label.dataBindingData()), label.node());
 
     /* Mark the text data as editable so we can subsequently query the contents
-    set by the DataLayer */
+       set by the DataLayer */
     ui.textLayer().setText(label.textData(), "nothing here!", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(ui.textLayer().text(label.textData()), "nothing here!");
 
@@ -666,7 +669,7 @@ template<class T, class Formatter> void LabelTest::constructStorageQueryFormatte
     ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
+       tested in LabelGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
