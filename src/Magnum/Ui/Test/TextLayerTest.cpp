@@ -5243,6 +5243,8 @@ void TextLayerTest::construct() {
     CORRADE_COMPARE(&static_cast<const Layer&>(layer).shared(), &shared);
     CORRADE_COMPARE(layer.flags(), data.layerFlags);
     CORRADE_COMPARE(layer.features(), LayerFeature::Draw|LayerFeature::Event|data.expectedExtraFeatures);
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 0);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 0);
 }
 
 void TextLayerTest::constructCopy() {
@@ -8033,6 +8035,9 @@ void TextLayerTest::textEditCallback() {
     AbstractUserInterface ui{{100, 100}};
 
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 0);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 0);
+
     NodeHandle node = ui.createNode({}, {100, 100}, NodeFlag::Focusable);
 
     /* A non-editable text to verify the very first text isn't used always */
@@ -8040,7 +8045,10 @@ void TextLayerTest::textEditCallback() {
 
     /* Data without a text edit callback */
     DataHandle noCallback = layer.create(0, "no call", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 0);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 0);
     CORRADE_VERIFY(!layer.hasTextEditCallback(noCallback));
+    CORRADE_VERIFY(!layer.hasAllocatedTextEditCallback(noCallback));
 
     /* Callback functor that records all construction, moves and destruction
        to verify we're not leaking anything anywhere */
@@ -8094,7 +8102,10 @@ void TextLayerTest::textEditCallback() {
         layer.setTextEditCallback(withCallback, TimeCallback{state});
     else
         layer.setTextEditCallback(withCallback, Callback{state});
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 1);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 1);
     CORRADE_VERIFY(layer.hasTextEditCallback(withCallback));
+    CORRADE_VERIFY(layer.hasAllocatedTextEditCallback(withCallback));
     CORRADE_COMPARE(state.constructed, 2);
     CORRADE_COMPARE(state.moved, 1);
     CORRADE_COMPARE(state.destructed, 1);
@@ -8223,7 +8234,10 @@ void TextLayerTest::textEditCallback() {
         layer.setTextEditCallback(dataHandleData(withCallback), TimeCallback{state2});
     else
         layer.setTextEditCallback(dataHandleData(withCallback), Callback{state2});
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 1);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 1);
     CORRADE_VERIFY(layer.hasTextEditCallback(dataHandleData(withCallback)));
+    CORRADE_VERIFY(layer.hasAllocatedTextEditCallback(dataHandleData(withCallback)));
     CORRADE_COMPARE(state.constructed, 2);
     CORRADE_COMPARE(state.moved, 1);
     CORRADE_COMPARE(state.destructed, 2);
@@ -8258,28 +8272,31 @@ void TextLayerTest::textEditCallback() {
     CORRADE_COMPARE(state2.destructed, 1); /* nothing here either */
     CORRADE_COMPARE(state2.called, 1);
 
-    /* Set new callbacks for both */
-    State anotherState, thirdState;
+    /* Set new callbacks for both. Make the second one a trivial lambda to
+       verify allocation counting as well. */
+    State anotherState;
     if(data.timeOverload) {
         layer.setTextEditCallback(another, TimeCallback{anotherState});
-        layer.setTextEditCallback(third, TimeCallback{thirdState});
+        layer.setTextEditCallback(third, [](Nanoseconds, Containers::StringView) {});
     } else {
         layer.setTextEditCallback(another, Callback{anotherState});
-        layer.setTextEditCallback(third, Callback{thirdState});
+        layer.setTextEditCallback(third, [](Containers::StringView) {});
     }
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 3);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 2);
     CORRADE_VERIFY(layer.hasTextEditCallback(another));
     CORRADE_VERIFY(layer.hasTextEditCallback(third));
+    CORRADE_VERIFY(layer.hasAllocatedTextEditCallback(another));
+    CORRADE_VERIFY(!layer.hasAllocatedTextEditCallback(third));
     CORRADE_COMPARE(anotherState.constructed, 2);
     CORRADE_COMPARE(anotherState.moved, 1);
     CORRADE_COMPARE(anotherState.destructed, 1);
     CORRADE_COMPARE(anotherState.called, 0);
-    CORRADE_COMPARE(thirdState.constructed, 2);
-    CORRADE_COMPARE(thirdState.moved, 1);
-    CORRADE_COMPARE(thirdState.destructed, 1);
-    CORRADE_COMPARE(thirdState.called, 0);
 
     /* Removing a data destructs the callback */
     layer.remove(another);
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 2);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 1);
     CORRADE_COMPARE(anotherState.constructed, 2);
     CORRADE_COMPARE(anotherState.moved, 1);
     CORRADE_COMPARE(anotherState.destructed, 2); /* here */
@@ -8294,7 +8311,10 @@ void TextLayerTest::textEditCallback() {
     else
         layer.setTextEditCallback(another2, Callback{another2State});
     CORRADE_COMPARE(dataHandleId(another2), dataHandleId(another));
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 3);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 2);
     CORRADE_VERIFY(layer.hasTextEditCallback(another2));
+    CORRADE_VERIFY(layer.hasAllocatedTextEditCallback(another2));
     CORRADE_COMPARE(anotherState.constructed, 2);
     CORRADE_COMPARE(anotherState.moved, 1);
     CORRADE_COMPARE(anotherState.destructed, 2);
@@ -8306,13 +8326,13 @@ void TextLayerTest::textEditCallback() {
 
     /* Setting a non-editable text destructs the callback */
     layer.setText(third, "nope", {}, TextDataFlags{});
-    CORRADE_COMPARE(thirdState.constructed, 2);
-    CORRADE_COMPARE(thirdState.moved, 1);
-    CORRADE_COMPARE(thirdState.destructed, 2); /* yeah */
-    CORRADE_COMPARE(thirdState.called, 0);
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 2);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 2);
 
     /* Setting a glyph as well */
     layer.setGlyph(another2, 0, {});
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 1);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 1);
     CORRADE_COMPARE(another2State.constructed, 2);
     CORRADE_COMPARE(another2State.moved, 1);
     CORRADE_COMPARE(another2State.destructed, 2); /* yeah */
@@ -8320,6 +8340,10 @@ void TextLayerTest::textEditCallback() {
 
     /* Clearing the callback destructs the previous one */
     layer.setTextEditCallback(withCallback, nullptr);
+    CORRADE_COMPARE(layer.usedTextEditCallbackCount(), 0);
+    CORRADE_COMPARE(layer.usedAllocatedTextEditCallbackCount(), 0);
+    CORRADE_VERIFY(!layer.hasTextEditCallback(withCallback));
+    CORRADE_VERIFY(!layer.hasAllocatedTextEditCallback(withCallback));
     CORRADE_COMPARE(state2.constructed, 2);
     CORRADE_COMPARE(state2.moved, 1);
     CORRADE_COMPARE(state2.destructed, 2); /* this */
@@ -9461,6 +9485,8 @@ void TextLayerTest::invalidHandle() {
     layer.editText(LayerDataHandle::Null, TextEdit::MoveCursorLeft, {});
     layer.hasTextEditCallback(DataHandle::Null);
     layer.hasTextEditCallback(LayerDataHandle::Null);
+    layer.hasAllocatedTextEditCallback(DataHandle::Null);
+    layer.hasAllocatedTextEditCallback(LayerDataHandle::Null);
     layer.setTextEditCallback(DataHandle::Null, nullptr);
     layer.setTextEditCallback(LayerDataHandle::Null, nullptr);
     layer.setGlyph(DataHandle::Null, 0, {});
@@ -9496,6 +9522,8 @@ void TextLayerTest::invalidHandle() {
         "Ui::TextLayer::editText(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::TextLayer::hasTextEditCallback(): invalid handle Ui::DataHandle::Null\n"
         "Ui::TextLayer::hasTextEditCallback(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::TextLayer::hasAllocatedTextEditCallback(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::hasAllocatedTextEditCallback(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::TextLayer::setTextEditCallback(): invalid handle Ui::DataHandle::Null\n"
         "Ui::TextLayer::setTextEditCallback(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::TextLayer::setGlyph(): invalid handle Ui::DataHandle::Null\n"
@@ -9676,6 +9704,8 @@ void TextLayerTest::nonEditableText() {
     layer.editText(glyph, TextEdit::MoveCursorLeft, {});
     layer.hasTextEditCallback(text);
     layer.hasTextEditCallback(glyph);
+    layer.hasAllocatedTextEditCallback(text);
+    layer.hasAllocatedTextEditCallback(glyph);
     layer.setTextEditCallback(text, nullptr);
     layer.setTextEditCallback(glyph, nullptr);
     CORRADE_COMPARE_AS(out,
@@ -9693,6 +9723,8 @@ void TextLayerTest::nonEditableText() {
         "Ui::TextLayer::editText(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::hasTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::hasTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n"
+        "Ui::TextLayer::hasAllocatedTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n"
+        "Ui::TextLayer::hasAllocatedTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::setTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::setTextEditCallback(): text doesn't have Ui::TextDataFlag::Editable set\n",
         TestSuite::Compare::String);

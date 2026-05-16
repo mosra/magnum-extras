@@ -1650,6 +1650,32 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         TextLayerFlags flags() const;
 
         /**
+         * @brief Count of editable texts with attached text edit callbacks
+         *
+         * Always at most @ref usedCount(). Counts all editable text data that
+         * have a callback set with @ref setTextEditCallback(). The operation
+         * is done with a @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
+         * @ref capacity().
+         * @see @ref usedTextEditCallbackCount()
+         */
+        std::size_t usedTextEditCallbackCount() const;
+
+        /**
+         * @brief Count of editable texts with attached allocated text edit callbacks
+         *
+         * Always at most @ref usedTextEditCallbackCount(). Counts all editable
+         * text data that have a callback set with @ref setTextEditCallback()
+         * and for which the functions capture non-trivially-copyable state or
+         * state that's too large to be stored in-place. The operation is done
+         * with a @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
+         * @ref capacity().
+         * @todoc fix the isAllocated link once Doxygen stops being shit -- it
+         *      works only from Containers themselves
+         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()"
+         */
+        std::size_t usedAllocatedTextEditCallbackCount() const;
+
+        /**
          * @brief Assign a style animator to this layer
          * @return Reference to self (for method chaining)
          *
@@ -2726,7 +2752,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid and the text was created or set with
          * @ref TextDataFlag::Editable enabled.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref usedTextEditCallbackCount()
          */
         bool hasTextEditCallback(DataHandle data) const;
 
@@ -2740,6 +2767,36 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *      @ref dataHandleData()
          */
         bool hasTextEditCallback(LayerDataHandle data) const;
+
+        /**
+         * @brief Whether an allocated text edit callback is set
+         *
+         * Returns @cpp true @ce if a text edit callback is set for given data
+         * via @ref setTextEditCallback() and the callback captures
+         * non-trivially-copyable state or state that's too large to be stored
+         * in-place, @cpp false @ce otherwise. In particular, returns
+         * @cpp false @ce also if a callback is not set. Expects that @p handle
+         * is valid and the text was created or set with
+         * @ref TextDataFlag::Editable enabled.
+         * @todoc fix the isAllocated link once Doxygen stops being shit -- it
+         *      works only from Containers themselves
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref hasTextEditCallback(DataHandle) const,
+         *      @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref usedAllocatedTextEditCallbackCount()
+         */
+        bool hasAllocatedTextEditCallback(DataHandle data) const;
+
+        /**
+         * @brief Whether an allocated text edit callback is set assuming it belongs to this layer
+         *
+         * Like @ref hasAllocatedTextEditCallback(DataHandle) const but without
+         * checking that @p handle indeed belongs to this layer. See its
+         * documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        bool hasAllocatedTextEditCallback(LayerDataHandle data) const;
 
         /**
          * @brief Set a text edit callback
@@ -3250,6 +3307,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL void updateTextInternal(UnsignedInt id, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView text, UnsignedInt cursor, UnsignedInt selection, Nanoseconds time);
         MAGNUM_UI_LOCAL void editTextInternal(UnsignedInt id, TextEdit edit, Containers::StringView text, Nanoseconds time);
         MAGNUM_UI_LOCAL bool hasTextEditCallbackInternal(UnsignedInt id) const;
+        MAGNUM_UI_LOCAL bool hasAllocatedTextEditCallbackInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void setTextEditCallbackInternal(UnsignedInt id, Containers::FunctionData&& function, bool timeOverload);
         MAGNUM_UI_LOCAL void setGlyphInternal(UnsignedInt id, UnsignedInt glyph, const TextProperties& properties);
         MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color4& color);

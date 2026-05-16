@@ -607,6 +607,29 @@ TextLayerFlags TextLayer::flags() const {
     return static_cast<const State&>(*_state).flags;
 }
 
+std::size_t TextLayer::usedTextEditCallbackCount() const {
+    /* Contrary to what the docs say about this being done linearly with
+       capacity, can simply iterate just the edit data and count non-null
+       functions. Unused slots have the functions null as well. */
+    std::size_t count = 0;
+    for(const Implementation::TextLayerEditData& i: static_cast<const State&>(*_state).editData)
+        if(i.textEditCallback)
+            ++count;
+    return count;
+}
+
+std::size_t TextLayer::usedAllocatedTextEditCallbackCount() const {
+    /* Same as above, contrary to what the docs say about this being done
+       linearly with capacity, can simply iterate just the edit data and count
+       allocated functions. Unused slots have the functions null and thus
+       non-allocated. */
+    std::size_t count = 0;
+    for(const Implementation::TextLayerEditData& i: static_cast<const State&>(*_state).editData)
+        if(i.textEditCallback.isAllocated())
+            ++count;
+    return count;
+}
+
 TextLayer& TextLayer::assignAnimator(TextLayerStyleAnimator& animator) {
     return static_cast<TextLayer&>(AbstractVisualLayer::assignAnimator(animator));
 }
@@ -1969,6 +1992,26 @@ bool TextLayer::hasTextEditCallbackInternal(const UnsignedInt id) const {
     CORRADE_ASSERT(data.editData != ~UnsignedInt{},
         "Ui::TextLayer::hasTextEditCallback(): text doesn't have" << TextDataFlag::Editable << "set", {});
     return !!state.editData[data.editData].textEditCallback;
+}
+
+bool TextLayer::hasAllocatedTextEditCallback(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::hasAllocatedTextEditCallback(): invalid handle" << handle, {});
+    return hasAllocatedTextEditCallbackInternal(dataHandleId(handle));
+}
+
+bool TextLayer::hasAllocatedTextEditCallback(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::hasAllocatedTextEditCallback(): invalid handle" << handle, {});
+    return hasAllocatedTextEditCallbackInternal(layerDataHandleId(handle));
+}
+
+bool TextLayer::hasAllocatedTextEditCallbackInternal(const UnsignedInt id) const {
+    auto& state = static_cast<const State&>(*_state);
+    const Implementation::TextLayerData& data = state.data[id];
+    CORRADE_ASSERT(data.editData != ~UnsignedInt{},
+        "Ui::TextLayer::hasAllocatedTextEditCallback(): text doesn't have" << TextDataFlag::Editable << "set", {});
+    return !!state.editData[data.editData].textEditCallback.isAllocated();
 }
 
 void TextLayer::setTextEditCallback(const DataHandle handle, Containers::Function<void(Containers::StringView)>&& function) {
