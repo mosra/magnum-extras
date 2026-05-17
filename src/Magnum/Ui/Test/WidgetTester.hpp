@@ -226,17 +226,23 @@ WidgetTester::WidgetTester() {
        properly affect other layers in doUpdate() callbacks */
     customDataLayer = &ui.setLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
 
-    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()))
-      .setBaseLayerInstance(Containers::pointer<TestBaseLayer>(ui.createLayer(), baseLayerShared))
-      .setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared))
-      .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()))
+    /** @todo make setBaseLayerInstance() etc reorder the layer internally as
+        it should be so the call order doesn't matter, then can revert this
+        back to one giant method-chained expression -- right now it causes
+        certain tests such as for Input fail on MSVC and older GCC because
+        those compilers don't call createLayer() in the source order but some
+        other */
+    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
+    ui.setBaseLayerInstance(Containers::pointer<TestBaseLayer>(ui.createLayer(), baseLayerShared));
+    ui.setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared));
+    ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
     /* If a widget creation asserts due to a style being out of bounds, run the
        UiThemeTest to figure out what the LayoutStyleCount should be updated
        to */
-      .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), UnsignedInt(Implementation::LayoutStyle::Count)))
-      .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()))
-      .setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()))
-      .setSize({1000, 1000});
+    ui.setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), UnsignedInt(Implementation::LayoutStyle::Count)));
+    ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+    ui.setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
+    ui.setSize({1000, 1000});
 
     /* Base and text layer styles were set in the Test*Shared constructors
        already. The LayoutLayer style has to be set because otherwise
