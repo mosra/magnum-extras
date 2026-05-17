@@ -56,7 +56,6 @@ endif()
 set(MagnumUi_SRCS
     Handle.cpp
     Icon.cpp
-    Input.cpp
     NodeFlags.cpp
     Panel.cpp
     Theme.cpp
@@ -82,6 +81,7 @@ set(MagnumUi_GracefulAssert_SRCS
     Formatter.cpp
     GenericAnimator.cpp
     GenericLayouter.cpp
+    Input.cpp
     Label.cpp
     LayoutLayer.cpp
     LineLayer.cpp

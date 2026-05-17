@@ -91,6 +91,8 @@ const struct {
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();
         }},
+    /** @todo data binding and stateless variants once string queries are
+        supported to be able to compare to the default output image */
 };
 
 const struct {
