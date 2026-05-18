@@ -2304,6 +2304,10 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
             data.persistentAnimation ? persistentAnimation : nullptr);
     }
 
+    /* The behavior relies on the event layer being ordered *after* the
+       AbstractVisualLayer, otherwise the transitions wouldn't happen in
+       correct order. Pass `layer.handle()` to `ui.createLayer()` here to
+       reproduce that. */
     EventLayer& eventLayer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
     NodeHandle node = ui.createNode({}, {100, 50});
@@ -2431,10 +2435,14 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
             /* At this point, currentPressedNode() is not updated yet because
                certain other functionality such as generation of tap/click
                events relies on the knowledge of whether given node is pressed.
-               Consistently with a press it's updated only after all release
-               events are fired. What makes the style correct is a transition
-               that only happens after, once the currentPressedNode() is
-               updated. */
+               This behavior also mirrors what a press event does, where the
+               node is not yet present in currentPressedNode() at the time the
+               event is fired.
+
+               Ultimately, what makes the style correct is that
+               AbstractVisualLayer's pointerReleaseEvent() is called *after*
+               EventLayer's pointerReleaseEvent() because the event layer is
+               ordered after. */
             CORRADE_COMPARE(ui.currentPressedNode(), node);
             CORRADE_COMPARE(layer.style(layerData), PressedOut1);
             ++called;
@@ -2516,10 +2524,10 @@ void AbstractVisualLayerTest::transitionStyleInEvent() {
         Int called = 0;
         EventConnection connection = eventLayer.onBlurScoped(node, [&]{
             layer.transitionStyle(layerData, PressedOver2);
-            /* Similarly as with the release event, currentFocusedNode() isn't
-               updated at this point yet. Again it *could* be, nevertheless a
-               second transition happens after, making the resulting style
-               correct. */
+            /* Similarly as with the release event, and to have the behavior
+               consistent with onFocus(), currentFocusedNode() isn't updated at
+               this point yet. A second transition happens after due to how
+               layers are ordered, making the resulting style correct. */
             CORRADE_COMPARE(ui.currentFocusedNode(), node);
             CORRADE_COMPARE(layer.style(layerData), FocusedOut2);
             ++called;
