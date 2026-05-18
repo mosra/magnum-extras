@@ -24630,7 +24630,8 @@ void AbstractUserInterfaceTest::isNodePressedCapturedHoveredFocused() {
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
-    /* A layer so we can actually accept the events */
+    /* A layer so we can actually accept the events, and to verify that the
+       state is consistent within the event handlers themselves */
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
         using AbstractLayer::create;
@@ -24638,15 +24639,45 @@ void AbstractUserInterfaceTest::isNodePressedCapturedHoveredFocused() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::Event;
         }
-        void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
+        void doPointerPressEvent(UnsignedInt id, PointerEvent& event) override {
+            /* The node cannot be marked as pressed here because so far we
+               don't know if the event gets accepted */
+            CORRADE_VERIFY(!ui().isNodePressed(nodes()[id]));
             if(disableCapture)
                 event.setCaptured(false);
             event.setAccepted();
         }
-        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
+        void doPointerReleaseEvent(UnsignedInt id, PointerEvent& event) override {
+            /* To be consistent with the press event, at this point the node
+               has to be still marked as pressed */
+            CORRADE_VERIFY(ui().isNodePressed(nodes()[id]));
             event.setAccepted();
         }
-        void doFocusEvent(UnsignedInt, FocusEvent& event) override {
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
+            /* A move can happen on a captured node even if it's not hovered,
+               so cannot test isNodeHovered() here */
+            event.setAccepted();
+        }
+        void doPointerEnterEvent(UnsignedInt id, PointerMoveEvent&) override {
+            /* Compared to other events, the enter event is fired once it's
+               known that the node is hovered */
+            CORRADE_VERIFY(ui().isNodeHovered(nodes()[id]));
+        }
+        void doPointerLeaveEvent(UnsignedInt id, PointerMoveEvent&) override {
+            /* Compared to other events, the leave event is fired once it's
+               known that the node is no longer hovered */
+            CORRADE_VERIFY(!ui().isNodeHovered(nodes()[id]));
+        }
+        void doFocusEvent(UnsignedInt id, FocusEvent& event) override {
+            /* The node cannot be marked as focused here because so far we
+               don't know if the event gets accepted */
+            CORRADE_VERIFY(!ui().isNodeFocused(nodes()[id]));
+            event.setAccepted();
+        }
+        void doBlurEvent(UnsignedInt id, FocusEvent& event) override {
+            /* To be consistent with the focus event, at this point the node
+               has to be still marked as focused */
+            CORRADE_VERIFY(ui().isNodeFocused(nodes()[id]));
             event.setAccepted();
         }
 
@@ -24736,9 +24767,7 @@ void AbstractUserInterfaceTest::isNodePressedCapturedHoveredFocused() {
     {
         layer.disableCapture = true;
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        /* There isn't any pointer release handler so this returns false, which
-           is fine */
-        CORRADE_VERIFY(!ui.pointerReleaseEvent({65, 75}, event));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({65, 75}, event));
     }
     CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);

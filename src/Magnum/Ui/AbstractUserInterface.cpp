@@ -4632,8 +4632,12 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
             globalPositionScaled, event, /*allowCapture*/ !event.isPrimary());
 
     /* After a release that's a primary event, there should be no pressed node
-       anymore. Reset only after the fallthrough events are called to have them
-       receive isNodePressed() the same as the original events did. */
+       anymore. This change is done *after* calling the release event to mirror
+       the behavior of a press event, where currentPressedNode is also updated
+       only once the event is accepted, which can't be known in advance.
+       Additionally reset also only after the fallthrough events are called to
+       have them receive isNodePressed() the same as the original events
+       did. */
     if(event.isPrimary())
         state.currentPressedNode = NodeHandle::Null;
 
@@ -4963,7 +4967,10 @@ bool AbstractUserInterface::focusEvent(const NodeHandle node, FocusEvent& event)
 
         /* The current focused node is now the `node` (which can be null), or
            as a special case null if a focus event wasn't accepted on a current
-           focused node. */
+           focused node. This change is done *after* calling the blur event to
+           mirror the behavior of a focus event, where currentFocusedNode is
+           also updated only once the event is accepted, which can't be known
+           in advance. */
         state.currentFocusedNode = !focusAccepted && state.currentFocusedNode == node ?
             NodeHandle::Null : node;
     }
