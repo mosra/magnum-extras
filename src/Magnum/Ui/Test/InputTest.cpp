@@ -516,8 +516,6 @@ template<> struct FormatterTraits<FloatFormatter> {
    StorageOperation::Increment etc. Actual editing tests use the builtin
    NumericStorage. */
 template<class T> struct DummyStorage: AbstractStorage {
-    typedef T Type;
-
     DummyStorage(DataLayer& layer, StorageOperations operations, StorageFlags flags): AbstractStorage{layer, flags} {
         *createInPlace<StorageOperations>() = operations;
     }

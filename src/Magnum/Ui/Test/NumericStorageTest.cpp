@@ -1379,7 +1379,7 @@ void NumericStorageTest::access3D() {
     CORRADE_COMPARE(query, 77);
 
     Int called = 0;
-    layer.onUpdate(query, [&called](UnsignedLong value) {
+    query.onUpdate([&called](UnsignedLong value) {
         CORRADE_COMPARE(value, 77);
         ++called;
     });
@@ -1432,7 +1432,7 @@ void NumericStorageTest::access2D() {
     CORRADE_COMPARE(query, 26);
 
     Int called = 0;
-    layer.onUpdate(query, [&called](UnsignedInt value) {
+    query.onUpdate([&called](UnsignedInt value) {
         CORRADE_COMPARE(value, 26);
         ++called;
     });
@@ -1477,7 +1477,7 @@ void NumericStorageTest::access1D() {
     CORRADE_COMPARE(query, 5);
 
     Int called = 0;
-    layer.onUpdate(query, [&called](UnsignedInt value) {
+    query.onUpdate([&called](UnsignedInt value) {
         CORRADE_COMPARE(value, 5);
         ++called;
     });
@@ -1524,11 +1524,11 @@ void NumericStorageTest::access() {
     /* Verifying onUpdate() with both the explicit and implicit query */
     Int called1 = 0;
     Int called2 = 0;
-    layer.onUpdate(query1, [&called1](UnsignedInt value) {
+    query1.onUpdate([&called1](UnsignedInt value) {
         CORRADE_COMPARE(value, 1337);
         ++called1;
     });
-    layer.onUpdate(storage, [&called2](UnsignedInt value) {
+    storage->onUpdate([&called2](UnsignedInt value) {
         CORRADE_COMPARE(value, 1337);
         ++called2;
     });
@@ -1574,7 +1574,7 @@ void NumericStorageTest::accessNonOwned3D() {
     CORRADE_COMPARE(query, -17654321);
 
     Int called = 0;
-    layer.onUpdate(query, [&called](Int value) {
+    query.onUpdate([&called](Int value) {
         CORRADE_COMPARE(value, -17654321);
         ++called;
     });
@@ -1628,7 +1628,7 @@ void NumericStorageTest::accessNonOwned2D() {
     CORRADE_COMPARE(query, -17654);
 
     Int called = 0;
-    layer.onUpdate(query, [&called](Int value) {
+    query.onUpdate([&called](Int value) {
         CORRADE_COMPARE(value, -17654);
         ++called;
     });
@@ -1677,7 +1677,7 @@ void NumericStorageTest::accessNonOwned1D() {
     CORRADE_COMPARE(query, -114);
 
     Int called = 0;
-    layer.onUpdate(query, [&called](Int value) {
+    query.onUpdate([&called](Int value) {
         CORRADE_COMPARE(value, -114);
         ++called;
     });
@@ -1731,11 +1731,11 @@ void NumericStorageTest::accessNonOwned() {
 
     /* Verifying onUpdate() with both the explicit and implicit query */
     Int called1 = 0, called2 = 0;
-    layer.onUpdate(query1, [&called1](Long value) {
+    query1.onUpdate([&called1](Long value) {
         CORRADE_COMPARE(value, -9876543210);
         ++called1;
     });
-    layer.onUpdate(storage, [&called2](Long value) {
+    storage->onUpdate([&called2](Long value) {
         CORRADE_COMPARE(value, -9876543210);
         ++called2;
     });
@@ -1836,7 +1836,7 @@ void NumericStorageTest::update() {
         Int called = 0;
         UnsignedInt expected;
     } state;
-    DataHandle update = layer.onUpdate(query, [&state](UnsignedInt value) {
+    DataHandle update = query.onUpdate([&state](UnsignedInt value) {
         CORRADE_COMPARE(value, state.expected);
         ++state.called;
     });
@@ -1951,7 +1951,7 @@ void NumericStorageTest::rangeStep() {
         Int expectedMin = -32768;
         Int expectedMax = 32767;
     } state;
-    DataHandle update = layer.onUpdate(query, [&state](Int value, Int min, Int max) {
+    DataHandle update = query.onUpdate([&state](Int value, Int min, Int max) {
         CORRADE_COMPARE(value, state.expected);
         CORRADE_COMPARE(min, state.expectedMin);
         CORRADE_COMPARE(max, state.expectedMax);

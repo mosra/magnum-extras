@@ -286,7 +286,7 @@ void StorageTest::access3D() {
     CORRADE_COMPARE(query, -17654321);
 
     Int called = 0;
-    DataHandle update = layer.onUpdate(query, [&called](Int value) {
+    DataHandle update = query.onUpdate([&called](Int value) {
         CORRADE_COMPARE(value, -17654321);
         ++called;
     });
@@ -327,7 +327,7 @@ void StorageTest::access2D() {
     CORRADE_COMPARE(query, -17654);
 
     Int called = 0;
-    DataHandle update = layer.onUpdate(query, [&called](Short value) {
+    DataHandle update = query.onUpdate([&called](Short value) {
         CORRADE_COMPARE(value, -17654);
         ++called;
     });
@@ -367,7 +367,7 @@ void StorageTest::access1D() {
     CORRADE_COMPARE(query, -114);
 
     Int called = 0;
-    DataHandle update = layer.onUpdate(query, [&called](Byte value) {
+    DataHandle update = query.onUpdate([&called](Byte value) {
         CORRADE_COMPARE(value, -114);
         ++called;
     });
@@ -407,11 +407,11 @@ void StorageTest::access() {
 
     /* Verifying onUpdate() with both the explicit and implicit query */
     Int called1 = 0, called2 = 0;
-    DataHandle update1 = layer.onUpdate(query1, [&called1](Long value) {
+    DataHandle update1 = query1.onUpdate([&called1](Long value) {
         CORRADE_COMPARE(value, -9876543210);
         ++called1;
     });
-    DataHandle update2 = layer.onUpdate(storage, [&called2](Long value) {
+    DataHandle update2 = storage->onUpdate([&called2](Long value) {
         CORRADE_COMPARE(value, -9876543210);
         ++called2;
     });
@@ -456,7 +456,7 @@ void StorageTest::accessCast3D() {
     CORRADE_COMPARE(query, 40399);
 
     Int called = 0;
-    DataHandle update = layer.onUpdate(query, [&called](UnsignedShort value) {
+    DataHandle update = query.onUpdate([&called](UnsignedShort value) {
         CORRADE_COMPARE(value, 40399);
         ++called;
     });
@@ -496,7 +496,7 @@ void StorageTest::accessCast2D() {
     CORRADE_COMPARE(query, -119);
 
     Int called = 0;
-    DataHandle update = layer.onUpdate(query, [&called](Byte value) {
+    DataHandle update = query.onUpdate([&called](Byte value) {
         CORRADE_COMPARE(value, -119);
         ++called;
     });
@@ -536,7 +536,7 @@ void StorageTest::accessCast1D() {
     CORRADE_COMPARE(query, 142);
 
     Int called = 0;
-    DataHandle update = layer.onUpdate(query, [&called](UnsignedByte value) {
+    DataHandle update = query.onUpdate([&called](UnsignedByte value) {
         CORRADE_COMPARE(value, 142);
         ++called;
     });
@@ -567,7 +567,7 @@ void StorageTest::accessCast() {
     CORRADE_COMPARE(query, -9876);
 
     Int called = 0;
-    DataHandle update = layer.onUpdate(query, [&called](Int value) {
+    DataHandle update = query.onUpdate([&called](Int value) {
         CORRADE_COMPARE(value, -9876);
         ++called;
     });

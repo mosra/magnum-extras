@@ -163,7 +163,7 @@ template<class T, class Formatter> Label::Label(std::nullptr_t, const Anchor anc
         const LayerDataHandle textData = _textData;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = query.layer().onUpdate(query, [&textLayer, textData, formatter](const T value) {
+        _dataBindingData = query.onUpdate([&textLayer, textData, formatter](const T value) {
             formatter(textLayer, textData, value);
         }, node());
     }
@@ -215,7 +215,7 @@ Label::Label(const Anchor anchor, const StorageQuery<Containers::StringView>& qu
         const LayerDataHandle textData = _textData;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = query.layer().onUpdate(query, [&textLayer, textData](const Containers::StringView value) {
+        _dataBindingData = query.onUpdate([&textLayer, textData](const Containers::StringView value) {
             textLayer.setText(textData, value, {});
         }, node());
     }
@@ -235,7 +235,7 @@ Label::Label(const Anchor anchor, const StorageQuery<Icon>& query, const LabelSt
         const LayerDataHandle textData = _textData;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = query.layer().onUpdate(query, [&textLayer, textData](const Icon value) {
+        _dataBindingData = query.onUpdate([&textLayer, textData](const Icon value) {
             textLayer.setGlyph(textData, value, {});
         }, node());
     }

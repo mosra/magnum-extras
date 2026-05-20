@@ -105,8 +105,9 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * @ref DecimalFormatter or @ref HexadecimalFormatter instance.
          *
          * Note that it's not possible to supply custom @ref TextProperties
-         * this way. If you need to override these, supply the @p query along
-         * with a lambda calling @ref setText() to @ref DataLayer::onUpdate().
+         * this way. If you need to override these, construct a label without a
+         * data binding and then pass a lambda calling @ref setText() on it to
+         * @ref StorageQuery::onUpdate().
          */
         explicit Label(Anchor anchor, const StorageQuery<Int>& query, LabelStyle style = LabelStyle::Default);
         /** @overload */
@@ -130,8 +131,9 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * constructor.
          *
          * Note that it's not possible to supply custom @ref TextProperties
-         * this way. If you need to override these, supply the @p query along
-         * with a lambda calling @ref setText() to @ref DataLayer::onUpdate().
+         * this way. If you need to override these, construct a label without a
+         * data binding and then pass a lambda calling @ref setText() on it to
+         * @ref StorageQuery::onUpdate().
          */
         explicit Label(Anchor anchor, const StorageQuery<Int>& query, const DecimalFormatter& formatter, LabelStyle style = LabelStyle::Default);
         /** @overload */
@@ -154,8 +156,9 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * to use a default-constructed @ref DecimalFormatter instance.
          *
          * Note that it's not possible to supply custom @ref TextProperties
-         * this way. If you need to override these, supply the @p query along
-         * with a lambda calling @ref setText() to @ref DataLayer::onUpdate().
+         * this way. If you need to override these, construct a label without a
+         * data binding and then pass a lambda calling @ref setText() on it to
+         * @ref StorageQuery::onUpdate().
          */
         explicit Label(Anchor anchor, const StorageQuery<Int>& query, const HexadecimalFormatter& formatter, LabelStyle style = LabelStyle::Default);
         /** @overload */
@@ -177,8 +180,9 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * @ref FloatFormatter instance.
          *
          * Note that it's not possible to supply custom @ref TextProperties
-         * this way. If you need to override these, supply the @p query along
-         * with a lambda calling @ref setText() to @ref DataLayer::onUpdate().
+         * this way. If you need to override these, construct a label without a
+         * data binding and then pass a lambda calling @ref setText() on it to
+         * @ref StorageQuery::onUpdate().
          */
         explicit Label(Anchor anchor, const StorageQuery<Float>& query, LabelStyle style = LabelStyle::Default);
         /** @overload */
@@ -196,8 +200,9 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * constructor overloads.
          *
          * Note that it's not possible to supply custom @ref TextProperties
-         * this way. If you need to override these, supply the @p query along
-         * with a lambda calling @ref setText() to @ref DataLayer::onUpdate().
+         * this way. If you need to override these, construct a label without a
+         * data binding and then pass a lambda calling @ref setText() on it to
+         * @ref StorageQuery::onUpdate().
          */
         explicit Label(Anchor anchor, const StorageQuery<Float>& query, const FloatFormatter& formatter, LabelStyle style = LabelStyle::Default);
         /** @overload */
@@ -210,8 +215,9 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * @param style             Label style
          *
          * Note that it's not possible to supply custom @ref TextProperties
-         * this way. If you need to override these, supply the @p query along
-         * with a lambda calling @ref setText() to @ref DataLayer::onUpdate().
+         * this way. If you need to override these, construct a label without a
+         * data binding and then pass a lambda calling @ref setText() on it to
+         * @ref StorageQuery::onUpdate().
          */
         explicit Label(Anchor anchor, const StorageQuery<Containers::StringView>& query, LabelStyle style = LabelStyle::Default);
 
@@ -222,8 +228,9 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * @param style             Label style
          *
          * Note that it's not possible to supply custom @ref TextProperties
-         * this way. If you need to override these, supply the @p query along
-         * with a lambda calling @ref setIcon() to @ref DataLayer::onUpdate().
+         * this way. If you need to override these, construct a label without a
+         * data binding and then pass a lambda calling @ref setText() on it to
+         * @ref StorageQuery::onUpdate().
          */
         explicit Label(Anchor anchor, const StorageQuery<Icon>& query, LabelStyle style = LabelStyle::Default);
 

@@ -702,20 +702,20 @@ inline UnsignedInt extractStorageId(const UnsignedInt storageIdDirty) {
 
 }
 
-DataHandle DataLayer::onUpdateInternal(const AbstractStorageQuery& query, const Implementation::StorageCallOoverload overload, Containers::FunctionData&& function, const NodeHandle node) {
+DataHandle DataLayer::create(const AbstractStorageQuery& query, const Implementation::StorageCallOoverload overload, Containers::FunctionData&& function, const NodeHandle node) {
     State& state = *_state;
-    CORRADE_ASSERT(query._layer == this,
-        "Ui::DataLayer::onUpdate(): storage doesn't belong to this layer", {});
-    /* Be helpful and print the whole handle including the layer, as that's
-       what one gets from AbstractStorage::handle() as well */
+    CORRADE_INTERNAL_ASSERT(query._layer == this);
+    /* This function is called from StorageQuery::onUpdate(), so show that in
+       the asserts. Also be helpful and print the whole handle including the
+       layer, as that's what one gets from AbstractStorage::handle() as well */
     CORRADE_ASSERT(isHandleValid(query._storage),
-        "Ui::DataLayer::onUpdate(): invalid handle" << storageHandle(handle(), query._storage), {});
+        "Ui::StorageQuery::onUpdate(): invalid handle" << storageHandle(handle(), query._storage), {});
     /* The query should support Min/Max if the value, min, max overload is
        picked */
     CORRADE_ASSERT(overload != Implementation::StorageCallOoverload::ByValueMinMax || query.operations() >= (StorageOperation::Min|StorageOperation::Max),
-        "Ui::DataLayer::onUpdate(): query doesn't support" << (StorageOperation::Min|StorageOperation::Max) << "for this overload", {});
+        "Ui::StorageQuery::onUpdate(): query doesn't support" << (StorageOperation::Min|StorageOperation::Max) << "for this overload", {});
     CORRADE_ASSERT(function,
-        "Ui::DataLayer::onUpdate(): function is null", {});
+        "Ui::StorageQuery::onUpdate(): function is null", {});
     /** @todo the index being within storage size is tested by the StorageQuery
         constructor already so it currently doesn't make sense to check it
         again here, however it'll become important if/once storages can change

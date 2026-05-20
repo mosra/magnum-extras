@@ -131,6 +131,14 @@ template<class T> class Storage: public AbstractStorage {
         operator StorageQuery<T>() const { return value(); }
 
         /**
+         * @brief Single-item storage value
+         *
+         * Equivalent to @ref value(), see its documentation for more
+         * information.
+         */
+        StorageQuery<T> operator->() const { return value(); }
+
+        /**
          * @brief 1D storage value at given index
          *
          * Expects that @ref size() is @cpp {1, 1, size} @ce and @p index is

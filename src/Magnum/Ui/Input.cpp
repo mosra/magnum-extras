@@ -135,7 +135,7 @@ template<class T, class Formatter> Input::Input(std::nullptr_t, const Anchor anc
         const LayerDataHandle textData = _textData;
         /* Leaving query validity checks on doUpdate() as that'd be a lot of
            duplication, the assumption is that StorageQuery is short-lived */
-        _dataBindingData = query.layer().onUpdate(query, [&ui, textData, formatter](DataHandle handle, T value) {
+        _dataBindingData = query.onUpdate([&ui, textData, formatter](DataHandle handle, T value) {
             /* Skip the update if the text node is currently focused (and thus
                likely being edited). Not doing so would result in e.g. `30.`
                being forcibly changed back to `30`, making it extremely

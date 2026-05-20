@@ -750,12 +750,12 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @brief Storage reference count
          *
          * Expects that @p handle is valid. Initially @cpp 0 @ce, is
-         * incremented after every @ref onUpdate() call referencing given
-         * @p handle and decremented after every @ref remove() of data
-         * referencing given @p handle, or when a node the data is attached to
-         * is removed along with all attachments. Can be at most
-         * @ref usedCount(). It's only allowed to @ref removeStorage() with a
-         * zero reference count.
+         * incremented after every @ref StorageQuery::onUpdate() call
+         * referencing given @p handle and decremented after every
+         * @ref remove() of data referencing given @p handle, or when a node
+         * the data is attached to is removed along with all attachments. Can
+         * be at most @ref usedCount(). It's only allowed to
+         * @ref removeStorage() with a zero reference count.
          * @see @ref isHandleValid(StorageHandle) const,
          *      @ref AbstractStorage::referenceCount()
          */
@@ -835,251 +835,6 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *      @ref isAllocated(), @ref storageUsedAllocatedCount()
          */
         std::size_t usedAllocatedCount() const;
-
-        /**
-         * @brief Bind a function to storage data update
-         * @param query         Storage query
-         * @param function      Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p query references a valid storage from this layer and
-         * @p function is not @cpp nullptr @ce. The @p function gets called
-         * with the result of @p query with @ref AbstractUserInterface::update()
-         * or @relativeref{AbstractUserInterface,draw()} whenever either the
-         * data itself or the @p storage is marked as dirty. The data is marked
-         * as dirty initially.
-         *
-         * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * detailed description of all constraints. Calling this function
-         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @see @ref isStorageDirty(), @ref isDirty()
-         */
-        template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const T& value)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(const T&)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return onUpdateInternal(query, Implementation::StorageCallOoverload::ByReference, Utility::move(function), node);
-        }
-        /** @overload */
-        template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T value)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(T)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return onUpdateInternal(query, Implementation::StorageCallOoverload::ByValue, Utility::move(function), node);
-        }
-
-        /**
-         * @brief Bind a function to storage data update along with min/max values
-         * @param query         Storage query
-         * @param function      Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p query references a valid storage from this layer,
-         * @ref StorageQuery::operations() includes @ref StorageOperation::Min
-         * and @relativeref{StorageOperation,Max} and @p function is not
-         * @cpp nullptr @ce. The @p function gets called with the result of
-         * @p query along with min and max values with
-         * @ref AbstractUserInterface::update() or
-         * @relativeref{AbstractUserInterface,draw()} whenever either the data
-         * itself or the @p storage is marked as dirty. The data is marked as
-         * dirty initially.
-         *
-         * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * detailed description of all constraints. Calling this function
-         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @see @ref isStorageDirty(), @ref isDirty()
-         */
-        template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T value, T min, T max)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(T, T, T)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            /* Check for StorageOperation::{Min,Max} done inside */
-            return onUpdateInternal(query, Implementation::StorageCallOoverload::ByValueMinMax, Utility::move(function), node);
-        }
-
-        /**
-         * @brief Bind a function to storage data update along with the data handle itself
-         * @param query         Storage query
-         * @param function      Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Like @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(const T& value)>&&, NodeHandle)
-         * but with the function additionally taking the @ref DataHandle of the
-         * binding itself, allowing it to query additional properties of the
-         * data or its associated storage. The @p handle is guaranteed to be
-         * valid in this layer. See documentation of @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(const T& value)>&&, NodeHandle)
-         * for more information.
-         */
-        template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(DataHandle handle, const T& value)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(DataHandle, const T&)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return onUpdateInternal(query, Implementation::StorageCallOoverload::HandleByReference, Utility::move(function), node);
-        }
-        /** @overload */
-        template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(DataHandle handle, T value)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(DataHandle, T)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return onUpdateInternal(query, Implementation::StorageCallOoverload::HandleByValue, Utility::move(function), node);
-        }
-
-        /**
-         * @brief Bind a function to storage's implicit data update
-         *
-         * Assuming the @p storage has a `Type` @cpp typedef @ce which denotes
-         * what @ref StorageQuery type the storage is implicitly convertible
-         * to, delegates to @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(const T& value)>&&, NodeHandle)
-         * and overloads with given type. See their documentation for more
-         * information.
-         */
-        template<class Storage
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , typename std::enable_if<std::is_base_of<AbstractStorage, Storage>::value, int>::type = 0
-            #endif
-        > DataHandle onUpdate(const Storage& storage,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const typename Storage::Type& value)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(const typename Storage::Type&)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return onUpdate<typename Storage::Type>(storage, Utility::move(function), node);
-        }
-        /** @overload */
-        template<class Storage
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , typename std::enable_if<std::is_base_of<AbstractStorage, Storage>::value, int>::type = 0
-            #endif
-        > DataHandle onUpdate(const Storage& storage,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(typename Storage::Type value)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(typename Storage::Type)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return onUpdate<typename Storage::Type>(storage, Utility::move(function), node);
-        }
-        /** @overload */
-        template<class Storage
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , typename std::enable_if<std::is_base_of<AbstractStorage, Storage>::value, int>::type = 0
-            #endif
-        > DataHandle onUpdate(const Storage& storage,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(typename Storage::Type value, typename Storage::Type min, typename Storage::Type max)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(typename Storage::Type, typename Storage::Type, typename Storage::Type)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return onUpdate<typename Storage::Type>(storage, Utility::move(function), node);
-        }
-        /** @overload */
-        template<class Storage
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , typename std::enable_if<std::is_base_of<AbstractStorage, Storage>::value, int>::type = 0
-            #endif
-        > DataHandle onUpdate(const Storage& storage,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(DataHandle, const typename Storage::Type& value)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(DataHandle, const typename Storage::Type&)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return onUpdate<typename Storage::Type>(storage, Utility::move(function), node);
-        }
-        /** @overload */
-        template<class Storage
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , typename std::enable_if<std::is_base_of<AbstractStorage, Storage>::value, int>::type = 0
-            #endif
-        > DataHandle onUpdate(const Storage& storage,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(DataHandle, typename Storage::Type value)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(DataHandle, typename Storage::Type)>>::type&&
-            #endif
-        function, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return onUpdate<typename Storage::Type>(storage, Utility::move(function), node);
-        }
 
         /**
          * @brief Remove a data
@@ -1328,8 +1083,9 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @ref set(), @ref reset(), @ref toggle(), @ref increment(),
          * @ref decrement(), @ref setToMin() and @ref setToMax() to be called
          * based on which @ref operations() are available. Immutable queries
-         * allow only getting the current value through @ref onUpdate(),
-         * potentially along with min / max if @ref operations() expose them.
+         * allow only getting the current value through
+         * @ref StorageQuery::onUpdate(), potentially along with min / max if
+         * @ref operations() expose them.
          * @see @ref isHandleValid(DataHandle) const,
          *      @ref storage(DataHandle) const, @ref StorageQuery::isMutable()
          */
@@ -1372,8 +1128,8 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
          * @ref StorageOperation::Set. It's the user responsibility to ensure
-         * that @p T matches the @ref StorageQuery type that was passed to
-         * @ref onUpdate() the @p handle is coming from.
+         * that @p T matches the @ref StorageQuery type the @p handle is coming
+         * from.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
@@ -1509,7 +1265,8 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * Expects that @p handle is valid, mutable and @ref operations() list
          * @ref StorageOperation::Min. Note that unlike with
          * @ref StorageQuery::min() there's no way to query the minimum allowed
-         * value from the @ref DataLayer --- instead use @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(T value, T min, T max)>&&, NodeHandle)
+         * value from the @ref DataLayer --- instead use
+         * @ref StorageQuery::onUpdate(Containers::Function<void(T value, T min, T max)>&&, NodeHandle) const
          * to have the min and max value passed to the data binding on update.
          *
          * Calling this function causes the storage to get marked as dirty and
@@ -1538,7 +1295,8 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * Expects that @p handle is valid, mutable and @ref operations() list
          * @ref StorageOperation::Max. Note that unlike with
          * @ref StorageQuery::max() there's no way to query the maximum allowed
-         * value from the @ref DataLayer --- instead use @ref onUpdate(const StorageQuery<T>&, Containers::Function<void(T value, T min, T max)>&&, NodeHandle)
+         * value from the @ref DataLayer --- instead use
+         * @ref StorageQuery::onUpdate(Containers::Function<void(T value, T min, T max)>&&, NodeHandle) const
          * to have the min and max value passed to the data binding on update.
          *
          * Calling this function causes the storage to get marked as dirty and
@@ -1563,6 +1321,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
 
     private:
         friend AbstractStorage;
+        template<class> friend class StorageQuery; /* calls create() */
 
         /* These four are called from within AbstractStorage */
         DataLayerStorageHandle createStorage(const Containers::Size3D& size, StorageFlags flags);
@@ -1575,7 +1334,11 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         AbstractStorage storageInternal(StorageHandle handle);
         AbstractStorage storageInternal(DataLayerStorageHandle handle);
 
-        DataHandle onUpdateInternal(const AbstractStorageQuery& query, Implementation::StorageCallOoverload overload, Containers::FunctionData&& function, NodeHandle node);
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /** @todoc If Doxygen sees this, it cannot link to create() in
+            AbstractLayer docs. What the fuck. */
+        DataHandle create(const AbstractStorageQuery& query, Implementation::StorageCallOoverload overload, Containers::FunctionData&& function, NodeHandle node);
+        #endif
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL void setDirtyInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL StorageHandle storageInternal(UnsignedInt id) const;
@@ -1929,8 +1692,7 @@ class MAGNUM_UI_EXPORT AbstractStorage {
 @m_since_latest_{extras}
 
 Used through the @ref StorageQuery subclass which is returned from
-@ref AbstractStorage implementations and is meant to be passed to
-@ref DataLayer::onUpdate() along with an update function.
+@ref AbstractStorage implementations.
 */
 class MAGNUM_UI_EXPORT AbstractStorageQuery {
     public:
@@ -2101,8 +1863,7 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
 @brief @ref DataLayer storage query
 @m_since_latest_{extras}
 
-Returned from @ref AbstractStorage implementations, meant to be passed to
-@ref DataLayer::onUpdate() along with an update function.
+Returned from @ref AbstractStorage implementations.
 */
 template<class T> class StorageQuery: public AbstractStorageQuery {
     public:
@@ -2284,6 +2045,142 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
         );
 
         /**
+         * @brief Bind a function to storage data update
+         * @param function      Function to call when data get updated
+         * @param node          Node to attach to
+         * @return New data handle
+         *
+         * Expects that @ref storage() is still valid in the @ref layer() and
+         * @p function is not @cpp nullptr @ce. The @p function gets called
+         * with the result of @p query with @ref AbstractUserInterface::update()
+         * or @relativeref{AbstractUserInterface,draw()} whenever either the
+         * data itself or the @p storage is marked as dirty. The data is marked
+         * as dirty initially.
+         *
+         * Delegates to @ref AbstractLayer::create(), see its documentation for
+         * detailed description of all constraints. Calling this function
+         * causes @ref LayerState::NeedsCommonDataUpdate to be set on the
+         * layer.
+         * @see @ref DataLayer::isStorageDirty(), @ref DataLayer::isDirty()
+         */
+        DataHandle onUpdate(
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            Containers::Function<void(const T& value)>&&
+            #else /* Without this, deduction of T won't work */
+            typename std::common_type<Containers::Function<void(const T&)>>::type&&
+            #endif
+        function, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) const {
+            return _layer->create(*this, Implementation::StorageCallOoverload::ByReference, Utility::move(function), node);
+        }
+        /** @overload */
+        DataHandle onUpdate(
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            Containers::Function<void(T value)>&&
+            #else /* Without this, deduction of T won't work */
+            typename std::common_type<Containers::Function<void(T)>>::type&&
+            #endif
+        function, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) const {
+            return _layer->create(*this, Implementation::StorageCallOoverload::ByValue, Utility::move(function), node);
+        }
+
+        /**
+         * @brief Bind a function to storage data update along with min/max values
+         * @param function      Function to call when data get updated
+         * @param node          Node to attach to
+         * @return New data handle
+         *
+         * Expects that @ref storage() is still valid in the @ref layer(),
+         * @ref StorageQuery::operations() includes @ref StorageOperation::Min
+         * and @relativeref{StorageOperation,Max} and @p function is not
+         * @cpp nullptr @ce. The @p function gets called with the result of
+         * @p query along with min and max values with
+         * @ref AbstractUserInterface::update() or
+         * @relativeref{AbstractUserInterface,draw()} whenever either the data
+         * itself or the @p storage is marked as dirty. The data is marked as
+         * dirty initially.
+         *
+         * Delegates to @ref AbstractLayer::create(), see its documentation for
+         * detailed description of all constraints. Calling this function
+         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
+         * @see @ref DataLayer::isStorageDirty(), @ref DataLayer::isDirty()
+         */
+        DataHandle onUpdate(
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            Containers::Function<void(T value, T min, T max)>&&
+            #else /* Without this, deduction of T won't work */
+            typename std::common_type<Containers::Function<void(T, T, T)>>::type&&
+            #endif
+        function, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) const {
+            /* Check for StorageOperation::{Min,Max} done inside */
+            return _layer->create(*this, Implementation::StorageCallOoverload::ByValueMinMax, Utility::move(function), node);
+        }
+
+        /**
+         * @brief Bind a function to storage data update along with the data handle itself
+         * @param function      Function to call when data get updated
+         * @param node          Node to attach to
+         * @return New data handle
+         *
+         * Like @ref onUpdate(Containers::Function<void(const T& value)>&&, NodeHandle) const
+         * but with the function additionally taking the @relativeref{Ui,DataHandle}
+         * of the binding itself, allowing it to query additional properties of
+         * the data or its associated storage. The @p handle is guaranteed to
+         * be valid in this layer. See documentation of
+         * @ref onUpdate(Containers::Function<void(const T& value)>&&, NodeHandle) const
+         * for more information.
+         * @todoc why the F is doxygen unable to link to DataHandle here?!
+         */
+        DataHandle onUpdate(
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            Containers::Function<void(DataHandle handle, const T& value)>&&
+            #else /* Without this, deduction of T won't work */
+            typename std::common_type<Containers::Function<void(DataHandle, const T&)>>::type&&
+            #endif
+        function, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) const {
+            return _layer->create(*this, Implementation::StorageCallOoverload::HandleByReference, Utility::move(function), node);
+        }
+        /** @overload */
+        DataHandle onUpdate(
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            Containers::Function<void(DataHandle handle, T value)>&&
+            #else /* Without this, deduction of T won't work */
+            typename std::common_type<Containers::Function<void(DataHandle, T)>>::type&&
+            #endif
+        function, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) const {
+            return _layer->create(*this, Implementation::StorageCallOoverload::HandleByValue, Utility::move(function), node);
+        }
+
+        /**
          * @brief Storage value
          *
          * Returns value of given @ref storage() at @ref index(). Expects that
@@ -2327,6 +2224,16 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @see @ref setToMax(), @ref min()
          */
         T max() const;
+
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /* This has to be here in order to allow storage implementations to
+           implement `StorageQuery<T> operator->()` so user code can call
+           `storage->onUpdate()`. The returned value has to be pointer-like, so
+           this satisfies that condition. */
+        /** @todo unfortunately doing this way also allows `query->onUpdate()`
+            to be used instead of `query.onUpdate()`, better idea? */
+        const StorageQuery<T>* operator->() const { return this; }
+        #endif
 
     private:
         /* Delegated to from the public single-item / 1D / 2D / 3D

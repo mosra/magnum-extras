@@ -734,6 +734,14 @@ template<class T> class NumericStorage: public AbstractStorage {
         operator StorageQuery<Type>() const { return value(); }
 
         /**
+         * @brief Single-item storage value
+         *
+         * Equivalent to @ref value(), see its documentation for more
+         * information.
+         */
+        StorageQuery<Type> operator->() const { return value(); }
+
+        /**
          * @brief 1D storage value at given index
          *
          * Expects that @ref size() is @cpp {1, 1, size} @ce and @p index is
