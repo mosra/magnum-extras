@@ -829,8 +829,7 @@ template<class T> class NumericStorage: public AbstractStorage {
         StorageOperations operations() const;
 };
 
-// TODO not inline
-template<class T> inline StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::value() const {
+template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::value() const {
     /* The StorageQuery requires lambdas so can't just pass the query() /
        updater() static functions by pointer */
     const auto query = [](const NumericStorage<T>& storage, const StorageOperation operation) {
@@ -846,7 +845,7 @@ template<class T> inline StorageQuery<typename NumericStorage<T>::Type> NumericS
     return {*this, operations, query};
 }
 
-template<class T> inline StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::operator[](const std::size_t index) const {
+template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::operator[](const std::size_t index) const {
     /* The StorageQuery requires lambdas so can't just pass the query() /
        updater() static functions by pointer */
     const auto query = [](const NumericStorage<T>& storage, const std::size_t index, const StorageOperation operation) {
@@ -862,7 +861,7 @@ template<class T> inline StorageQuery<typename NumericStorage<T>::Type> NumericS
     return {*this, index, operations, query};
 }
 
-template<class T> inline StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::operator[](const Containers::Size2D& index) const {
+template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::operator[](const Containers::Size2D& index) const {
     /* The StorageQuery requires lambdas so can't just pass the query() /
        updater() static functions by pointer */
     const auto query = [](const NumericStorage<T>& storage, const Containers::Size2D& index, const StorageOperation operation) {
@@ -878,7 +877,7 @@ template<class T> inline StorageQuery<typename NumericStorage<T>::Type> NumericS
     return {*this, index, operations, query};
 }
 
-template<class T> inline StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::operator[](const Containers::Size3D& index) const {
+template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::operator[](const Containers::Size3D& index) const {
     /* The StorageQuery requires lambdas so can't just pass the query() /
        updater() static functions by pointer */
     const auto query = [](const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation) {
