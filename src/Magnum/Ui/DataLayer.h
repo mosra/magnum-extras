@@ -1575,11 +1575,6 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         AbstractStorage storageInternal(StorageHandle handle);
         AbstractStorage storageInternal(DataLayerStorageHandle handle);
 
-        /* The layer argument is just for the assert, but since it has to be an
-           exported symbol to be used from the templated onUpdate() functions,
-           it cannot be wrapped in #ifdef CORRADE_NO_ASSERT because it'd cause
-           linker errors if the library is built with assertions but the user
-           project not and vice versa. */
         DataHandle onUpdateInternal(const AbstractStorageQuery& query, Implementation::StorageCallOoverload overload, Containers::FunctionData&& function, NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL void setDirtyInternal(UnsignedInt id);
