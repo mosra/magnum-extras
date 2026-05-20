@@ -72,8 +72,8 @@ namespace Implementation {
 @m_since_latest_{extras}
 
 Owns or references typed numeric data for use with @ref DataLayer, providing
-also a way to update them along with customizable value range and steps for
-incrementing and decrementing.
+also a way to update them along with customizable default value, value range
+and steps for incrementing and decrementing.
 
 The template is explicitly instantiated for @relativeref{Magnum,UnsignedByte},
 @relativeref{Magnum,Byte}, @relativeref{Magnum,UnsignedShort},
@@ -333,8 +333,9 @@ template<class T> class NumericStorage: public AbstractStorage {
          * @param flags     Storage flags
          *
          * Delegates to @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags)
-         * and then initializes the storage using @p value. See the
-         * documentation of @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags)
+         * and then initializes the storage using @p value. The @p value is
+         * subsequently also used as the default value instead of @cpp 0 @ce.
+         * See the documentation of @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags)
          * for more information.
          * @see @ref DirectInit, @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags),
          *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
@@ -709,10 +710,30 @@ template<class T> class NumericStorage: public AbstractStorage {
          *
          * Unlike @ref setRange(), calling this function *does not* cause the
          * storage to be marked as dirty, as it doesn't have any effect on the
-         * values
+         * values.
          * @see @ref StorageQuery::increment(), @ref StorageQuery::decrement()
          */
         const NumericStorage<T>& setStep(T step) const;
+
+        /** @brief Default value */
+        T defaultValue() const;
+
+        /**
+         * @brief Set default value
+         * @return Reference to self (for method chaining)
+         *
+         * The default value is used when calling @ref StorageQuery::reset().
+         * Initially is set to either @cpp 0 @ce or the value that was passed
+         * to the @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
+         * constructor. Note that the default value *isn't* restricted in
+         * regards to the range or step specified by @ref setRange() and
+         * @ref setStep() in any way.
+         *
+         * Unlike @ref setRange(), calling this function *does not* cause the
+         * storage to be marked as dirty, as it doesn't have any effect on the
+         * values.
+         */
+        const NumericStorage<T>& setDefaultValue(T value) const;
 
         /**
          * @brief Single-item storage value
@@ -776,6 +797,7 @@ template<class T> class NumericStorage: public AbstractStorage {
          * @relativeref{StorageOperation,Max} for querying the value range.
          * Unless the storage is non-owned and immutable, the query implements
          * also an updater accepting @ref StorageOperation::Set,
+         * @relativeref{StorageOperation,Reset},
          * @relativeref{StorageOperation,Increment} and
          * @relativeref{StorageOperation,Decrement}.
          *
@@ -828,7 +850,7 @@ template<class T> class NumericStorage: public AbstractStorage {
         /* Called from other create() functions, but calling it from the header
            would require including ArrayView so there's a void create(NoInitT)
            for use in header instead */
-        MAGNUM_UI_LOCAL Containers::ArrayView<T> createNoInitInternal();
+        MAGNUM_UI_LOCAL Containers::ArrayView<T> createNoInitInternal(const T& defaultValue);
         /* Called from create(NonOwnedT) functions, not MAGNUM_UI_LOCAL so we
            can inline the trivial create(NonOwnedT) above */
         void createNonOwnedInternal(const void* pointer, bool immutable, const std::ptrdiff_t* stride, UnsignedInt dimensions);

@@ -120,11 +120,14 @@ template<> struct Traits<Half>: CastingTraits<Half, Float> {
 };
 
 template<class T> struct Data {
+    explicit Data(const T& defaultValue): defaultValue{defaultValue} {}
+
     Flags flags;
     /* 0/1/3/7 or 4/1/3/7 bytes free for a 1/2/4/8-byte type */
     T min = Traits<T>::min();
     T max = Traits<T>::max();
     T step = Traits<T>::step();
+    T defaultValue;
     /* For owned data, T[] is then right after, tightly packed, with array
        length matching the (3D) storage size. For non-owned data the derived
        DataNonOwned<dimensions> struct is used instead. */
@@ -163,6 +166,8 @@ template<class T> struct Data {
 };
 
 template<class T> struct DataNonOwned: Data<T> {
+    explicit DataNonOwned(const T& default_): Data<T>{default_} {}
+
     void* pointer;
     /* The stride is stored only for the actual data dimensions (so 0, 1, 2 or
        3 components) in order to fit in-place in as many cases as possible.
@@ -215,15 +220,15 @@ template<class T> struct DataNonOwned: Data<T> {
 
 }
 
-template<class T> Containers::ArrayView<T> NumericStorage<T>::createNoInitInternal() {
+template<class T> Containers::ArrayView<T> NumericStorage<T>::createNoInitInternal(const T& defaultValue) {
     const Containers::Size3D& size = this->size();
     const std::size_t count = size[0]*size[1]*size[2];
     const std::size_t dataSize = sizeof(Data<T>) + sizeof(T)*count;
 
-    /* Even with 8-byte types the Data<T> struct alone fits in-place, however
-       the actual data storage after doesn't. So this branch is never entered
-       in that case but as we don't do createInPlace<Data<T>>() we don't need
-       to special-case that at compile time. */
+    /* With 8-byte types the Data<T> struct no longer fits in-place. So this
+       branch is never entered in that case but as we don't do
+       createInPlace<Data<T>>() we don't need to special-case that at compile
+       time. */
     char* const storage = dataSize <= MaxInPlaceSize ?
         createInPlace<char>() :
         createAllocated(new char[dataSize], 1, [](void* data, std::size_t) {
@@ -231,23 +236,23 @@ template<class T> Containers::ArrayView<T> NumericStorage<T>::createNoInitIntern
         });
 
     /* Construct the Data struct in-place to initialize its members */
-    Data<T>* data = new(storage) Data<T>;
+    Data<T>* data = new(storage) Data<T>{defaultValue};
     return {data->pointer(), count};
 }
 
 template<class T> void NumericStorage<T>::create(NoInitT) {
-    createNoInitInternal();
+    createNoInitInternal(T{});
 }
 
 template<class T> void NumericStorage<T>::create(ValueInitT) {
     /** @todo Utility::fill() for this once it exists */
-    for(T& i: createNoInitInternal())
+    for(T& i: createNoInitInternal(T{}))
         i = T{};
 }
 
 template<class T> void NumericStorage<T>::create(DirectInitT, const T& value) {
     /** @todo Utility::fill() for this once it exists */
-    for(T& i: createNoInitInternal())
+    for(T& i: createNoInitInternal(value))
         i = value;
 }
 
@@ -265,7 +270,7 @@ template<class T> void NumericStorage<T>::createNonOwnedInternal(const void* con
         });
 
     /* Construct the Data struct in-place to initialize its members */
-    DataNonOwned<T>* data = new(storage) DataNonOwned<T>;
+    DataNonOwned<T>* data = new(storage) DataNonOwned<T>{T{}};
     data->flags |= Flag::NonOwned;
     if(dimensions >= 2)
         data->flags |= Flag::NonOwned2D;
@@ -336,6 +341,18 @@ template<class T> const NumericStorage<T>& NumericStorage<T>::setStep(const T st
     return *this;
 }
 
+template<class T> T NumericStorage<T>::defaultValue() const {
+    return AbstractStorage::data<Data<T>>()->defaultValue;
+}
+
+template<class T> const NumericStorage<T>& NumericStorage<T>::setDefaultValue(const T defaultValue) const {
+    /* Not calling setDirty() in this case as the step doesn't affect the
+       stored value or its range */
+    AbstractStorage::data<Data<T>>()->defaultValue = defaultValue;
+
+    return *this;
+}
+
 template<class T> typename NumericStorage<T>::Type NumericStorage<T>::query(const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation) {
     /* Almost a Rust-level code with the **.::<>() */
     Data<T>& data = *storage.AbstractStorage::data<Data<T>>();
@@ -361,7 +378,7 @@ namespace {
    with the static_assert() below we disallow any types that are less than 32
    bits, as there's no advantage using those. and it further reduces
    duplications in the binary. */
-template<class T> T updaterImplementation(const T min, const T max, const T step, const T currentValue, const StorageOperation operation, const T value, StorageUpdateState& state) {
+template<class T> T updaterImplementation(const T min, const T max, const T step, const T defaultValue, const T currentValue, const StorageOperation operation, const T value, StorageUpdateState& state) {
     static_assert(std::is_arithmetic<T>::value && sizeof(T) >= 4,
         "this helper should be called with builtin types only");
 
@@ -382,6 +399,8 @@ template<class T> T updaterImplementation(const T min, const T max, const T step
     /* All other operations are required to succeed, including cases where
        increment gets clamped and such */
     state = StorageUpdateState::Success;
+    if(operation == StorageOperation::Reset)
+        return defaultValue;
     /* The following has to clamp() and not just min() / max() so they work
        properly also with negative step. See the "custom negative step" test
        cases. */
@@ -437,6 +456,7 @@ template<class T> StorageUpdateState NumericStorage<T>::updater(const NumericSto
         static_cast<typename Traits<T>::ArithmeticType>(data.min),
         static_cast<typename Traits<T>::ArithmeticType>(data.max),
         static_cast<typename Traits<T>::ArithmeticType>(data.step),
+        static_cast<typename Traits<T>::ArithmeticType>(data.defaultValue),
         currentValue,
         operation,
         value ? static_cast<typename Traits<T>::ArithmeticType>(*value) : typename Traits<T>::ArithmeticType{},
@@ -455,7 +475,7 @@ template<class T> StorageUpdateState NumericStorage<T>::updater(const NumericSto
 template<class T> StorageOperations NumericStorage<T>::operations() const {
     return AbstractStorage::data<Data<T>>()->flags >= Flag::NonOwnedImmutable ?
         StorageOperation::Min|StorageOperation::Max :
-        StorageOperation::Set|StorageOperation::Increment|StorageOperation::Decrement|StorageOperation::Min|StorageOperation::Max;
+        StorageOperation::Set|StorageOperation::Reset|StorageOperation::Increment|StorageOperation::Decrement|StorageOperation::Min|StorageOperation::Max;
 }
 
 template<class T> Containers::StridedArrayView3D<const T> NumericStorage<T>::data() const {
@@ -497,6 +517,8 @@ template MAGNUM_UI_EXPORT Containers::Pair<type, type> NumericStorage<type>::ran
 template MAGNUM_UI_EXPORT const NumericStorage<type>& NumericStorage<type>::setRange(type, type) const; \
 template MAGNUM_UI_EXPORT type NumericStorage<type>::step() const;          \
 template MAGNUM_UI_EXPORT const NumericStorage<type>& NumericStorage<type>::setStep(type) const; \
+template MAGNUM_UI_EXPORT type NumericStorage<type>::defaultValue() const;          \
+template MAGNUM_UI_EXPORT const NumericStorage<type>& NumericStorage<type>::setDefaultValue(type) const; \
 template MAGNUM_UI_EXPORT typename NumericStorage<type>::Type NumericStorage<type>::query(const NumericStorage<type>&, const Containers::Size3D&, StorageOperation); \
 template MAGNUM_UI_EXPORT StorageUpdateState NumericStorage<type>::updater(const NumericStorage<type>&, const Containers::Size3D&, StorageOperation, const Type*); \
 template MAGNUM_UI_EXPORT StorageOperations NumericStorage<type>::operations() const; \

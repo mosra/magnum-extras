@@ -80,11 +80,10 @@ struct NumericStorageTest: TestSuite::Tester {
 
     /* Verifies behavior of setRange(), setStep() and their effect on value
        updates including clamping and other edge cases */
-    void rangeStep();
+    void rangeStepDefault();
     template<class T> void rangeStepTypeOverflowSigned();
     template<class T> void rangeStepTypeOverflowUnsigned();
     void rangeStepTypeOverflowFloat();
-
     void rangeStepInvalid();
 };
 
@@ -167,37 +166,61 @@ const struct {
     Short value;
     Containers::Optional<Containers::Pair<Short, Short>> range;
     Containers::Optional<Short> step;
+    Containers::Optional<Short> defaultValue;
     StorageOperation operation;
     Containers::Optional<Int> set;
     StorageUpdateState expectedState;
     bool expectedDirty;
     Int expected;
-} RangeStepData[]{
+} RangeStepDefaultData[]{
     {"set",
-        1134, {}, {},
+        1134, {}, {}, {},
         StorageOperation::Set, 31655,
         StorageUpdateState::Success, true, 31655},
     /* Just to verify that there isn't some weird rogue assertion blowing up
        if encountering a zero (it used to be, which is why this is here) */
     {"set zero",
-        1134, {}, {},
+        1134, {}, {}, {},
         StorageOperation::Set, 0,
         StorageUpdateState::Success, true, 0},
     {"set the same value",
-        -1134, {}, {},
+        -1134, {}, {}, {},
         StorageOperation::Set, -1134,
         StorageUpdateState::Success, false, -1134},
     {"set a value larger than representable",
-        1134, {}, {},
+        1134, {}, {}, {},
         StorageOperation::Set, 100000,
         StorageUpdateState::Clamped, true, 32767},
     {"set a value smaller than representable",
-        1134, {}, {},
+        1134, {}, {}, {},
         StorageOperation::Set, -100000,
         StorageUpdateState::Clamped, true, -32768},
 
+    {"reset",
+        1134, {}, {}, {},
+        StorageOperation::Reset, {},
+        StorageUpdateState::Success, true, 0},
+    {"reset when already zero",
+        0, {}, {}, {},
+        StorageOperation::Reset, {},
+        StorageUpdateState::Success, false, 0},
+    {"reset with a custom default value",
+        1134, {}, {}, 31222,
+        StorageOperation::Reset, {},
+        StorageUpdateState::Success, true, 31222},
+    {"reset with a custom default value when already that",
+        31222, {}, {}, 31222,
+        StorageOperation::Reset, {},
+        StorageUpdateState::Success, false, 31222},
+    /* This is accepted because otherwise it would be impossible to change the
+       range because the default would be outside of it and vice versa */
+    {"reset with a custom default value that's outside allowed range",
+        1134, {{2000, 3000}}, {}, 245,
+        StorageOperation::Reset, {},
+        StorageUpdateState::Success, true, 245},
+
     {"set a range that's the same as before and a value that's the same as before",
-        1134, {{-32768, 32767}}, {},
+        1134, {{-32768, 32767}}, {}, {},
         StorageOperation::Set, 1134,
         StorageUpdateState::Success, false, 1134},
 
@@ -206,125 +229,125 @@ const struct {
        value got set. The value *doesn't* get changed just by setting the
        range. */
     {"set the same value with a range that's before the value",
-        1134, {{-1000, 1000}}, {},
+        1134, {{-1000, 1000}}, {}, {},
         StorageOperation::Set, 1134,
         StorageUpdateState::Clamped, true, 1000},
     {"set the same value with a range that's after the value",
-        1134, {{2000, 3000}}, {},
+        1134, {{2000, 3000}}, {}, {},
         StorageOperation::Set, 1134,
         StorageUpdateState::Clamped, true, 2000},
 
     {"set a value before a range",
-        1134, {{-2000, 3000}}, {},
+        1134, {{-2000, 3000}}, {}, {},
         StorageOperation::Set, -2152,
         StorageUpdateState::Clamped, true, -2000},
     {"set a value before a range, already at range begin",
-        -2000, {{-2000, 3000}}, {},
+        -2000, {{-2000, 3000}}, {}, {},
         StorageOperation::Set, -2152,
         StorageUpdateState::Clamped, false, -2000},
     {"set a value after a range",
-        1134, {{-2000, 3000}}, {},
+        1134, {{-2000, 3000}}, {}, {},
         StorageOperation::Set, 3265,
         StorageUpdateState::Clamped, true, 3000},
     {"set a value after a range, already at range end",
-        3000, {{-2000, 3000}}, {},
+        3000, {{-2000, 3000}}, {}, {},
         StorageOperation::Set, 3265,
         StorageUpdateState::Clamped, false, 3000},
     {"set a value exactly at range begin",
-        1134, {{-2000, 3000}}, {},
+        1134, {{-2000, 3000}}, {}, {},
         StorageOperation::Set, -2000,
         StorageUpdateState::Success, true, -2000},
     {"set a value exactly at range begin",
-        1134, {{-2000, 3000}}, {},
+        1134, {{-2000, 3000}}, {}, {},
         StorageOperation::Set, -2000,
         StorageUpdateState::Success, true, -2000},
     {"set a value exactly at range begin, already there",
-        -2000, {{-2000, 3000}}, {},
+        -2000, {{-2000, 3000}}, {}, {},
         StorageOperation::Set, -2000,
         StorageUpdateState::Success, false, -2000},
     {"set a value exactly at range end",
-        1134, {{-2000, 3000}}, {},
+        1134, {{-2000, 3000}}, {}, {},
         StorageOperation::Set, 3000,
         StorageUpdateState::Success, true, 3000},
     {"set a value exactly at range end, already there",
-        3000, {{-2000, 3000}}, {},
+        3000, {{-2000, 3000}}, {}, {},
         StorageOperation::Set, 3000,
         StorageUpdateState::Success, false, 3000},
 
     {"set a value with a range being empty",
-        1134, {{4000, 4000}}, {},
+        1134, {{4000, 4000}}, {}, {},
         StorageOperation::Set, 3764,
         StorageUpdateState::Clamped, true, 4000},
     {"set a value with a range being empty, already there",
-        4000, {{4000, 4000}}, {},
+        4000, {{4000, 4000}}, {}, {},
         StorageOperation::Set, 4000,
         StorageUpdateState::Success, false, 4000},
 
     {"increment",
-        1134, {}, {},
+        1134, {}, {}, {},
         StorageOperation::Increment, {},
         StorageUpdateState{}, true, 1135},
     {"decrement",
-        1134, {}, {},
+        1134, {}, {}, {},
         StorageOperation::Decrement, {},
         StorageUpdateState{}, true, 1133},
     {"increment exactly at range end",
-        3000, {{-2000, 3000}}, {},
+        3000, {{-2000, 3000}}, {}, {},
         StorageOperation::Increment, {},
         StorageUpdateState{}, false, 3000},
     {"decrement exactly at range begin",
-        -2000, {{-2000, 3000}}, {},
+        -2000, {{-2000, 3000}}, {}, {},
         StorageOperation::Decrement, {},
         StorageUpdateState{}, false, -2000},
     {"increment, custom step",
-        1134, {}, 20,
+        1134, {}, 20, {},
         StorageOperation::Increment, {},
         StorageUpdateState{}, true, 1154},
     {"decrement, custom step",
-        1134, {}, 20,
+        1134, {}, 20, {},
         StorageOperation::Decrement, {},
         StorageUpdateState{}, true, 1114},
     {"increment, custom step, near range end",
-        2996, {{-2000, 3000}}, 20,
+        2996, {{-2000, 3000}}, 20, {},
         StorageOperation::Increment, {},
         StorageUpdateState{}, true, 3000},
     {"decrement, custom step, near range begin",
-        -1996, {{-2000, 3000}}, 20,
+        -1996, {{-2000, 3000}}, 20, {},
         StorageOperation::Decrement, {},
         StorageUpdateState{}, true, -2000},
     {"increment, custom negative step",
-        1134, {}, -20,
+        1134, {}, -20, {},
         StorageOperation::Increment, {},
         StorageUpdateState{}, true, 1114},
     {"decrement, custom negative step",
-        1134, {}, -20,
+        1134, {}, -20, {},
         StorageOperation::Decrement, {},
         StorageUpdateState{}, true, 1154},
     /* With just a min() this would underflow the range */
     {"increment, custom negative step, near range begin",
-        -1996, {{-2000, 3000}}, -20,
+        -1996, {{-2000, 3000}}, -20, {},
         StorageOperation::Increment, {},
         StorageUpdateState{}, true, -2000},
     /* With just a max() this would overflow the range */
     {"decrement, custom negative step, near range end",
-        2996, {{-2000, 3000}}, -20,
+        2996, {{-2000, 3000}}, -20, {},
         StorageOperation::Decrement, {},
         StorageUpdateState{}, true, 3000},
 
     {"min",
-        1134, {}, {},
+        1134, {}, {}, {},
         StorageOperation::Min, {},
         StorageUpdateState{}, true, -32768},
     {"max",
-        1134, {}, {},
+        1134, {}, {}, {},
         StorageOperation::Max, {},
         StorageUpdateState{}, true, 32767},
     {"min, custom range",
-        1134, {{-2000, 3000}}, {},
+        1134, {{-2000, 3000}}, {}, {},
         StorageOperation::Min, {},
         StorageUpdateState{}, true, -2000},
     {"max, custom range",
-        1134, {{-2000, 3000}}, {},
+        1134, {{-2000, 3000}}, {}, {},
         StorageOperation::Max, {},
         StorageUpdateState{}, true, 3000},
 };
@@ -470,8 +493,8 @@ NumericStorageTest::NumericStorageTest() {
     addInstancedTests({&NumericStorageTest::update},
         Containers::arraySize(UpdateData));
 
-    addInstancedTests({&NumericStorageTest::rangeStep},
-        Containers::arraySize(RangeStepData));
+    addInstancedTests({&NumericStorageTest::rangeStepDefault},
+        Containers::arraySize(RangeStepDefaultData));
 
     addTests({&NumericStorageTest::rangeStepTypeOverflowSigned<Int>,
               &NumericStorageTest::rangeStepTypeOverflowSigned<Long>,
@@ -574,20 +597,20 @@ template<class T> void NumericStorageTest::constructValueInit() {
     /* On 64-bit up to 32 bytes fits in place, on 32-bit up to 20, adjust one
        coordinate in each size to fit exactly on both bitness variants */
     #ifndef CORRADE_TARGET_32BIT
-    constexpr std::size_t sizeFirstY = 7;
+    constexpr std::size_t sizeFirstY = 9;
     #else
-    constexpr std::size_t sizeFirstY = 4;
+    constexpr std::size_t sizeFirstY = 5;
     #endif
 
     NumericStorage<T> first1 = data.implicitLayer ?
-        NumericStorage<T>{ui, ValueInit, {2, sizeFirstY, 2}, StorageFlags{0x18}} :
-        NumericStorage<T>{layer, ValueInit, {2, sizeFirstY, 2}, StorageFlags{0x18}};
+        NumericStorage<T>{ui, ValueInit, {3, sizeFirstY, 1}, StorageFlags{0x18}} :
+        NumericStorage<T>{layer, ValueInit, {3, sizeFirstY, 1}, StorageFlags{0x18}};
     NumericStorage<T> first2 = data.implicitLayer ?
-        NumericStorage<T>{ui, {2, sizeFirstY, 2}, StorageFlags{0x18}} :
-        NumericStorage<T>{layer, {2, sizeFirstY, 2}, StorageFlags{0x18}};
+        NumericStorage<T>{ui, {3, sizeFirstY, 1}, StorageFlags{0x18}} :
+        NumericStorage<T>{layer, {3, sizeFirstY, 1}, StorageFlags{0x18}};
     CORRADE_COMPARE(&first1.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(&first2.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
-    /* 1-byte storage fits in-place (28 / 16 + 4*1 bytes), larger not
+    /* 1-byte storage fits exactly in-place (27 / 15 + 5*1 bytes), larger not
        anymore */
     CORRADE_COMPARE(first1.isAllocated(), sizeof(T) > 1);
     CORRADE_COMPARE(first1.isAllocated(), sizeof(T) > 1);
@@ -595,17 +618,19 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_VERIFY(!first2.isDirty());
     CORRADE_COMPARE(first1.flags(), StorageFlags{0x18});
     CORRADE_COMPARE(first2.flags(), StorageFlags{0x18});
-    CORRADE_COMPARE(first1.size(), (Containers::Size3D{2, sizeFirstY, 2}));
-    CORRADE_COMPARE(first2.size(), (Containers::Size3D{2, sizeFirstY, 2}));
-    CORRADE_COMPARE(first1.stride(), (Containers::Stride3D{sizeFirstY *2*sizeof(T), 2*sizeof(T), sizeof(T)}));
-    CORRADE_COMPARE(first2.stride(), (Containers::Stride3D{sizeFirstY *2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(first1.size(), (Containers::Size3D{3, sizeFirstY, 1}));
+    CORRADE_COMPARE(first2.size(), (Containers::Size3D{3, sizeFirstY, 1}));
+    CORRADE_COMPARE(first1.stride(), (Containers::Stride3D{sizeFirstY *1*sizeof(T), 1*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(first2.stride(), (Containers::Stride3D{sizeFirstY *1*sizeof(T), 1*sizeof(T), sizeof(T)}));
 
     /* See comment at defaultRangeFor() for details */
     CORRADE_COMPARE(first1.range(), defaultRangeFor<T>());
-    /* Using 1.0 because unlike 1, which is ambiguous conversion to Half, this
+    /* Using N.0 because unlike N, which is ambiguous conversion to Half, this
        isn't ambigous for any type. Lol. */
     CORRADE_COMPARE(first1.step(), T(1.0));
     CORRADE_COMPARE(first2.step(), T(1.0));
+    CORRADE_COMPARE(first1.defaultValue(), T(0.0));
+    CORRADE_COMPARE(first2.defaultValue(), T(0.0));
 
     /* Verify at least one element to ensure the operator[]() (and value(), and
        operator StorageQuery<>()) is implemented for all types. Thorough
@@ -628,52 +653,52 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_VERIFY(view1.isContiguous());
     CORRADE_VERIFY(view2.isContiguous());
     CORRADE_COMPARE_AS(view1.asContiguous(),
-        Containers::stridedArrayView({T{}}).template broadcasted<0>(2* sizeFirstY *2),
+        Containers::stridedArrayView({T{}}).template broadcasted<0>(3*sizeFirstY *1),
         TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(view2.asContiguous(),
-        Containers::stridedArrayView({T{}}).template broadcasted<0>(2* sizeFirstY *2),
+        Containers::stridedArrayView({T{}}).template broadcasted<0>(3*sizeFirstY *1),
         TestSuite::Compare::Container);
 
     /* 2D, 1D and single-item variants delegate to the 3D constructor, so
        verify just that they propagate all arguments correctly */
     #ifndef CORRADE_TARGET_32BIT
-    constexpr std::size_t sizeSecondX = 4;
+    constexpr std::size_t sizeSecondX = 5;
     #else
     constexpr std::size_t sizeSecondX = 2;
     #endif
     NumericStorage<T> second1 = data.implicitLayer ?
-        NumericStorage<T>{ui, ValueInit, {sizeSecondX, 3}, StorageFlags{0x20}} :
-        NumericStorage<T>{layer, ValueInit, {sizeSecondX, 3}, StorageFlags{0x20}};
+        NumericStorage<T>{ui, ValueInit, {sizeSecondX, 2}, StorageFlags{0x20}} :
+        NumericStorage<T>{layer, ValueInit, {sizeSecondX, 2}, StorageFlags{0x20}};
     NumericStorage<T> second2 = data.implicitLayer ?
-        NumericStorage<T>{ui, {sizeSecondX, 3}, StorageFlags{0x20}} :
-        NumericStorage<T>{layer, {sizeSecondX, 3}, StorageFlags{0x20}};
+        NumericStorage<T>{ui, {sizeSecondX, 2}, StorageFlags{0x20}} :
+        NumericStorage<T>{layer, {sizeSecondX, 2}, StorageFlags{0x20}};
     CORRADE_COMPARE(&second1.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(&second2.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
-    /* 2-byte storage fits in-place (24 / 12 + 4*2 bytes), larger not
-       anymore */
+    /* 2-byte storage fits in-place with a gap (20 / 8 + 5*2 bytes), larger
+       not anymore */
     CORRADE_COMPARE(second1.isAllocated(), sizeof(T) > 2);
     CORRADE_COMPARE(second2.isAllocated(), sizeof(T) > 2);
     CORRADE_VERIFY(!second1.isDirty());
     CORRADE_VERIFY(!second2.isDirty());
     CORRADE_COMPARE(second1.flags(), StorageFlags{0x20});
     CORRADE_COMPARE(second2.flags(), StorageFlags{0x20});
-    CORRADE_COMPARE(second1.size(), (Containers::Size3D{1, sizeSecondX, 3}));
-    CORRADE_COMPARE(second2.size(), (Containers::Size3D{1, sizeSecondX, 3}));
-    CORRADE_COMPARE(second1.stride(), (Containers::Stride3D{sizeSecondX*3*sizeof(T), 3*sizeof(T), sizeof(T)}));
-    CORRADE_COMPARE(second2.stride(), (Containers::Stride3D{sizeSecondX*3*sizeof(T), 3*sizeof(T), sizeof(T)}));
-    CORRADE_COMPARE((second1[{1, 2}]), static_cast<typename decltype(second1)::Type>(T{}));
-    CORRADE_COMPARE((second2[{1, 2}]), static_cast<typename decltype(second2)::Type>(T{}));
+    CORRADE_COMPARE(second1.size(), (Containers::Size3D{1, sizeSecondX, 2}));
+    CORRADE_COMPARE(second2.size(), (Containers::Size3D{1, sizeSecondX, 2}));
+    CORRADE_COMPARE(second1.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(second2.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE((second1[{1, 1}]), static_cast<typename decltype(second1)::Type>(T{}));
+    CORRADE_COMPARE((second2[{1, 1}]), static_cast<typename decltype(second2)::Type>(T{}));
     CORRADE_COMPARE_AS(second1.data().asContiguous(),
-        Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeSecondX*3),
+        Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeSecondX*2),
         TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(second2.data().asContiguous(),
-        Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeSecondX*3),
+        Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeSecondX*2),
         TestSuite::Compare::Container);
 
     #ifndef CORRADE_TARGET_32BIT
-    constexpr std::size_t sizeThird = 4;
-    #else
     constexpr std::size_t sizeThird = 3;
+    #else
+    constexpr std::size_t sizeThird = 5;
     #endif
     NumericStorage<T> third1 = data.implicitLayer ?
         NumericStorage<T>{ui, ValueInit, sizeThird, StorageFlags{0x10}} :
@@ -683,10 +708,8 @@ template<class T> void NumericStorageTest::constructValueInit() {
         NumericStorage<T>{layer, sizeThird, StorageFlags{0x10}};
     CORRADE_COMPARE(&third1.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(&third2.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
-    /* 4-byte storage fits in-place on 64-bit (16 + 4*4 bytes), larger not
-       anymore. On 32-bit only up to 2-byte (12 + 2*4 bytes), with a 4-byte
-       storage only a single item would fit, which is tested in the single-item
-       case below already. */
+    /* 4-byte storage fits in-place on 64-bit (12 + 5*4 bytes), larger not
+       anymore. On 32-bit only up to 2-byte (10 + 5*2 bytes). */
     #ifndef CORRADE_TARGET_32BIT
     CORRADE_COMPARE(third1.isAllocated(), sizeof(T) > 4);
     CORRADE_COMPARE(third2.isAllocated(), sizeof(T) > 4);
@@ -719,11 +742,15 @@ template<class T> void NumericStorageTest::constructValueInit() {
         NumericStorage<T>{layer, StorageFlags{0x08}};
     CORRADE_COMPARE(&fourth1.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(&fourth2.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
-    /* 8-byte storage doesn't fit in-place anymore (8 + 4*8 bytes). On 32-bit
-       it's the same case although the threshold is right at four bytes
-       (4 + 4*4 bytes fits exactly). */
+    /* 8-byte storage doesn't fit in-place anymore (8 + 5*8 bytes). On 32-bit
+       even a 4-byte storage doesn't fit anymore (4 + 5*4 bytes). */
+    #ifndef CORRADE_TARGET_32BIT
     CORRADE_COMPARE(fourth1.isAllocated(), sizeof(T) > 4);
     CORRADE_COMPARE(fourth2.isAllocated(), sizeof(T) > 4);
+    #else
+    CORRADE_COMPARE(fourth1.isAllocated(), sizeof(T) > 2);
+    CORRADE_COMPARE(fourth1.isAllocated(), sizeof(T) > 2);
+    #endif
     CORRADE_VERIFY(!fourth1.isDirty());
     CORRADE_VERIFY(!fourth2.isDirty());
     CORRADE_COMPARE(fourth1.flags(), StorageFlags{0x08});
@@ -760,21 +787,22 @@ template<class T> void NumericStorageTest::constructNoInit() {
     ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
 
     #ifndef CORRADE_TARGET_32BIT
-    constexpr std::size_t sizeFirstY = 7;
+    constexpr std::size_t sizeFirstY = 9;
     #else
-    constexpr std::size_t sizeFirstY = 4;
+    constexpr std::size_t sizeFirstY = 5;
     #endif
     NumericStorage<T> first = data.implicitLayer ?
-        NumericStorage<T>{ui, NoInit, {2, sizeFirstY, 2}, StorageFlags{0x18}} :
-        NumericStorage<T>{layer, NoInit, {2, sizeFirstY, 2}, StorageFlags{0x18}};
+        NumericStorage<T>{ui, NoInit, {3, sizeFirstY, 1}, StorageFlags{0x18}} :
+        NumericStorage<T>{layer, NoInit, {3, sizeFirstY, 1}, StorageFlags{0x18}};
     CORRADE_COMPARE(&first.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(first.isAllocated(), sizeof(T) > 1);
     CORRADE_VERIFY(!first.isDirty());
     CORRADE_COMPARE(first.flags(), StorageFlags{0x18});
-    CORRADE_COMPARE(first.size(), (Containers::Size3D{2, sizeFirstY, 2}));
-    CORRADE_COMPARE(first.stride(), (Containers::Stride3D{sizeFirstY*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(first.size(), (Containers::Size3D{3, sizeFirstY, 1}));
+    CORRADE_COMPARE(first.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
     CORRADE_COMPARE(first.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(first.step(), T(1.0));
+    CORRADE_COMPARE(first.defaultValue(), T(0.0));
 
     /* Cannot test the operator[](), value() and operator StorageQuery() here
        as they return an uninitalized value. Thorough indexing tests are in
@@ -790,24 +818,24 @@ template<class T> void NumericStorageTest::constructNoInit() {
     /* 2D and 1D variants delegate to the 3D constructor, so verify just that
        they propagate all arguments correctly */
     #ifndef CORRADE_TARGET_32BIT
-    constexpr std::size_t sizeSecondX = 4;
+    constexpr std::size_t sizeSecondX = 5;
     #else
     constexpr std::size_t sizeSecondX = 2;
     #endif
     NumericStorage<T> second = data.implicitLayer ?
-        NumericStorage<T>{ui, NoInit, {sizeSecondX, 3}, StorageFlags{0x20}} :
-        NumericStorage<T>{layer, NoInit, {sizeSecondX, 3}, StorageFlags{0x20}};
+        NumericStorage<T>{ui, NoInit, {sizeSecondX, 2}, StorageFlags{0x20}} :
+        NumericStorage<T>{layer, NoInit, {sizeSecondX, 2}, StorageFlags{0x20}};
     CORRADE_COMPARE(&second.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(second.isAllocated(), sizeof(T) > 2);
     CORRADE_VERIFY(!second.isDirty());
     CORRADE_COMPARE(second.flags(), StorageFlags{0x20});
-    CORRADE_COMPARE(second.size(), (Containers::Size3D{1, sizeSecondX, 3}));
-    CORRADE_COMPARE(second.stride(), (Containers::Stride3D{sizeSecondX*3*sizeof(T), 3*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(second.size(), (Containers::Size3D{1, sizeSecondX, 2}));
+    CORRADE_COMPARE(second.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
 
     #ifndef CORRADE_TARGET_32BIT
-    constexpr std::size_t sizeThird = 4;
-    #else
     constexpr std::size_t sizeThird = 3;
+    #else
+    constexpr std::size_t sizeThird = 5;
     #endif
     NumericStorage<T> third = data.implicitLayer ?
         NumericStorage<T>{ui, NoInit, sizeThird, StorageFlags{0x10}} :
@@ -823,14 +851,19 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_COMPARE(third.size(), (Containers::Size3D{1, 1, sizeThird}));
     CORRADE_COMPARE(third.stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
 
-    /* For single-item storages, types below 8 bytes fit in-place, in which
+    /* For single-item storages, types below 8 / 4 bytes fit in-place, in which
        case we can create, fill & remove a storage and then recycling the slot
        gives us an ability to check that the value was indeed left over from
        before. 8-byte types are allocated and anything can happen there -- the
        exact memory reused, stomped over by something else in the meantime or a
        different memory being allocated next time. */
     StorageHandle previousHandle{};
-    if(sizeof(T) < 8) {
+    #ifndef CORRADE_TARGET_32BIT
+    if(sizeof(T) < 8)
+    #else
+    if(sizeof(T) < 4)
+    #endif
+    {
         NumericStorage<T> previous{data.implicitLayer ? ui.dataLayer() : layer};
         previousHandle = previous.handle();
         /* For Half the storage gets expanded to Float and the two types aren't
@@ -843,15 +876,28 @@ template<class T> void NumericStorageTest::constructNoInit() {
     NumericStorage<T> fourth = data.implicitLayer ?
         NumericStorage<T>{ui, NoInit, StorageFlags{0x08}} :
         NumericStorage<T>{layer, NoInit, StorageFlags{0x08}};
+    #ifndef CORRADE_TARGET_32BIT
     if(sizeof(T) < 8)
+    #else
+    if(sizeof(T) < 4)
+    #endif
         CORRADE_COMPARE(storageHandleId(fourth.handle()), storageHandleId(previousHandle));
     CORRADE_COMPARE(&fourth.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
+    #ifndef CORRADE_TARGET_32BIT
     CORRADE_COMPARE(fourth.isAllocated(), sizeof(T) > 4);
+    #else
+    CORRADE_COMPARE(fourth.isAllocated(), sizeof(T) > 2);
+    #endif
     CORRADE_VERIFY(!fourth.isDirty());
     CORRADE_COMPARE(fourth.flags(), StorageFlags{0x08});
     CORRADE_COMPARE(fourth.size(), (Containers::Size3D{1, 1, 1}));
     CORRADE_COMPARE(fourth.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
-    if(sizeof(T) < 8) {
+    #ifndef CORRADE_TARGET_32BIT
+    if(sizeof(T) < 8)
+    #else
+    if(sizeof(T) < 4)
+    #endif
+    {
         CORRADE_COMPARE(fourth.value(), static_cast<typename decltype(fourth)::Type>(StorageTraits<T>::value()));
         CORRADE_COMPARE(StorageQuery<typename decltype(fourth)::Type>{fourth}, static_cast<typename decltype(fourth)::Type>(StorageTraits<T>::value()));
         CORRADE_COMPARE_AS(fourth.data().asContiguous(),
@@ -876,21 +922,22 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
 
     #ifndef CORRADE_TARGET_32BIT
-    constexpr std::size_t sizeFirstY = 7;
+    constexpr std::size_t sizeFirstY = 9;
     #else
-    constexpr std::size_t sizeFirstY = 4;
+    constexpr std::size_t sizeFirstY = 5;
     #endif
     NumericStorage<T> first = data.implicitLayer ?
-        NumericStorage<T>{ui, DirectInit, {2, sizeFirstY, 2}, StorageTraits<T>::value(), StorageFlags{0x18}} :
-        NumericStorage<T>{layer, DirectInit, {2, sizeFirstY, 2}, StorageTraits<T>::value(), StorageFlags{0x18}};
+        NumericStorage<T>{ui, DirectInit, {3, sizeFirstY, 1}, StorageTraits<T>::value(), StorageFlags{0x18}} :
+        NumericStorage<T>{layer, DirectInit, {3, sizeFirstY, 1}, StorageTraits<T>::value(), StorageFlags{0x18}};
     CORRADE_COMPARE(&first.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(first.isAllocated(), sizeof(T) > 1);
     CORRADE_VERIFY(!first.isDirty());
     CORRADE_COMPARE(first.flags(), StorageFlags{0x18});
-    CORRADE_COMPARE(first.size(), (Containers::Size3D{2, sizeFirstY, 2}));
-    CORRADE_COMPARE(first.stride(), (Containers::Stride3D{sizeFirstY*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(first.size(), (Containers::Size3D{3, sizeFirstY, 1}));
+    CORRADE_COMPARE(first.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
     CORRADE_COMPARE(first.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(first.step(), T(1.0));
+    CORRADE_COMPARE(first.defaultValue(), StorageTraits<T>::value());
 
     /* The operator[](), value() and operator StorageQuery() is tested in
        constructValueInit() already, no need to do that again here, verify only
@@ -903,33 +950,33 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_COMPARE(view.stride(), first.stride());
     CORRADE_VERIFY(view.isContiguous());
     CORRADE_COMPARE_AS(view.asContiguous(),
-        Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(2*sizeFirstY*2),
+        Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(3*sizeFirstY*1),
         TestSuite::Compare::Container);
 
     /* 2D, 1D and single-item variants delegate to the 3D constructor, so
        verify just that they propagate all arguments correctly */
     #ifndef CORRADE_TARGET_32BIT
-    constexpr std::size_t sizeSecondX = 4;
+    constexpr std::size_t sizeSecondX = 5;
     #else
     constexpr std::size_t sizeSecondX = 2;
     #endif
     NumericStorage<T> second = data.implicitLayer ?
-        NumericStorage<T>{ui, DirectInit, {sizeSecondX, 3}, StorageTraits<T>::value(), StorageFlags{0x20}} :
-        NumericStorage<T>{layer, DirectInit, {sizeSecondX, 3}, StorageTraits<T>::value(), StorageFlags{0x20}};
+        NumericStorage<T>{ui, DirectInit, {sizeSecondX, 2}, StorageTraits<T>::value(), StorageFlags{0x20}} :
+        NumericStorage<T>{layer, DirectInit, {sizeSecondX, 2}, StorageTraits<T>::value(), StorageFlags{0x20}};
     CORRADE_COMPARE(&second.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(second.isAllocated(), sizeof(T) > 2);
     CORRADE_VERIFY(!second.isDirty());
     CORRADE_COMPARE(second.flags(), StorageFlags{0x20});
-    CORRADE_COMPARE(second.size(), (Containers::Size3D{1, sizeSecondX, 3}));
-    CORRADE_COMPARE(second.stride(), (Containers::Stride3D{sizeSecondX*3*sizeof(T), 3*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(second.size(), (Containers::Size3D{1, sizeSecondX, 2}));
+    CORRADE_COMPARE(second.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
     CORRADE_COMPARE_AS(second.data().asContiguous(),
-        Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(sizeSecondX*3),
+        Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(sizeSecondX*2),
         TestSuite::Compare::Container);
 
     #ifndef CORRADE_TARGET_32BIT
-    constexpr std::size_t sizeThird = 4;
-    #else
     constexpr std::size_t sizeThird = 3;
+    #else
+    constexpr std::size_t sizeThird = 5;
     #endif
     NumericStorage<T> third = data.implicitLayer ?
         NumericStorage<T>{ui, DirectInit, sizeThird, StorageTraits<T>::value(), StorageFlags{0x10}} :
@@ -952,7 +999,11 @@ template<class T> void NumericStorageTest::constructDirectInit() {
         NumericStorage<T>{ui, DirectInit, StorageTraits<T>::value(), StorageFlags{0x08}} :
         NumericStorage<T>{layer, DirectInit, StorageTraits<T>::value(), StorageFlags{0x08}};
     CORRADE_COMPARE(&fourth.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
+    #ifndef CORRADE_TARGET_32BIT
     CORRADE_COMPARE(fourth.isAllocated(), sizeof(T) > 4);
+    #else
+    CORRADE_COMPARE(fourth.isAllocated(), sizeof(T) > 2);
+    #endif
     CORRADE_VERIFY(!fourth.isDirty());
     CORRADE_COMPARE(fourth.flags(), StorageFlags{0x08});
     CORRADE_COMPARE(fourth.size(), (Containers::Size3D{1, 1, 1}));
@@ -997,16 +1048,11 @@ template<class T> void NumericStorageTest::constructNonOwned3D() {
         NumericStorage<T>{layer, NonOwned, constStorageView, StorageFlags{0x18}};
     CORRADE_COMPARE(&storage1.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(&storage2.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
-    /* 3D storages don't fit in-place on 64 bits because even pointer + 3D
-       stride is 32 bytes already. On 32-bit it can fit only for single-byte
-       types. */
-    #ifndef CORRADE_TARGET_32BIT
+    /* 3D storages don't fit in-place because on 64-bit even pointer + 3D
+       stride is 32 bytes already, and on 32-bit even a 1-byte type occupies 21
+       bytes in total. */
     CORRADE_VERIFY(storage1.isAllocated());
     CORRADE_VERIFY(storage2.isAllocated());
-    #else
-    CORRADE_COMPARE(storage1.isAllocated(), sizeof(T) > 1);
-    CORRADE_COMPARE(storage2.isAllocated(), sizeof(T) > 1);
-    #endif
     CORRADE_VERIFY(!storage1.isDirty());
     CORRADE_VERIFY(!storage2.isDirty());
     CORRADE_COMPARE(storage1.flags(), StorageFlags{0x18});
@@ -1020,6 +1066,8 @@ template<class T> void NumericStorageTest::constructNonOwned3D() {
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
     CORRADE_COMPARE(storage2.step(), T(1.0));
+    CORRADE_COMPARE(storage1.defaultValue(), T(0.0));
+    CORRADE_COMPARE(storage2.defaultValue(), T(0.0));
 
     /* The operator[](), value() and operator StorageQuery() is tested for all
        types in constructValueInit() already, and verifying just non-owned
@@ -1030,7 +1078,7 @@ template<class T> void NumericStorageTest::constructNonOwned3D() {
     StorageQuery<typename decltype(storage2)::Type> query2 = storage2[{0, 0, 0}];
     CORRADE_VERIFY(query1.isMutable());
     CORRADE_VERIFY(!query2.isMutable());
-    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), StorageOperation::Min|StorageOperation::Max);
 
     /* The data should be the same views as passed to the constructor */
@@ -1080,10 +1128,10 @@ template<class T> void NumericStorageTest::constructNonOwned2D() {
     CORRADE_COMPARE(&storage1.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(&storage2.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     /* On 64-bit pointer + 2D stride is 24 bytes, so the storage fits in-place
-       only if the remaining four members are at most 8 bytes. On 32-bit
+       only if the remaining five members are at most 8 bytes. On 32-bit
        pointer + 2D stride is 12 so it's again 8 bytes left for the rest. */
-    CORRADE_COMPARE(storage1.isAllocated(), sizeof(T) > 2);
-    CORRADE_COMPARE(storage2.isAllocated(), sizeof(T) > 2);
+    CORRADE_COMPARE(storage1.isAllocated(), sizeof(T) > 1);
+    CORRADE_COMPARE(storage2.isAllocated(), sizeof(T) > 1);
     CORRADE_VERIFY(!storage1.isDirty());
     CORRADE_VERIFY(!storage2.isDirty());
     CORRADE_COMPARE(storage1.flags(), StorageFlags{0x20});
@@ -1097,13 +1145,15 @@ template<class T> void NumericStorageTest::constructNonOwned2D() {
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
     CORRADE_COMPARE(storage2.step(), T(1.0));
+    CORRADE_COMPARE(storage1.defaultValue(), T(0.0));
+    CORRADE_COMPARE(storage2.defaultValue(), T(0.0));
 
     /* Check just that the const variant doesn't have an updater set */
     StorageQuery<typename decltype(storage1)::Type> query1 = storage1[{0, 0}];
     StorageQuery<typename decltype(storage2)::Type> query2 = storage2[{0, 0}];
     CORRADE_VERIFY(query1.isMutable());
     CORRADE_VERIFY(!query2.isMutable());
-    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), StorageOperation::Min|StorageOperation::Max);
 
     /* The data should be the same views as passed to the constructor, expanded
@@ -1147,16 +1197,11 @@ template<class T> void NumericStorageTest::constructNonOwned1D() {
     CORRADE_COMPARE(&storage1.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(&storage2.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     /* Pointer + 1D stride is 16 bytes on 64-bit, so the storage fits in-place
-       only if the remaining four members are at most 16 bytes. On 32-bit it's
-       8 bytes, so the rest can occupy at most 12 bytes, which makes it 2-byte
-       types only. */
-    #ifndef CORRADE_TARGET_32BIT
-    CORRADE_COMPARE(storage1.isAllocated(), sizeof(T) > 4);
-    CORRADE_COMPARE(storage2.isAllocated(), sizeof(T) > 4);
-    #else
+       only if the remaining five members are at most 16 bytes. On 32-bit it's
+       8 bytes, so the rest can occupy at most 12 bytes. Which makes it 2-byte
+       types for both. */
     CORRADE_COMPARE(storage1.isAllocated(), sizeof(T) > 2);
     CORRADE_COMPARE(storage2.isAllocated(), sizeof(T) > 2);
-    #endif
     CORRADE_VERIFY(!storage1.isDirty());
     CORRADE_VERIFY(!storage2.isDirty());
     CORRADE_COMPARE(storage1.flags(), StorageFlags{0x10});
@@ -1171,13 +1216,15 @@ template<class T> void NumericStorageTest::constructNonOwned1D() {
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
     CORRADE_COMPARE(storage2.step(), T(1.0));
+    CORRADE_COMPARE(storage1.defaultValue(), T(0.0));
+    CORRADE_COMPARE(storage2.defaultValue(), T(0.0));
 
     /* Check just that the const variant doesn't have an updater set */
     StorageQuery<typename decltype(storage1)::Type> query1 = storage1[0];
     StorageQuery<typename decltype(storage2)::Type> query2 = storage2[0];
     CORRADE_VERIFY(query1.isMutable());
     CORRADE_VERIFY(!query2.isMutable());
-    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), StorageOperation::Min|StorageOperation::Max);
 
     /* The data should be the same views as passed to the constructor, expanded
@@ -1217,11 +1264,16 @@ template<class T> void NumericStorageTest::constructNonOwned() {
     CORRADE_COMPARE(&storage1.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(&storage2.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     /* Pointer + no stride is 8 bytes on 64-bit, so the storage fits in-place
-       only if the remaining four members are at most 24 bytes -- so not 8-byte
-       types anymore. On 32-bit the rest has to fit into 16 bytes, so also at
-       most four-byte types. */
+       only if the remaining five members are at most 24 bytes -- so not 8-byte
+       types anymore. On 32-bit the rest has to fit into 16 bytes, so just
+       two-byte types. */
+    #ifndef CORRADE_TARGET_32BIT
     CORRADE_COMPARE(storage1.isAllocated(), sizeof(T) > 4);
     CORRADE_COMPARE(storage2.isAllocated(), sizeof(T) > 4);
+    #else
+    CORRADE_COMPARE(storage1.isAllocated(), sizeof(T) > 2);
+    CORRADE_COMPARE(storage2.isAllocated(), sizeof(T) > 2);
+    #endif
     CORRADE_VERIFY(!storage1.isDirty());
     CORRADE_VERIFY(!storage2.isDirty());
     CORRADE_COMPARE(storage1.flags(), StorageFlags{0x08});
@@ -1234,13 +1286,15 @@ template<class T> void NumericStorageTest::constructNonOwned() {
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
     CORRADE_COMPARE(storage2.step(), T(1.0));
+    CORRADE_COMPARE(storage1.defaultValue(), T(0.0));
+    CORRADE_COMPARE(storage2.defaultValue(), T(0.0));
 
     /* Check just that the const variant doesn't have an updater set */
     StorageQuery<typename decltype(storage1)::Type> query1 = storage1.value();
     StorageQuery<typename decltype(storage2)::Type> query2 = storage2.value();
     CORRADE_VERIFY(query1.isMutable());
     CORRADE_VERIFY(!query2.isMutable());
-    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), StorageOperation::Min|StorageOperation::Max);
 
     /* The data should point to the value passed to the constructor, with
@@ -1297,10 +1351,12 @@ void NumericStorageTest::constructHandleRecycle() {
     NumericStorage<UnsignedShort> first{layer, NonOwned, data};
     first
         .setRange(13457, 58776)
-        .setStep(5556);
+        .setStep(5556)
+        .setDefaultValue(9987);
     CORRADE_VERIFY(!first.isAllocated());
     CORRADE_COMPARE(first.range(), (Containers::Pair<UnsignedShort, UnsignedShort>{13457, 58776}));
     CORRADE_COMPARE(first.step(), 5556);
+    CORRADE_COMPARE(first.defaultValue(), 9987);
     /* The query should be immutable also */
     CORRADE_VERIFY(!first[0].isMutable());
 
@@ -1312,6 +1368,7 @@ void NumericStorageTest::constructHandleRecycle() {
     CORRADE_VERIFY(!second.isAllocated());
     CORRADE_COMPARE(second.range(), (Containers::Pair<UnsignedShort, UnsignedShort>{0, 65535}));
     CORRADE_COMPARE(second.step(), 1);
+    CORRADE_COMPARE(second.defaultValue(), 0);
     /* The internal immutable flag should also be reset */
     CORRADE_VERIFY(second.value().isMutable());
 }
@@ -1375,7 +1432,7 @@ void NumericStorageTest::access3D() {
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{3, 4, 1}));
     CORRADE_VERIFY(query.isMutable());
-    CORRADE_COMPARE(query.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+    CORRADE_COMPARE(query.operations(), StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query, 77);
 
     Int called = 0;
@@ -1428,7 +1485,7 @@ void NumericStorageTest::access2D() {
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 3, 4}));
     CORRADE_VERIFY(query.isMutable());
-    CORRADE_COMPARE(query.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+    CORRADE_COMPARE(query.operations(), StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query, 26);
 
     Int called = 0;
@@ -1473,7 +1530,7 @@ void NumericStorageTest::access1D() {
     CORRADE_COMPARE(query.storage(), storage.handle());
     CORRADE_COMPARE(query.index(), (Containers::Size3D{0, 0, 4}));
     CORRADE_VERIFY(query.isMutable());
-    CORRADE_COMPARE(query.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+    CORRADE_COMPARE(query.operations(), StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query, 5);
 
     Int called = 0;
@@ -1516,8 +1573,8 @@ void NumericStorageTest::access() {
     CORRADE_COMPARE(query2.index(), (Containers::Size3D{0, 0, 0}));
     CORRADE_VERIFY(query1.isMutable());
     CORRADE_VERIFY(query2.isMutable());
-    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
-    CORRADE_COMPARE(query2.operations(), StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+    CORRADE_COMPARE(query1.operations(), StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+    CORRADE_COMPARE(query2.operations(), StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query1, 1337);
     CORRADE_COMPARE(query2, 1337);
 
@@ -1570,7 +1627,7 @@ void NumericStorageTest::accessNonOwned3D() {
     CORRADE_COMPARE(query.isMutable(), !data.immutable);
     CORRADE_COMPARE(query.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
-        StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+        StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query, -17654321);
 
     Int called = 0;
@@ -1624,7 +1681,7 @@ void NumericStorageTest::accessNonOwned2D() {
     CORRADE_COMPARE(query.isMutable(), !data.immutable);
     CORRADE_COMPARE(query.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
-        StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+        StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query, -17654);
 
     Int called = 0;
@@ -1673,7 +1730,7 @@ void NumericStorageTest::accessNonOwned1D() {
     CORRADE_COMPARE(query.isMutable(), !data.immutable);
     CORRADE_COMPARE(query.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
-        StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+        StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query, -114);
 
     Int called = 0;
@@ -1722,10 +1779,10 @@ void NumericStorageTest::accessNonOwned() {
     CORRADE_COMPARE(query2.isMutable(), !data.immutable);
     CORRADE_COMPARE(query1.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
-        StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+        StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query2.operations(), data.immutable ?
         StorageOperation::Min|StorageOperation::Max :
-        StorageOperation::Set|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
+        StorageOperation::Set|StorageOperation::Reset|StorageOperation::Min|StorageOperation::Max|StorageOperation::Increment|StorageOperation::Decrement);
     CORRADE_COMPARE(query1, -9876543210ll);
     CORRADE_COMPARE(query2, -9876543210ll);
 
@@ -1817,7 +1874,7 @@ void NumericStorageTest::update() {
 
     /* This verifies that all update operations properly touch the stored or
        referenced value at given index along with setting dirty bits. Behavior
-       with a custom range, step, clamping etc. is tested in rangeStep()
+       with a custom range, step, clamping etc. is tested in rangeStepDefault()
        below. */
 
     AbstractUserInterface ui{{100, 100}};
@@ -1829,6 +1886,8 @@ void NumericStorageTest::update() {
         NumericStorage<UnsignedByte>{layer, DirectInit, 176};
     /* The query is always at least a 32-bit type */
     StorageQuery<UnsignedInt> query = storage.value();
+
+    storage.setDefaultValue(37);
 
     /* Attach an update to min and max as well to verify it's being passed
        correctly on updates */
@@ -1927,10 +1986,25 @@ void NumericStorageTest::update() {
     CORRADE_VERIFY(!layer.isStorageDirty(storage));
     CORRADE_VERIFY(!layer.isDirty(update));
     CORRADE_COMPARE(state.called, 6);
+
+    /* Reset marks the storage as dirty */
+    query.reset();
+    CORRADE_VERIFY(layer.isStorageDirty(storage));
+    CORRADE_VERIFY(!layer.isDirty(update));
+
+    /* Update calls and resets */
+    state.expected = 37;
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        ui.update();
+    }
+    CORRADE_VERIFY(!layer.isStorageDirty(storage));
+    CORRADE_VERIFY(!layer.isDirty(update));
+    CORRADE_COMPARE(state.called, 7);
 }
 
-void NumericStorageTest::rangeStep() {
-    auto&& data = RangeStepData[testCaseInstanceId()];
+void NumericStorageTest::rangeStepDefault() {
+    auto&& data = RangeStepDefaultData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Compared to update(), which verified that the right value was updated
@@ -2005,13 +2079,25 @@ void NumericStorageTest::rangeStep() {
         CORRADE_VERIFY(!layer.isDirty(update));
     }
 
+    /* Set a custom default value if desired. It should *not* mark the storage
+       as dirty, and also shouldn't change the value in any way. */
+    if(data.defaultValue) {
+        storage.setDefaultValue(*data.defaultValue);
+        CORRADE_COMPARE(storage.defaultValue(), *data.defaultValue);
+        CORRADE_COMPARE(query, data.value);
+        CORRADE_VERIFY(!layer.isStorageDirty(storage));
+        CORRADE_VERIFY(!layer.isDirty(update));
+    }
+
     /* Perform the desired update operation. This should mark the storage as
        dirty only if the value actually changes. */
     if(data.operation == StorageOperation::Set) {
         CORRADE_COMPARE(query.set(*data.set), data.expectedState);
     } else {
         CORRADE_INTERNAL_ASSERT(!data.set);
-        if(data.operation == StorageOperation::Increment)
+        if(data.operation == StorageOperation::Reset)
+            query.reset();
+        else if(data.operation == StorageOperation::Increment)
             query.increment();
         else if(data.operation == StorageOperation::Decrement)
             query.decrement();
