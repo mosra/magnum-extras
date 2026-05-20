@@ -59,23 +59,17 @@ namespace Magnum { namespace Ui { namespace Implementation {
 
 /* This works with both the Application itself as well as the ViewportEvent */
 template<class ApplicationOrEvent> struct ApplicationSizeConverter<ApplicationOrEvent,
-    /* Clang (16, but probably others too) is only able to match this with the
-       >=. Without it, it can only match if the size is 1, which is never the
-       case for function pointers. I suppose the boolean conversion in SFINAE
-       contexts has some funny "optimization" that doesn't take the higher bits
-       into account or some such. */
-    #ifdef CORRADE_TARGET_CLANG
-    typename std::enable_if<sizeof(&ApplicationOrEvent::framebufferSize) >= 0>::type
     /* MSVC cannot match the above and Application doesn't have any nested type
        related to framebuffer sizes, and matching on some unrelated typedef
        doesn't feel any better than nothing at all even though that works on
        older MSVC. Fortunately this seems to be fixed in MSVC 2022 17.10+. So
        far we don't need to avoid any conflict here so just enable it always. */
-    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    #if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG_CL) && _MSC_VER < 1940
     void
-    /* GCC is fine */
     #else
-    typename std::enable_if<sizeof(&ApplicationOrEvent::framebufferSize)>::type
+    /* The !! is important because Clang otherwise complains that "16 cannot be
+       narrowed to bool" and refuses to pick this specialization. GCC works. */
+    typename std::enable_if<!!sizeof(&ApplicationOrEvent::framebufferSize)>::type
     #endif
 > {
     static void set(AbstractUserInterface& ui, const ApplicationOrEvent& applicationOrEvent) {
@@ -182,30 +176,24 @@ template<class ApplicationModifiers> Modifiers modifiersFor(ApplicationModifiers
 }
 
 /** @todo remove once the deprecated MouseEvent is gone */
-#if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG) && _MSC_VER < 1940
+#if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG_CL) && _MSC_VER < 1940
 CORRADE_HAS_TYPE(IsPointerEvent, decltype(std::declval<T>().pointer()));
 CORRADE_HAS_TYPE(IsPointerMoveEvent, decltype(std::declval<T>().pointers()));
 #endif
 
 template<class Event> struct PointerEventConverter<Event, typename std::enable_if<
-    /* Clang (16, but probably others too) is only able to match this with the
-       >=. Without it, it can only match if the size is 1, which was only the
-       case with the now-deprecated MouseEvent::Button. I suppose the boolean
-       conversion in SFINAE contexts has some funny "optimization" that doesn't
-       take the higher bits into account or some such. */
-    #ifdef CORRADE_TARGET_CLANG
-    sizeof(&Event::pointer) >= 0
     /* MSVC cannot match the above and PointerEvent doesn't have any nested
        type, only the now-deprecated MouseEvent::Button is what works on older
        MSVC. Fortunately this seems to be fixed in MSVC 2022 17.10+. Would do
        the same as in TextInputEventConverter but this needs to not conflict
        with the PointerEventConverter for MouseEvent below. */
     /** @todo replace with just void once the deprecated MouseEvent is gone */
-    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    #if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG_CL) && _MSC_VER < 1940
     IsPointerEvent<Event>::value
-    /* GCC is fine */
     #else
-    sizeof(&Event::pointer)
+    /* The !! is important because Clang otherwise complains that "16 cannot be
+       narrowed to bool" and refuses to pick this specialization. GCC works. */
+    !!sizeof(&Event::pointer)
     #endif
 >::type> {
     static bool press(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
@@ -240,23 +228,17 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
 };
 
 template<class Event> struct ScrollEventConverter<Event,
-    /* Clang (16, but probably others too) is only able to match this with the
-       >=. Without it, it can only match if the size is 1, which was only the
-       case with the now-deprecated MouseEvent::Button. I suppose the boolean
-       conversion in SFINAE contexts has some funny "optimization" that doesn't
-       take the higher bits into account or some such. */
-    #ifdef CORRADE_TARGET_CLANG
-    typename std::enable_if<sizeof(&Event::offset) >= 0>::type
     /* MSVC cannot match the above and ScrollEvent doesn't have any nested
        type, only the now-deprecated MouseEvent::Button is what works on older
        MSVC. Fortunately this seems to be fixed in MSVC 2022 17.10+. Compared
        to PointerEvent we don't need to avoid any conflict here so just enable
        it always. */
-    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    #if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG_CL) && _MSC_VER < 1940
     void
-    /* GCC is fine */
     #else
-    typename std::enable_if<sizeof(&Event::offset)>::type
+    /* The !! is important because Clang otherwise complains that "16 cannot be
+       narrowed to bool" and refuses to pick this specialization. GCC works. */
+    typename std::enable_if<!!sizeof(&Event::offset)>::type
     #endif
 > {
     static bool trigger(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
@@ -284,24 +266,18 @@ template<class Event> struct ScrollEventConverter<Event,
 };
 
 template<class Event> struct PointerMoveEventConverter<Event, typename std::enable_if<
-    /* Clang (16, but probably others too) is only able to match this with the
-       >=. Without it, it can only match if the size is 1, which was only the
-       case with the now-deprecated MouseEvent::Button. I suppose the boolean
-       conversion in SFINAE contexts has some funny "optimization" that doesn't
-       take the higher bits into account or some such. */
-    #ifdef CORRADE_TARGET_CLANG
-    sizeof(&Event::pointers) >= 0
     /* MSVC cannot match the above and PointerMoveEvent doesn't have any nested
        type, only the now-deprecated MouseEvent::Button is what works on older
        MSVC. Fortunately this seems to be fixed in MSVC 2022 17.10+. Would do
        the same as in TextInputEventConverter but this needs to not conflict
        with the PointerMoveEventConverter for MouseMoveEvent below. */
     /** @todo replace with just void once the deprecated MouseEvent is gone */
-    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    #if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG_CL) && _MSC_VER < 1940
     IsPointerMoveEvent<Event>::value
-    /* GCC is fine */
     #else
-    sizeof(&Event::pointers)
+    /* The !! is important because Clang otherwise complains that "16 cannot be
+       narrowed to bool" and refuses to pick this specialization. GCC works. */
+    !!sizeof(&Event::pointers)
     #endif
 >::type> {
     static bool move(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
@@ -352,17 +328,9 @@ template<class Event> Pointers pointersForButtons(typename Event::Buttons button
     return pointers;
 }
 
-template<class Event> struct PointerEventConverter<Event, typename std::enable_if<sizeof(typename Event::Button)
-    /* Without this, Clang (16, but probably others too) is only able to match
-       this if MouseEvent::Buttons is 8-bit (such as in Sdl2Application but not
-       GlfwApplication or EmscriptenApplication, which have 32-bit values). I
-       suppose the boolean conversion in SFINAE contexts has some funny
-       "optimization" that doesn't take the higher bits into account or some
-       such. */
-    #ifdef CORRADE_TARGET_CLANG
-    >= 0
-    #endif
->::type> {
+/* The !! is important because Clang otherwise complains that "4 cannot be
+   narrowed to bool" and refuses to pick this specialization. GCC works. */
+template<class Event> struct PointerEventConverter<Event, typename std::enable_if<!!sizeof(typename Event::Button)>::type> {
     static bool press(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
         const Pointer pointer = pointerForButton<Event>(event.button());
         if(pointer == Pointer{})
@@ -392,15 +360,9 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
     }
 };
 
-template<class Event> struct PointerMoveEventConverter<Event, typename std::enable_if<sizeof(typename Event::Buttons)
-    /* Without this, Clang (16, but probably others too) is only able to match
-       this if MouseMoveEvent::Buttons is 8-bit. I suppose the boolean
-       conversion in SFINAE contexts has some funny "optimization" that doesn't
-       take the higher bits into account or some such. */
-    #ifdef CORRADE_TARGET_CLANG
-    >= 0
-    #endif
->::type> {
+/* The !! is important because Clang otherwise complains that "4 cannot be
+   narrowed to bool" and refuses to pick this specialization. GCC works. */
+template<class Event> struct PointerMoveEventConverter<Event, typename std::enable_if<!!sizeof(typename Event::Buttons)>::type> {
     static bool move(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
         const Pointers pointers = pointersForButtons<Event>(event.buttons());
 
@@ -586,22 +548,16 @@ template<class ApplicationKey> Key keyFor(ApplicationKey key) {
 }
 
 template<class Event> struct KeyEventConverter<Event,
-    /* Clang (16, but probably others too) is only able to match this with the
-       >=. Without it, it can only match if the size is 1, which was only the
-       case with the now-deprecated MouseEvent::Button. I suppose the boolean
-       conversion in SFINAE contexts has some funny "optimization" that doesn't
-       take the higher bits into account or some such. */
-    #ifdef CORRADE_TARGET_CLANG
-    typename std::enable_if<sizeof(&Event::key) >= 0>::type
     /* MSVC cannot match the above and KeyEvent doesn't have any nested type,
        only the now-deprecated Key is what works on older MSVC. Fortunately
        this seems to be fixed in MSVC 2022 17.10+. Compared to PointerEvent we
        don't need to avoid any conflict here so just enable it always. */
-    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    #if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG_CL) && _MSC_VER < 1940
     void
-    /* GCC is fine */
+    /* The !! is important because Clang otherwise complains that "16 cannot be
+       narrowed to bool" and refuses to pick this specialization. GCC works. */
     #else
-    typename std::enable_if<sizeof(&Event::key)>::type
+    typename std::enable_if<!!sizeof(&Event::key)>::type
     #endif
 > {
     static bool press(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
@@ -634,22 +590,16 @@ template<class Event> struct KeyEventConverter<Event,
 };
 
 template<class Event> struct TextInputEventConverter<Event,
-    /* Clang (16, but probably others too) is only able to match this with the
-       >=. Without it, it can only match if the size is 1, which was only the
-       case with the now-deprecated MouseEvent::Button. I suppose the boolean
-       conversion in SFINAE contexts has some funny "optimization" that doesn't
-       take the higher bits into account or some such. */
-    #ifdef CORRADE_TARGET_CLANG
-    typename std::enable_if<sizeof(&Event::text) >= 0>::type
     /* MSVC cannot match the above and TextInputEvent doesn't have any nested
        type. Fortunately this seems to be fixed in MSVC 2022 17.10+. Compared
        to PointerEvent we don't need to avoid any conflict here so just enable
        it always. */
-    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    #if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG_CL) && _MSC_VER < 1940
     void
-    /* GCC is fine */
+    /* The !! is important because Clang otherwise complains that "16 cannot be
+       narrowed to bool" and refuses to pick this specialization. GCC works. */
     #else
-    typename std::enable_if<sizeof(&Event::text)>::type
+    typename std::enable_if<!!sizeof(&Event::text)>::type
     #endif
 > {
     static bool trigger(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
