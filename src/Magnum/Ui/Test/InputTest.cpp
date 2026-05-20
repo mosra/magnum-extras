@@ -521,7 +521,7 @@ template<class T> struct DummyStorage: AbstractStorage {
             return 133742;
         }, [](const DummyStorage&, StorageOperation, const T*) -> StorageUpdateState {
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        },};
+        }};
     }
 };
 
