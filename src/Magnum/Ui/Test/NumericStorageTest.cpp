@@ -53,6 +53,7 @@ struct NumericStorageTest: TestSuite::Tester {
     template<class T> void constructNonOwned2D();
     template<class T> void constructNonOwned1D();
     template<class T> void constructNonOwned();
+    void constructCopy();
 
     void constructHandleRecycle();
 
@@ -443,7 +444,9 @@ NumericStorageTest::NumericStorageTest() {
         &NumericStorageTest::constructNonOwned<Nanoseconds>},
         Containers::arraySize(ConstructData));
 
-    addTests({&NumericStorageTest::constructHandleRecycle,
+    addTests({&NumericStorageTest::constructCopy,
+
+              &NumericStorageTest::constructHandleRecycle,
 
               &NumericStorageTest::access3D,
               &NumericStorageTest::access2D,
@@ -1250,6 +1253,34 @@ template<class T> void NumericStorageTest::constructNonOwned() {
     CORRADE_COMPARE(view2.size(), (Containers::Size3D{1, 1, 1}));
     CORRADE_COMPARE(view1.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
     CORRADE_COMPARE(view2.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
+}
+
+void NumericStorageTest::constructCopy() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
+
+    /* The copy constructor is implicitly generated, so just verify that
+       something is done at all, and that the templated UI constructor doesn't
+       break it */
+    NumericStorage<Int> a1{ui.dataLayer()};
+    NumericStorage<Int> a2{ui};
+    /* This works even without restricting the templated UI constructor */
+    NumericStorage<Int> b1 = a1;
+    /* This only if the UI constructor isn't all-catching */
+    NumericStorage<Int> b2{a2};
+    CORRADE_COMPARE(&b1.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(&b2.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(b1.handle(), a1.handle());
+    CORRADE_COMPARE(b2.handle(), a2.handle());
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    /* This is verified by StorageQuery constructors and other APIs already,
+       but doesn't hurt to have it here as well */
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<NumericStorage<Int>>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<NumericStorage<Int>>::value);
+    #endif
 }
 
 void NumericStorageTest::constructHandleRecycle() {

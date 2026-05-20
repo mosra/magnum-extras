@@ -1785,7 +1785,9 @@ class MAGNUM_UI_EXPORT AbstractStorage {
          * @ref UserInterface::dataLayer(). Expects that the @p ui contains a
          * @ref DataLayer instance.
          */
-        template<class UserInterface> explicit AbstractStorage(UserInterface& ui, StorageFlags flags = {}): AbstractStorage{ui, {1, 1, 1}, flags} {}
+        /* The enable_if is to make this constructor not picked over the
+           implicitly-generated copy */
+        template<class UserInterface, typename std::enable_if<std::is_convertible<UserInterface&, AbstractUserInterface&>::value, int>::type = 0> explicit AbstractStorage(UserInterface& ui, StorageFlags flags = {}): AbstractStorage{ui, {1, 1, 1}, flags} {}
 
         /**
          * @brief Construct a 1D storage using the default @ref DataLayer on given user interface

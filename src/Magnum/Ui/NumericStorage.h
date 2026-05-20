@@ -619,7 +619,9 @@ template<class T> class NumericStorage: public AbstractStorage {
          *      @ref NumericStorage(UserInterface&, DirectInitT, const T&, StorageFlags),
          *      @ref NumericStorage(UserInterface&, NonOwnedT, T&, StorageFlags)
          */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, StorageFlags flags = {}): NumericStorage{ui, ValueInit, flags} {}
+        /* The enable_if is to make this constructor not picked over the
+           implicitly-generated copy */
+        template<class UserInterface, typename std::enable_if<std::is_convertible<UserInterface&, AbstractUserInterface&>::value, int>::type = 0> explicit NumericStorage(UserInterface& ui, StorageFlags flags = {}): NumericStorage{ui, ValueInit, flags} {}
 
         /**
          * @brief Construct a value-initialized 1D storage using the default @ref DataLayer in given user interface

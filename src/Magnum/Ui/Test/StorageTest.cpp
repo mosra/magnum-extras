@@ -40,6 +40,7 @@ struct StorageTest: TestSuite::Tester {
     explicit StorageTest();
 
     void construct();
+    void constructCopy();
 
     void access3D();
     void access2D();
@@ -107,6 +108,8 @@ const struct {
 StorageTest::StorageTest() {
     addInstancedTests({&StorageTest::construct},
         Containers::arraySize(ConstructData));
+
+    addTests({&StorageTest::constructCopy});
 
     addInstancedTests({&StorageTest::access3D},
         Containers::arraySize(Access3DData));
@@ -227,6 +230,35 @@ void StorageTest::construct() {
     CORRADE_COMPARE(fourth.data().data(), storageData + 3);
     CORRADE_COMPARE(fourth.data().size(), (Containers::Size3D{1, 1, 1}));
     CORRADE_COMPARE(fourth.data().stride(), (Containers::Stride3D{4, 4, 4}));
+}
+
+void StorageTest::constructCopy() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
+
+    /* The copy constructor is implicitly generated, so just verify that
+       something is done at all, and that the templated UI constructor doesn't
+       break it. */
+    Int data;
+    Storage<Int> a1{ui.dataLayer(), data};
+    Storage<Int> a2{ui, data};
+    /* In this case the templated UI constructor takes two arguments always so
+       both of these pick the implicitly-generated copy */
+    Storage<Int> b1 = a1;
+    Storage<Int> b2{a2};
+    CORRADE_COMPARE(&b1.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(&b2.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(b1.handle(), a1.handle());
+    CORRADE_COMPARE(b2.handle(), a2.handle());
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    /* This is verified by StorageQuery constructors and other APIs already,
+       but doesn't hurt to have it here as well */
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<Storage<Int>>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<Storage<Int>>::value);
+    #endif
 }
 
 void StorageTest::access3D() {

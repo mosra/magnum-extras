@@ -81,6 +81,8 @@ struct DataLayerTest: TestSuite::Tester {
     void createStorageImplicitLayer();
     void createStorageImplicitLayerInvalid();
 
+    void createStorageCopy();
+
     void setStorageDirty();
 
     void invalidStorageHandle();
@@ -239,6 +241,8 @@ DataLayerTest::DataLayerTest() {
 
               &DataLayerTest::createStorageImplicitLayer,
               &DataLayerTest::createStorageImplicitLayerInvalid,
+
+              &DataLayerTest::createStorageCopy,
 
               &DataLayerTest::setStorageDirty,
 
@@ -1408,6 +1412,43 @@ void DataLayerTest::createStorageImplicitLayerInvalid() {
         "Ui::AbstractStorage: DataLayer not present in the UI\n"
         "Ui::AbstractStorage: DataLayer not present in the UI\n",
         TestSuite::Compare::String);
+}
+
+/* "Template cannot be used for a local struct", so it's here */
+struct CopyStorage: AbstractStorage {
+    explicit CopyStorage(DataLayer& layer): AbstractStorage{layer} {}
+
+    /* Tests how a minimal template UserInterface constructor has to look like
+       to not be picked up for a copy */
+    template<class UserInterface, typename std::enable_if<std::is_convertible<UserInterface&, AbstractUserInterface&>::value, int>::type = 0> explicit CopyStorage(UserInterface& ui): AbstractStorage{ui} {}
+};
+
+void DataLayerTest::createStorageCopy() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
+
+    /* The copy constructor is implicitly generated, so just verify that
+       something is done at all, and that the templated UI constructor doesn't
+       break it */
+    CopyStorage a1{ui.dataLayer()};
+    CopyStorage a2{ui};
+    /* This works even without restricting the templated UI constructor */
+    CopyStorage b1 = a1;
+    /* This only if the UI constructor isn't all-catching */
+    CopyStorage b2{a2};
+    CORRADE_COMPARE(&b1.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(&b2.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(b1.handle(), a1.handle());
+    CORRADE_COMPARE(b2.handle(), a2.handle());
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    /* This is verified by StorageQuery constructors and other APIs already,
+       but doesn't hurt to have it here as well */
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<CopyStorage>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<CopyStorage>::value);
+    #endif
 }
 
 void DataLayerTest::setStorageDirty() {
