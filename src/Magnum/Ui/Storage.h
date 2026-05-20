@@ -123,7 +123,7 @@ template<class T> class Storage: public AbstractStorage {
         }
 
         /**
-         * @brief Single-item storage value query
+         * @brief Single-item storage value
          *
          * Equivalent to @ref value(), see its documentation for more
          * information.

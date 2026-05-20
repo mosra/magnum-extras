@@ -726,7 +726,7 @@ template<class T> class NumericStorage: public AbstractStorage {
         StorageQuery<Type> value() const;
 
         /**
-         * @brief Single-item storage value query
+         * @brief Single-item storage value
          *
          * Equivalent to @ref value(), see its documentation for more
          * information.
