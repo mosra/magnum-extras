@@ -68,6 +68,7 @@ struct InputTest: WidgetTester {
 
     template<class T> void edit();
     void editStorageQuery();
+    void editStorageQueryUpdateFailed();
     template<class T, class Formatter> void editStorageQueryCustomParser();
     void editStorageQueryIncrementDecrement();
 };
@@ -344,6 +345,11 @@ InputTest::InputTest() {
         &InputTest::editStorageQuery
     }, Containers::arraySize(EditStorageQueryData),
        &WidgetTester::setup,
+       &WidgetTester::teardown);
+
+    addTests<InputTest>({
+        &InputTest::editStorageQueryUpdateFailed
+    }, &WidgetTester::setup,
        &WidgetTester::teardown);
 
     addInstancedTests<InputTest>({
@@ -1098,6 +1104,46 @@ void InputTest::editStorageQuery() {
     };
     CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), Int(expectedBackgroundStyle(data.initialStyle)));
     CORRADE_COMPARE(ui.textLayer().style(input.textData()), Int(expectedTextStyle(data.initialStyle)));
+}
+
+void InputTest::editStorageQueryUpdateFailed() {
+    /* The NumericStorage used above never returns StorageUpdateState::Failed
+       so it's tested separately here */
+
+    struct Storage: AbstractStorage {
+        explicit Storage(DataLayer& layer): AbstractStorage{layer, StorageFlag::ReferenceCounted} {
+            /* Stores a call count in-place */
+            *createInPlace<Int>() = 0;
+        }
+
+        operator StorageQuery<Int>() const {
+            return {*this, StorageOperation::Set, [](const Storage&, StorageOperation) {
+                return 37;
+            }, [](const Storage& storage, StorageOperation, const Int*) {
+                ++storage.updateCallCount();
+                return StorageUpdateState::Failed;
+            }};
+        }
+
+        Int& updateCallCount() const { return *data<Int>(); }
+    } storage{ui.dataLayer()};
+
+    Input input{Anchor{root, {}, {32, 16}}, storage};
+
+    /* Focus the node */
+    FocusEvent focusEvent{{}};
+    CORRADE_VERIFY(ui.focusEvent(input, focusEvent));
+    CORRADE_COMPARE(ui.currentFocusedNode(), input);
+
+    /* The input should call the updater and turn the style to Danger due to
+       the failure state */
+    TextInputEvent textInputEvent{{}, "13"};
+    CORRADE_VERIFY(ui.textInputEvent(textInputEvent));
+    CORRADE_COMPARE(input.text(), "3713");
+    CORRADE_COMPARE(storage.updateCallCount(), 1);
+
+    CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), Int(BaseStyle::InputDangerFocused));
+    CORRADE_COMPARE(ui.textLayer().style(input.textData()), Int(TextStyle::InputDangerFocused));
 }
 
 template<class T, class Formatter> void InputTest::editStorageQueryCustomParser() {
