@@ -853,7 +853,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * Delegates to @ref AbstractLayer::create(), see its documentation for
          * detailed description of all constraints. Calling this function
          * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @see @ref isStorageDirty(), @ref storageSize()
+         * @see @ref isStorageDirty(), @ref isDirty()
          */
         template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -907,7 +907,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * Delegates to @ref AbstractLayer::create(), see its documentation for
          * detailed description of all constraints. Calling this function
          * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @see @ref isStorageDirty(), @ref storageSize()
+         * @see @ref isStorageDirty(), @ref isDirty()
          */
         template<class T> DataHandle onUpdate(const StorageQuery<T>& query,
             #ifdef DOXYGEN_GENERATING_OUTPUT
