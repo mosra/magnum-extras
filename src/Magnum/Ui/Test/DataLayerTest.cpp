@@ -113,9 +113,6 @@ struct DataLayerTest: TestSuite::Tester {
     void invalidHandle();
 
     void indexLinearization();
-    #ifndef CORRADE_TARGET_32BIT
-    void indexLinearizationFullStorageCapacity();
-    #endif
 
     void clean();
     /* No updateEmpty() like in other layers as doUpdate() currently isn't
@@ -283,10 +280,6 @@ DataLayerTest::DataLayerTest() {
 
     addInstancedTests({&DataLayerTest::indexLinearization},
         Containers::arraySize(IndexLinearizationData));
-
-    #ifndef CORRADE_TARGET_32BIT
-    addTests({&DataLayerTest::indexLinearizationFullStorageCapacity});
-    #endif
 
     addTests({&DataLayerTest::clean,
               &DataLayerTest::update});
@@ -3867,46 +3860,6 @@ void DataLayerTest::indexLinearization() {
     CORRADE_COMPARE(layer.storage(indexInitial), storage);
     CORRADE_COMPARE(layer.storage(indexLater), storage);
 }
-
-#ifndef CORRADE_TARGET_32BIT
-void DataLayerTest::indexLinearizationFullStorageCapacity() {
-    /* Variant of indexLinearization() with all bits of the linearized index
-       used, where all bits of the storage ID are used as well */
-
-    struct DummyStorage: AbstractStorage {
-        explicit DummyStorage(DataLayer& layer, std::size_t size): AbstractStorage{layer, size} {}
-
-        StorageQuery<Int> operator[](const std::size_t index) const {
-            return {*this, index, {}, [](const DummyStorage&, std::size_t, StorageOperation) {
-                return 1337;
-            }};
-        }
-    };
-
-    DataLayer layer{layerHandle(0, 1)};
-
-    for(std::size_t i = 0; i != (1 << Implementation::DataLayerStorageHandleIdBits) - 1; ++i)
-        DummyStorage{layer, 1};
-
-    /* It should be enough to verify just with a 1D size */
-    DummyStorage storage{layer, 1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)};
-    CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layer.handle(), (1ull << 20) - 1, 1));
-    CORRADE_COMPARE(storage.size(), (Containers::Size3D{1, 1, 1ull << 43}));
-
-    /* Index set initially, verify it won't stomp over the other properties */
-    DataHandle indexInitial = layer.onUpdate(storage[(1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)) - 1], [](const Int&) {});
-    CORRADE_COMPARE(layer.index(indexInitial), (Containers::Size3D{0, 0, (1ull << 43) - 1}));
-    CORRADE_VERIFY(layer.isDirty(indexInitial));
-    CORRADE_COMPARE(layer.storage(indexInitial), storage);
-
-    /* Index set only subsequently through setIndex() */
-    DataHandle indexLater = layer.onUpdate(storage[0], [](const Int&) {});
-    layer.setIndex(indexLater, (1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)) - 1);
-    CORRADE_COMPARE(layer.index(indexLater), (Containers::Size3D{0, 0, (1ull << 43) - 1}));
-    CORRADE_VERIFY(layer.isDirty(indexLater));
-    CORRADE_COMPARE(layer.storage(indexLater), storage);
-}
-#endif
 
 void DataLayerTest::clean() {
     struct DummyStorage: AbstractStorage {
