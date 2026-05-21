@@ -230,8 +230,7 @@ FontHandle TextLayer::Shared::addFont(Text::AbstractFont& font, const Float size
     /** @todo assert that the font is opened? doesn't prevent anybody from
         closing it, tho */
 
-    arrayAppend(state.fonts, InPlaceInit, nullptr, &font, nullptr, size/font.size(), *glyphCacheFontId);
-    return fontHandle(state.fonts.size() - 1, 1);
+    return addFontInternal(&font, size/font.size(), *glyphCacheFontId);
 }
 
 FontHandle TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&& font, const Float size) {
@@ -243,7 +242,9 @@ FontHandle TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&& 
 }
 
 FontHandle TextLayer::Shared::addInstancelessFont(const UnsignedInt glyphCacheFontId, const Float scale) {
+    #ifndef CORRADE_NO_ASSERT
     State& state = static_cast<State&>(*_state);
+    #endif
     CORRADE_ASSERT(glyphCacheFontId < state.glyphCache.fontCount(),
         "Ui::TextLayer::Shared::addInstancelessFont(): index" << glyphCacheFontId << "out of range for" << state.glyphCache.fontCount() << "fonts in associated glyph cache", {});
     CORRADE_ASSERT(!state.glyphCache.fontPointer(glyphCacheFontId),
@@ -251,7 +252,12 @@ FontHandle TextLayer::Shared::addInstancelessFont(const UnsignedInt glyphCacheFo
     CORRADE_ASSERT(state.fonts.size() < 1 << Implementation::FontHandleIdBits,
         "Ui::TextLayer::Shared::addInstancelessFont(): can only have at most" << (1 << Implementation::FontHandleIdBits) << "fonts", {});
 
-    arrayAppend(state.fonts, InPlaceInit, nullptr, nullptr, nullptr, scale, glyphCacheFontId);
+    return addFontInternal(nullptr, scale, glyphCacheFontId);
+}
+
+FontHandle TextLayer::Shared::addFontInternal(Text::AbstractFont* const font, const Float scale, const UnsignedInt glyphCacheFontId) {
+    State& state = static_cast<State&>(*_state);
+    arrayAppend(state.fonts, InPlaceInit, nullptr, font, nullptr, scale, glyphCacheFontId);
     return fontHandle(state.fonts.size() - 1, 1);
 }
 
