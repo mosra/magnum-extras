@@ -678,7 +678,7 @@ ui.draw();
 /* [AbstractUserInterface-setup-draw] */
 
 /* [AbstractUserInterface-setup-draw-ondemand] */
-if(ui.state()) {
+if(ui) {
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
     ui.draw();

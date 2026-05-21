@@ -333,10 +333,9 @@ care of by a @ref RendererGL instance internally.
 
 @par Power-efficient on-demand redrawing
     The whole @ref Ui library, including animations, is designed to redraw only
-    when needed. A desire to redraw is signalled by @ref state() returning a
-    non-empty set of @ref UserInterfaceState values, so assuming there's
-    nothing else besides the UI that needs to be redrawn, the above could be
-    rewritten like this:
+    when needed. A desire to redraw is signalled via @ref operator bool(), so
+    assuming there's nothing else besides the UI that needs to be redrawn, the
+    above could be rewritten like this:
 @par
     @snippet Ui-gl.cpp AbstractUserInterface-setup-draw-ondemand
 @par
@@ -391,7 +390,7 @@ the user interface, matching @ref Platform::Sdl2Application::PointerEvent::setAc
 etc. get called as well, to prevent it from propagating further in certain
 circumstances (such as to the browser window when compiling for the web). To
 make sure the UI is appropriately redrawn after handling an event, each of
-these again checks against @ref state():
+these again checks against @ref operator bool():
 
 @snippet Ui-sdl2.cpp AbstractUserInterface-application-events
 
@@ -428,9 +427,9 @@ for example). With @ref Magnum/Math/TimeStl.h it can convert to a
     Note that, as shown in the snippet, to have animations working you don't
     need to constantly redraw either. The library keeps track of whether any
     animations are currently playing or are scheduled to be played in the
-    future, and returns @ref UserInterfaceState::NeedsAnimationAdvance in
-    @ref state() in that case, which the snippet uses to trigger a redraw. Once
-    all animations stop, @ref state() becomes empty, causing the application to
+    future, and returns @cpp true @ce from @ref operator bool() in that case,
+    which the snippet uses to trigger a redraw. Once all animations stop,
+    boolean conversion evaluates to @cpp false @ce, causing the application to
     again just wait for another input event.
 
 Animations can happen also in response to input events. To equip them with a
@@ -967,7 +966,9 @@ else stays the same and no animations need to be advanced, then only the
 single layer gets updated and everything is redrawn again. Such state is
 tracked in @ref state(), @ref AbstractLayer::state(),
 @ref AbstractLayouter::state() and @ref AbstractAnimator::state(), see the
-functions and related enums for details.
+functions and related enums for details. The various state bits are ultimately
+what contributes to the @ref operator bool() returning @cpp true @ce to signal
+that a redraw is needed.
 
 @section Ui-AbstractUserInterface-events Event handling
 
@@ -1399,9 +1400,21 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @brief User interface state
          *
          * See the @ref UserInterfaceState enum for more information. By
-         * default no flags are set.
+         * default no flags are set. A flag being set generally means that a
+         * redraw is needed, you can make use of @ref operator bool() to check
+         * for that condition.
          */
         UserInterfaceStates state() const;
+
+        /**
+         * @brief Whether the user interface needs an update, animation advance or a redraw
+         *
+         * Returns @cpp true @ce if @ref state() contains at least one flag,
+         * @cpp false @ce otherwise. Meant to be used to decide whether to
+         * schedule another redraw after the UI was drawn or after an event was
+         * handled.
+         */
+        explicit operator bool() const { return !!state(); }
 
         /**
          * @brief Animation time

@@ -174,6 +174,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void statePropagateFromLayouters();
     void statePropagateFromAnimators();
 
+    void boolConversion();
+
     /* Tests that update() and draw() on AbstractLayer gets correct data */
     void draw();
     /* Tests that update(), composite() and draw() gets correct data */
@@ -1283,7 +1285,9 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
         Containers::arraySize(StatePropagateFromLayersData));
 
     addTests({&AbstractUserInterfaceTest::statePropagateFromLayouters,
-              &AbstractUserInterfaceTest::statePropagateFromAnimators});
+              &AbstractUserInterfaceTest::statePropagateFromAnimators,
+
+              &AbstractUserInterfaceTest::boolConversion});
 
     addInstancedTests({&AbstractUserInterfaceTest::draw},
         Containers::arraySize(DrawData));
@@ -13283,6 +13287,26 @@ void AbstractUserInterfaceTest::statePropagateFromAnimators() {
        first animator when checking the state. */
     animator2.create(10_nsec, 10_nsec);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
+}
+
+void AbstractUserInterfaceTest::boolConversion() {
+    AbstractUserInterface ui{{100, 100}};
+
+    /* The boolean conversion just exposes state() without extra congitive
+       overhead */
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_VERIFY(!ui);
+
+    ui.createNode({}, {});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+    CORRADE_VERIFY(ui);
+
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_VERIFY(!ui);
+
+    /* It should be explicit to avoid accidents */
+    CORRADE_VERIFY(!std::is_convertible<AbstractUserInterface&, bool>::value);
 }
 
 void AbstractUserInterfaceTest::draw() {

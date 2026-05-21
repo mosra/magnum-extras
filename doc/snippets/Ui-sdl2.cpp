@@ -105,7 +105,7 @@ class MyApplication: public Platform::Application {
             _ui.draw();
 
             swapBuffers();
-            if(_ui.state())
+            if(_ui)
                 redraw();
         }
 
@@ -127,43 +127,43 @@ void MyApplication::pointerPressEvent(PointerEvent& event) {
     if(!_ui.pointerPressEvent(event)) {
         DOXYGEN_ELLIPSIS()
     }
-    if(_ui.state()) redraw();
+    if(_ui) redraw();
 }
 void MyApplication::pointerReleaseEvent(PointerEvent& event) {
     if(!_ui.pointerReleaseEvent(event)) {
         DOXYGEN_ELLIPSIS()
     }
-    if(_ui.state()) redraw();
+    if(_ui) redraw();
 }
 void MyApplication::pointerMoveEvent(PointerMoveEvent& event) {
     if(!_ui.pointerMoveEvent(event)) {
         DOXYGEN_ELLIPSIS()
     }
-    if(_ui.state()) redraw();
+    if(_ui) redraw();
 }
 void MyApplication::scrollEvent(ScrollEvent& event) {
     if(!_ui.scrollEvent(event)) {
         DOXYGEN_ELLIPSIS()
     }
-    if(_ui.state()) redraw();
+    if(_ui) redraw();
 }
 void MyApplication::keyPressEvent(KeyEvent& event) {
     if(!_ui.keyPressEvent(event)) {
         DOXYGEN_ELLIPSIS()
     }
-    if(_ui.state()) redraw();
+    if(_ui) redraw();
 }
 void MyApplication::keyReleaseEvent(KeyEvent& event) {
     if(!_ui.keyReleaseEvent(event)) {
         DOXYGEN_ELLIPSIS()
     }
-    if(_ui.state()) redraw();
+    if(_ui) redraw();
 }
 void MyApplication::textInputEvent(TextInputEvent& event) {
     if(!_ui.textInputEvent(event)) {
         DOXYGEN_ELLIPSIS()
     }
-    if(_ui.state()) redraw();
+    if(_ui) redraw();
 }
 /* [AbstractUserInterface-application-events] */
 #endif
@@ -200,7 +200,7 @@ void MyApplication::drawEvent() {
         .draw();
 
     swapBuffers();
-    if(_ui.state())
+    if(_ui)
         redraw();
 }
 /* [AbstractUserInterface-animations-advance] */
@@ -210,7 +210,7 @@ void MyApplication::pointerPressEvent(PointerEvent& event) {
     if(!_ui.pointerPressEvent(event, now())) {
         DOXYGEN_ELLIPSIS()
     }
-    if(_ui.state()) redraw();
+    if(_ui) redraw();
 }
 DOXYGEN_ELLIPSIS()
 /* [AbstractUserInterface-animations-events] */
