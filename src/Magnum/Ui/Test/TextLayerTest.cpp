@@ -2618,8 +2618,8 @@ void TextLayerTest::sharedAddFont() {
     CORRADE_COMPARE(fourth, Ui::fontHandle(3, 1));
     CORRADE_COMPARE(shared.fontCount(), 4);
     CORRADE_VERIFY(shared.isHandleValid(fourth));
-    CORRADE_COMPARE(shared.glyphCacheFontId(second), secondFontId);
-    CORRADE_VERIFY(!shared.hasFontInstance(second));
+    CORRADE_COMPARE(shared.glyphCacheFontId(fourth), fourthFontId);
+    CORRADE_VERIFY(!shared.hasFontInstance(fourth));
 }
 
 void TextLayerTest::sharedAddFontTakeOwnership() {
