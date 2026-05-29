@@ -100,7 +100,7 @@ struct TestTextLayerShared: TextLayer::Shared {
         font.openFile("", 16.0f);
         glyphCache.addFont(Implementation::IconCount + 1, &font);
 
-        FontHandle fontHandle[]{addFont(font, 16.0f)};
+        FontHandle fontHandle[]{addFont(font, 16.0f, {})};
         Text::Alignment alignment[]{Text::Alignment::MiddleCenter};
         TextLayerStyleUniform uniforms[1];
         UnsignedInt styleToUniform[]{0};

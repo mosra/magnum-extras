@@ -1719,8 +1719,8 @@ if(!font12 ||
                                        "0123456789?!:;,. "))
     Fatal{} << "Oh no";
 
-Ui::FontHandle font16Handle = textLayerShared.addFont(*font16, font16->size());
-Ui::FontHandle font12Handle = textLayerShared.addFont(*font12, font12->size());
+Ui::FontHandle font16Handle = textLayerShared.addFont(*font16, font16->size(), {});
+Ui::FontHandle font12Handle = textLayerShared.addFont(*font12, font12->size(), {});
 /* [TextLayer-setup-fonts] */
 
 /* [TextLayer-setup-style] */
@@ -1844,7 +1844,7 @@ textLayer.setPadding(text, {textLayer.size(hash).x(), 0.0f, 0.0f, 0.0f});
 {
 Containers::Pointer<Text::AbstractFont> font;
 /* [TextLayer-style-shaping-font] */
-Ui::FontHandle greekFontHandle = textLayerShared.addFont(DOXYGEN_ELLIPSIS(*font, 1.0f));
+Ui::FontHandle greekFontHandle = textLayerShared.addFont(DOXYGEN_ELLIPSIS(*font, 1.0f, {}));
 
 DOXYGEN_ELLIPSIS()
 
@@ -1939,9 +1939,9 @@ font->fillGlyphCache(glyphCache, "abcdefghijklmnopqrstuvwxyz"
                                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                  "0123456789?!:;,. ");
 
-Ui::FontHandle font8Handle = textLayerShared.addFont(*font, 8.0f);
-Ui::FontHandle font16Handle = textLayerShared.addFont(*font, 16.0f);
-Ui::FontHandle font12Handle = textLayerShared.addFont(*font, 12.0f);
+Ui::FontHandle font8Handle = textLayerShared.addFont(*font, 8.0f, {});
+Ui::FontHandle font16Handle = textLayerShared.addFont(*font, 16.0f, {});
+Ui::FontHandle font12Handle = textLayerShared.addFont(*font, 12.0f, {});
 /* [TextLayer-distancefield-setup-fonts] */
 
 /* [TextLayer-distancefield-smoothness] */
@@ -2002,6 +2002,7 @@ Containers::Pointer<Text::AbstractFont> font = fontManager.loadAndInstantiate("S
 textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), font->glyphForName("coffee"), {}, node);
 /* [TextLayer-single-glyph-runtime] */
 
+{
 /* [TextLayer-single-glyph-enum] */
 enum class IconFont: UnsignedInt {
     DOXYGEN_ELLIPSIS()
@@ -2010,6 +2011,21 @@ enum class IconFont: UnsignedInt {
 
 textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), IconFont::Coffee, {}, node);
 /* [TextLayer-single-glyph-enum] */
+}
+
+{
+/* [TextLayer-single-glyph-enum-glyph-mapping] */
+enum class IconFont: UnsignedInt {
+    DOXYGEN_ELLIPSIS()
+    Coffee,
+};
+
+UnsignedInt glyphMapping[DOXYGEN_ELLIPSIS(1)]{};
+DOXYGEN_ELLIPSIS()
+glyphMapping[Int(IconFont::Coffee)] = font->glyphForName("coffee");
+textLayerShared.addFont(*font, DOXYGEN_ELLIPSIS(1.0f), glyphMapping);
+/* [TextLayer-single-glyph-enum-glyph-mapping] */
+}
 }
 
 {
@@ -2081,7 +2097,7 @@ textLayer.shared().glyphCache().flushImage(*flushRange);
 UnsignedInt needleFontId = textLayer.shared().glyphCache().addFont(1);
 textLayer.shared().glyphCache().addGlyph(needleFontId, 0,
     {-16, -16}, offset->z(), Range2Di::fromSize(offset->xy(), needle->size()));
-Ui::FontHandle needleFont = textLayer.shared().addInstancelessFont(needleFontId, DOXYGEN_ELLIPSIS(0.125f));
+Ui::FontHandle needleFont = textLayer.shared().addInstancelessFont(needleFontId, DOXYGEN_ELLIPSIS(0.125f, {}));
 /* [TextLayer-transformation-clock2] */
 
 UnsignedInt style = 0;
@@ -2267,7 +2283,7 @@ Float scale = 2.0f*(Vector2{ui.framebufferSize()}/ui.size()).max();
 
 font->openFile("font.ttf", 16.0f);
 DOXYGEN_ELLIPSIS()
-Ui::FontHandle fontHandle = textLayerShared.addFont(*font, font->size()*scale);
+Ui::FontHandle fontHandle = textLayerShared.addFont(*font, font->size()*scale, {});
 /* [TextLayer-dpi] */
 static_cast<void>(fontHandle);
 }

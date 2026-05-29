@@ -1891,7 +1891,7 @@ void TextLayerGLTest::render() {
                     data.styleUniformEditingCommon ? Containers::arraySize(editingStyleUniforms) : 0,
                     data.styleUniformEditingCommon ? Containers::arraySize(editingStyleToUniform) : 0)};
     FontHandle fontHandle[]{
-        layerShared.addFont(data.distanceField ? *_fontDistanceField : *_font, 32.0f)
+        layerShared.addFont(data.distanceField ? *_fontDistanceField : *_font, 32.0f, {})
     };
     Text::Alignment alignment[]{
         Text::Alignment::MiddleCenter
@@ -2022,7 +2022,7 @@ void TextLayerGLTest::renderRvalueGlyphCache() {
             .setOutlineColor(0xdcdcdc_rgbf) /* used only if distance field */
             .setOutlineWidth(3.0f)          /* used only if distance field */
             .setEdgeOffset(1.5f)},          /* used only if distance field */
-        {layerShared.addFont(font, 32.0f)},
+        {layerShared.addFont(font, 32.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -2092,7 +2092,7 @@ void TextLayerGLTest::renderDistanceFieldWidthSmoothness() {
 
     layerShared.setStyle(data.styleUniformCommon,
         {data.styleUniform},
-        {layerShared.addFont(*font, data.styleFontSize)},
+        {layerShared.addFont(*font, data.styleFontSize, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -2167,7 +2167,7 @@ void TextLayerGLTest::renderEditingSmoothness() {
             .setColor(0x3bd267_rgbf),
     };
     FontHandle fonts[]{
-        layerShared.addFont(*_font, 32.0f*data.scale),
+        layerShared.addFont(*_font, 32.0f*data.scale, {}),
     };
     Text::Alignment alignment[]{
         Text::Alignment::MiddleCenter,
@@ -2258,7 +2258,7 @@ void TextLayerGLTest::renderAlignmentPadding() {
         .setEditingStyleCount(data.editable ? 2 : 0)
     };
 
-    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
+    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f, {});
     layerShared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)},
@@ -2344,7 +2344,7 @@ void TextLayerGLTest::renderCustomColor() {
         layerShared = TextLayerGL::Shared{_fontGlyphCache, TextLayer::Shared::Configuration{2, 1}
             .setEditingStyleCount(data.editable ? 2 : 0)};
 
-    FontHandle fontHandle = layerShared.addFont(data.distanceField ? *_fontDistanceField : *_font, 32.0f);
+    FontHandle fontHandle = layerShared.addFont(data.distanceField ? *_fontDistanceField : *_font, 32.0f, {});
     layerShared.setStyle(
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),           /* used only if distance field */
@@ -2461,7 +2461,7 @@ void TextLayerGLTest::renderChangeStyle() {
         .setEditingStyleCount(data.editableBefore || data.editableAfter ? 3 : 0)
     };
 
-    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
+    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f, {});
     layerShared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}        /* colored */
@@ -2559,7 +2559,7 @@ void TextLayerGLTest::renderChangeText() {
         .setEditingStyleCount(data.editableBefore || data.editableAfter ? 2 : 0)
     };
 
-    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
+    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f, {});
     layerShared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -2654,7 +2654,7 @@ void TextLayerGLTest::renderDynamicStyles() {
             /* Include dynamic editing styles if there's any */
             .setDynamicStyleCount(2, data.dynamicStyleUniformCursor || data.dynamicStyleUniformSelection)
     };
-    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
+    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f, {});
 
     TextLayerGL* layer{};
     if(!data.createLayerAfterSetStyle)
@@ -3029,8 +3029,8 @@ void TextLayerGLTest::drawOrder() {
         .setEditingStyleCount(6)
     };
 
-    FontHandle fontHandleLarge = layerShared.addFont(font, 16.0f);
-    FontHandle fontHandleSmall = layerShared.addFont(font, 8.0f);
+    FontHandle fontHandleLarge = layerShared.addFont(font, 16.0f, {});
+    FontHandle fontHandleSmall = layerShared.addFont(font, 8.0f, {});
     /* Testing the styleToUniform initializer list overload, others cases use
        implicit mapping initializer list overloads */
     layerShared.setStyle(TextLayerCommonStyleUniform{}, {
@@ -3213,8 +3213,8 @@ void TextLayerGLTest::drawClipping() {
         .setEditingStyleCount(6)
     };
 
-    FontHandle fontHandleLarge = layerShared.addFont(font, 160.0f);
-    FontHandle fontHandleSmall = layerShared.addFont(font, 80.0f);
+    FontHandle fontHandleLarge = layerShared.addFont(font, 160.0f, {});
+    FontHandle fontHandleSmall = layerShared.addFont(font, 80.0f, {});
     /* Testing the styleToUniform initializer list overload, others cases use
        implicit mapping initializer list overloads */
     layerShared.setStyle(TextLayerCommonStyleUniform{}, {
@@ -3380,7 +3380,7 @@ void TextLayerGLTest::eventStyleTransition() {
         .setEditingStyleCount(data.editableBefore || data.editableAfter ? 3 : 0)
     };
 
-    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
+    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f, {});
     layerShared
         .setStyle(TextLayerCommonStyleUniform{}, {
             TextLayerStyleUniform{},        /* default */

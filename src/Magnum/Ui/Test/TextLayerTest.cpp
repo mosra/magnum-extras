@@ -129,6 +129,7 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedAddFontNotFoundInCache();
     void sharedAddFontNoHandlesLeft();
     void sharedAddInstancelessFontHasInstance();
+    void sharedAddFontGlyphMappingOutOfRange();
     void sharedFontInvalidHandle();
     void sharedFontNoInstance();
 
@@ -549,7 +550,7 @@ const struct {
     const char* name;
     NodeHandle node;
     LayerStates extraState;
-    bool layerDataHandleOverloads, customFont, customAlignment, nullStyleFonts;
+    bool layerDataHandleOverloads, customFont, glyphMapping, customAlignment, nullStyleFonts;
     UnsignedInt styleCount, dynamicStyleCount;
     TextLayerFlags layerFlags;
     Containers::Optional<TextDataFlags> flags;
@@ -557,52 +558,55 @@ const struct {
 } CreateRemoveSetData[]{
     {"create",
         NodeHandle::Null, {},
-        false, false, false, false, 3, 0, {}, {}, false},
+        false, false, false, false, false, 3, 0, {}, {}, false},
     {"create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsLayoutUpdate,
-        false, false, false, false, 3, 0, {}, {}, false},
+        false, false, false, false, false, 3, 0, {}, {}, false},
     {"LayerDataHandle overloads",
         NodeHandle::Null, {},
-        true, false, false, false, 3, 0, {}, {}, false},
+        true, false, false, false, false, 3, 0, {}, {}, false},
     {"custom fonts",
         NodeHandle::Null, {},
-        false, true, false, false, 3, 0, {}, {}, false},
+        false, true, false, false, false, 3, 0, {}, {}, false},
     {"custom fonts, null style fonts",
         NodeHandle::Null, {},
-        false, true, false, true, 3, 0, {}, {}, false},
+        false, true, false, false, true, 3, 0, {}, {}, false},
     {"custom fonts, LayerDataHandle overloads",
         NodeHandle::Null, {},
-        true, true, false, false, 3, 0, {}, {}, false},
+        true, true, false, false, false, 3, 0, {}, {}, false},
+    {"glyph mapping",
+        NodeHandle::Null, {},
+        false, false, true, false, false, 3, 0, {}, {}, false},
     {"custom alignment",
         NodeHandle::Null, {},
-        false, false, true, false, 3, 0, {}, {}, false},
+        false, false, false, true, false, 3, 0, {}, {}, false},
     {"dynamic styles",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate,
-        false, false, false, false, 1, 2, {}, {}, false},
+        false, false, false, false, false, 1, 2, {}, {}, false},
     {"dynamic styles, custom alignment",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate,
-        false, false, true, false, 1, 2, {}, {}, false},
+        false, false, false, true, false, 1, 2, {}, {}, false},
     {"transformable",
         NodeHandle::Null, {},
-        false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}, false},
+        false, false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}, false},
     {"transformable, create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate,
-        false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}, false},
+        false, false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}, false},
     {"editable",
         NodeHandle::Null, {},
-        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
+        false, false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsLayoutUpdate,
-        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
+        false, false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, LayerDataHandle overloads",
         NodeHandle::Null, {},
-        true, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
+        true, false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, use updateText() instead of setText()",
         NodeHandle::Null, {},
-        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, true},
+        false, false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, true},
     {"editable, use updateText() instead of setText(), LayerDataHandle overloads",
         NodeHandle::Null, {},
-        true, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, true},
+        true, false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, true},
 };
 
 const struct {
@@ -700,6 +704,20 @@ const struct {
     {"attached",
         nodeHandle(0x12345, 0xabc), LayerState::NeedsLayoutUpdate,
         LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate},
+};
+
+const struct {
+    const char* name;
+    Containers::Array<UnsignedInt> glyphMapping;
+    UnsignedInt expectedCount;
+} GlyphOutOfRangeData[]{
+    {"no glyph mapping", {}, 13},
+    {"glyph mapping smaller than font glyph count", {InPlaceInit, {
+        6, 9, 12, 0, 5, 9, 1
+    }}, 7},
+    {"glyph mapping larger than font glyph count", {InPlaceInit, {
+        6, 9, 12, 0, 5, 9, 1, 2, 3, 12, 4, 7, 4, 8, 8, 5, 10
+    }}, 17},
 };
 
 const struct {
@@ -1639,6 +1657,7 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::sharedAddFontNotFoundInCache,
               &TextLayerTest::sharedAddFontNoHandlesLeft,
               &TextLayerTest::sharedAddInstancelessFontHasInstance,
+              &TextLayerTest::sharedAddFontGlyphMappingOutOfRange,
               &TextLayerTest::sharedFontInvalidHandle,
               &TextLayerTest::sharedFontNoInstance});
 
@@ -1752,10 +1771,12 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::nonEditableText,
               &TextLayerTest::nonEditableTextTransformation,
               &TextLayerTest::noSharedStyleFonts,
-              &TextLayerTest::noFontInstance,
-              &TextLayerTest::glyphOutOfRange,
+              &TextLayerTest::noFontInstance});
 
-              &TextLayerTest::layoutEmpty});
+    addInstancedTests({&TextLayerTest::glyphOutOfRange},
+        Containers::arraySize(GlyphOutOfRangeData));
+
+    addTests({&TextLayerTest::layoutEmpty});
 
     addInstancedTests({&TextLayerTest::layout},
         Containers::arraySize(LayoutData));
@@ -2580,8 +2601,8 @@ void TextLayerTest::sharedAddFont() {
     } font1, font2;
 
     /* First font */
-    UnsignedInt firstFontId = cache.addFont(13, &font1);
-    FontHandle first = shared.addFont(font1, 13.0f);
+    UnsignedInt firstFontId = cache.addFont(56, &font1);
+    FontHandle first = shared.addFont(font1, 13.0f, {});
     CORRADE_COMPARE(first, Ui::fontHandle(0, 1));
     CORRADE_COMPARE(shared.fontCount(), 1);
     CORRADE_VERIFY(shared.isHandleValid(first));
@@ -2590,19 +2611,21 @@ void TextLayerTest::sharedAddFont() {
     CORRADE_COMPARE(&shared.font(first), &font1);
     /* Const overload */
     CORRADE_COMPARE(&const_cast<const Shared&>(shared).font(first), &font1);
+    CORRADE_COMPARE(shared.fontGlyphCount(first), 56);
 
     /* Second font, instanceless */
     UnsignedInt secondFontId = cache.addFont(223);
-    FontHandle second = shared.addInstancelessFont(secondFontId, 0.5f);
+    FontHandle second = shared.addInstancelessFont(secondFontId, 0.5f, {});
     CORRADE_COMPARE(second, Ui::fontHandle(1, 1));
     CORRADE_COMPARE(shared.fontCount(), 2);
     CORRADE_VERIFY(shared.isHandleValid(second));
     CORRADE_COMPARE(shared.glyphCacheFontId(second), secondFontId);
     CORRADE_VERIFY(!shared.hasFontInstance(second));
+    CORRADE_COMPARE(shared.fontGlyphCount(second), 223);
 
-    /* Third font */
-    UnsignedInt thirdFontId = cache.addFont(56, &font2);
-    FontHandle third = shared.addFont(font2, 6.0f);
+    /* Third font, custom glyph mapping with duplicated glyphs */
+    UnsignedInt thirdFontId = cache.addFont(5, &font2);
+    FontHandle third = shared.addFont(font2, 6.0f, Containers::arrayView<UnsignedInt>({3, 1, 3, 1, 2, 2, 4, 0}));
     CORRADE_COMPARE(third, Ui::fontHandle(2, 1));
     CORRADE_COMPARE(shared.fontCount(), 3);
     CORRADE_VERIFY(shared.isHandleValid(third));
@@ -2611,15 +2634,20 @@ void TextLayerTest::sharedAddFont() {
     CORRADE_COMPARE(&shared.font(third), &font2);
     /* Const overload */
     CORRADE_COMPARE(&const_cast<const Shared&>(shared).font(third), &font2);
+    /* Glyph count is the mapping size which is larger than real glyph count */
+    CORRADE_COMPARE(shared.fontGlyphCount(third), 8);
 
-    /* Fourth font, instanceless */
+    /* Fourth font, instanceless, custom glyph mapping for just a subset */
     UnsignedInt fourthFontId = cache.addFont(117);
-    FontHandle fourth = shared.addInstancelessFont(fourthFontId, 2.0f);
+    FontHandle fourth = shared.addInstancelessFont(fourthFontId, 2.0f, Containers::arrayView<UnsignedInt>({0, 56, 111, 0, 3, 96}));
     CORRADE_COMPARE(fourth, Ui::fontHandle(3, 1));
     CORRADE_COMPARE(shared.fontCount(), 4);
     CORRADE_VERIFY(shared.isHandleValid(fourth));
     CORRADE_COMPARE(shared.glyphCacheFontId(fourth), fourthFontId);
     CORRADE_VERIFY(!shared.hasFontInstance(fourth));
+    /* Glyph count is the mapping size which is smaller than real glyph
+       count */
+    CORRADE_COMPARE(shared.fontGlyphCount(fourth), 6);
 }
 
 void TextLayerTest::sharedAddFontTakeOwnership() {
@@ -2664,32 +2692,37 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
         Containers::Pointer<Font> font1{InPlaceInit, destructed};
         UnsignedInt firstFontId = cache.addFont(13, font1.get());
         Font* pointer1 = font1.get();
-        FontHandle first = shared.addFont(Utility::move(font1), 13.0f);
+        FontHandle first = shared.addFont(Utility::move(font1), 13.0f, {});
         CORRADE_COMPARE(first, Ui::fontHandle(0, 1));
         CORRADE_COMPARE(shared.fontCount(), 1);
         CORRADE_VERIFY(shared.isHandleValid(first));
         CORRADE_COMPARE(shared.glyphCacheFontId(first), firstFontId);
         CORRADE_COMPARE(&shared.font(first), pointer1);
+        CORRADE_COMPARE(shared.fontGlyphCount(first), 13);
 
         /* It should be possible to add a second font using the same pointer
-           but different options */
-        FontHandle second = shared.addFont(*pointer1, 6.0f);
+           but different options, including glyph mapping */
+        FontHandle second = shared.addFont(*pointer1, 6.0f, Containers::arrayView<UnsignedInt>({3, 0, 11}));
         CORRADE_COMPARE(second, Ui::fontHandle(1, 1));
         CORRADE_COMPARE(shared.fontCount(), 2);
         CORRADE_VERIFY(shared.isHandleValid(second));
         CORRADE_COMPARE(shared.glyphCacheFontId(second), firstFontId);
         CORRADE_COMPARE(&shared.font(second), pointer1);
+        CORRADE_COMPARE(shared.fontGlyphCount(second), 3);
 
-        /* Add a second font, to verify both get deleted appropriately */
+        /* Add a second font, with custom glyph mapping, to verify both get
+           deleted appropriately and the mapping is used even with the r-value
+           overload */
         Containers::Pointer<Font> font2{InPlaceInit, destructed};
         UnsignedInt thirdFontId = cache.addFont(13, font2.get());
         Font* pointer2 = font2.get();
-        FontHandle third = shared.addFont(Utility::move(font2), 22.0f);
+        FontHandle third = shared.addFont(Utility::move(font2), 22.0f, Containers::arrayView<UnsignedInt>({5, 9, 12, 0, 11, 1}));
         CORRADE_COMPARE(third, Ui::fontHandle(2, 1));
         CORRADE_COMPARE(shared.fontCount(), 3);
         CORRADE_VERIFY(shared.isHandleValid(third));
         CORRADE_COMPARE(shared.glyphCacheFontId(third), thirdFontId);
         CORRADE_COMPARE(&shared.font(third), pointer2);
+        CORRADE_COMPARE(shared.fontGlyphCount(third), 6);
     }
 
     /* The owned instances should be destructed exactly once */
@@ -2716,7 +2749,7 @@ void TextLayerTest::sharedAddFontTakeOwnershipNull() {
 
     Containers::String out;
     Error redirectError{&out};
-    shared.addFont(nullptr, 13.0f);
+    shared.addFont(nullptr, 13.0f, {});
     CORRADE_COMPARE(out, "Ui::TextLayer::Shared::addFont(): font is null\n");
 }
 
@@ -2755,8 +2788,8 @@ void TextLayerTest::sharedAddFontNotFoundInCache() {
 
     Containers::String out;
     Error redirectError{&out};
-    shared.addFont(font, 1.0f);
-    shared.addInstancelessFont(2, 1.0f);
+    shared.addFont(font, 1.0f, {});
+    shared.addInstancelessFont(2, 1.0f, {});
     CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::addFont(): font not found among 2 fonts in associated glyph cache\n"
         "Ui::TextLayer::Shared::addInstancelessFont(): index 2 out of range for 2 fonts in associated glyph cache\n");
@@ -2795,15 +2828,15 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
 
     FontHandle handle;
     for(std::size_t i = 0; i != 1 << Implementation::FontHandleIdBits; ++i)
-        handle = shared.addFont(font, 1.0f);
+        handle = shared.addFont(font, 1.0f, {});
     CORRADE_COMPARE(handle, Ui::fontHandle((1 << Implementation::FontHandleIdBits) - 1, 1));
 
     CORRADE_COMPARE(shared.fontCount(), 1 << Implementation::FontHandleIdBits);
 
     Containers::String out;
     Error redirectError{&out};
-    shared.addFont(font, 1.0f);
-    shared.addInstancelessFont(glyphCacheInstanceLessFontId, 1.0f);
+    shared.addFont(font, 1.0f, {});
+    shared.addInstancelessFont(glyphCacheInstanceLessFontId, 1.0f, {});
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
     CORRADE_COMPARE(out,
@@ -2846,9 +2879,60 @@ void TextLayerTest::sharedAddInstancelessFontHasInstance() {
 
     Containers::String out;
     Error redirectError{&out};
-    shared.addInstancelessFont(glyphCacheFontId, 1.0f);
+    shared.addInstancelessFont(glyphCacheFontId, 1.0f, {});
     CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::addInstancelessFont(): glyph cache font 1 has an instance set\n");
+}
+
+void TextLayerTest::sharedAddFontGlyphMappingOutOfRange() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}};
+
+    struct Font: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    };
+    Font font;
+    cache.addFont(30, &font);
+    Containers::Pointer<Font> allocatedFont{InPlaceInit};
+    cache.addFont(15, allocatedFont.get());
+    UnsignedInt glyphCacheInstanceLessFontId = cache.addFont(20);
+
+    /* Duplicated IDs and IDs right below glyph count are fine. All overloads
+       should delegate to the same helper that checks so testing just once
+       here, the message gets verified for all overloads below. */
+    shared.addFont(font, 1.0f, Containers::arrayView<UnsignedInt>({0, 0, 29}));
+    shared.addInstancelessFont(glyphCacheInstanceLessFontId, 1.0f, Containers::arrayView<UnsignedInt>({0, 0, 19}));
+
+    Containers::String out;
+    Error redirectError{&out};
+    shared.addFont(font, 1.0f, Containers::arrayView<UnsignedInt>({0, 29, 19, 30, 12}));
+    shared.addFont(Utility::move(allocatedFont), 1.0f, Containers::arrayView<UnsignedInt>({0, 19, 12}));
+    shared.addInstancelessFont(2, 1.0f, Containers::arrayView<UnsignedInt>({0, 19, 13, 8, 1, 20, 12}));
+    CORRADE_COMPARE_AS(out,
+        "Ui::TextLayer::Shared::addFont(): glyph 30 out of range for 30 glyphs at index 3\n"
+        "Ui::TextLayer::Shared::addFont(): glyph 19 out of range for 15 glyphs at index 1\n"
+        "Ui::TextLayer::Shared::addInstancelessFont(): glyph 20 out of range for 20 glyphs at index 5\n",
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::sharedFontInvalidHandle() {
@@ -2882,7 +2966,7 @@ void TextLayerTest::sharedFontInvalidHandle() {
 
     /* Need to add at least one font because the assertion returns the first
        font as a fallback */
-    shared.addFont(font, 13.0f);
+    shared.addFont(font, 13.0f, {});
 
     Containers::String out;
     Error redirectError{&out};
@@ -2895,7 +2979,9 @@ void TextLayerTest::sharedFontInvalidHandle() {
     /* Const overload */
     const_cast<const Shared&>(shared).font(FontHandle(0x12ab));
     const_cast<const Shared&>(shared).font(FontHandle::Null);
-    CORRADE_COMPARE(out,
+    shared.fontGlyphCount(FontHandle(0x12ab));
+    shared.fontGlyphCount(FontHandle::Null);
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::Shared::glyphCacheFontId(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
         "Ui::TextLayer::Shared::glyphCacheFontId(): invalid handle Ui::FontHandle::Null\n"
         "Ui::TextLayer::Shared::hasFontInstance(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
@@ -2903,7 +2989,10 @@ void TextLayerTest::sharedFontInvalidHandle() {
         "Ui::TextLayer::Shared::font(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
         "Ui::TextLayer::Shared::font(): invalid handle Ui::FontHandle::Null\n"
         "Ui::TextLayer::Shared::font(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
-        "Ui::TextLayer::Shared::font(): invalid handle Ui::FontHandle::Null\n");
+        "Ui::TextLayer::Shared::font(): invalid handle Ui::FontHandle::Null\n"
+        "Ui::TextLayer::Shared::fontGlyphCount(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
+        "Ui::TextLayer::Shared::fontGlyphCount(): invalid handle Ui::FontHandle::Null\n",
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::sharedFontNoInstance() {
@@ -2939,9 +3028,9 @@ void TextLayerTest::sharedFontNoInstance() {
 
     /* Need to add at least one font with an instance because the assertion
        returns the first font as a fallback */
-    shared.addFont(font, 13.0f);
+    shared.addFont(font, 13.0f, {});
 
-    FontHandle instanceless = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.3f);
+    FontHandle instanceless = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.3f, {});
     CORRADE_VERIFY(!shared.hasFontInstance(instanceless));
 
     Containers::String out;
@@ -2999,8 +3088,8 @@ void TextLayerTest::sharedSetStyle() {
     Font font1, font2;
     cache.addFont(67, &font1);
     cache.addFont(23, &font2);
-    FontHandle first = shared.addFont(font1, 13.0f);
-    FontHandle second = shared.addFont(font2, 6.0f);
+    FontHandle first = shared.addFont(font1, 13.0f, {});
+    FontHandle second = shared.addFont(font2, 6.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
@@ -3132,8 +3221,8 @@ void TextLayerTest::sharedSetStyleImplicitFeatures() {
     Font font1, font2;
     cache.addFont(67, &font1);
     cache.addFont(23, &font2);
-    FontHandle first = shared.addFont(font1, 13.0f);
-    FontHandle second = shared.addFont(font2, 6.0f);
+    FontHandle first = shared.addFont(font1, 13.0f, {});
+    FontHandle second = shared.addFont(font2, 6.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
@@ -3317,8 +3406,8 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
     Font font1, font2;
     cache.addFont(67, &font1);
     cache.addFont(23, &font2);
-    FontHandle first = shared.addFont(font1, 13.0f);
-    FontHandle second = shared.addFont(font2, 6.0f);
+    FontHandle first = shared.addFont(font1, 13.0f, {});
+    FontHandle second = shared.addFont(font2, 6.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
@@ -3541,8 +3630,8 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
     Font font1, font2;
     cache.addFont(67, &font1);
     cache.addFont(23, &font2);
-    FontHandle first = shared.addFont(font1, 13.0f);
-    FontHandle second = shared.addFont(font2, 6.0f);
+    FontHandle first = shared.addFont(font1, 13.0f, {});
+    FontHandle second = shared.addFont(font2, 6.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
@@ -3911,8 +4000,8 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
     Font font1, font2;
     cache.addFont(67, &font1);
     cache.addFont(23, &font2);
-    FontHandle first = shared.addFont(font1, 13.0f);
-    FontHandle second = shared.addFont(font2, 6.0f);
+    FontHandle first = shared.addFont(font1, 13.0f, {});
+    FontHandle second = shared.addFont(font2, 6.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
@@ -4031,8 +4120,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures() {
     Font font1, font2;
     cache.addFont(67, &font1);
     cache.addFont(23, &font2);
-    FontHandle first = shared.addFont(font1, 13.0f);
-    FontHandle second = shared.addFont(font2, 6.0f);
+    FontHandle first = shared.addFont(font1, 13.0f, {});
+    FontHandle second = shared.addFont(font2, 6.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
@@ -4195,8 +4284,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
     Font font1, font2;
     cache.addFont(67, &font1);
     cache.addFont(23, &font2);
-    FontHandle first = shared.addFont(font1, 13.0f);
-    FontHandle second = shared.addFont(font2, 6.0f);
+    FontHandle first = shared.addFont(font1, 13.0f, {});
+    FontHandle second = shared.addFont(font2, 6.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
@@ -4389,8 +4478,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
     Font font1, font2;
     cache.addFont(67, &font1);
     cache.addFont(23, &font2);
-    FontHandle first = shared.addFont(font1, 13.0f);
-    FontHandle second = shared.addFont(font2, 6.0f);
+    FontHandle first = shared.addFont(font1, 13.0f, {});
+    FontHandle second = shared.addFont(font2, 6.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
@@ -4573,7 +4662,7 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{4}};
 
-    FontHandle handle = shared.addFont(font, 13.0f);
+    FontHandle handle = shared.addFont(font, 13.0f, {});
 
     /* Setting a null handle is okay, but create() etc that uses given style
        then has to explicitly pass a font handle */
@@ -5336,7 +5425,7 @@ void TextLayerTest::dynamicStyle() {
         .setDynamicStyleCount(3)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -6198,9 +6287,17 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
-    FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f);
-    FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f);
+    /* The three-glyph font is scaled to 0.5 */
+    FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f, {});
+    /* The one-glyph is scaled to 2.0, and optionally has a glyph mapping to
+       have createGlyph() / setGlyph() translate glyph 6 to 66 and glyph 3 to
+       13. The mapping array is deliberately just 7 items to ensure glyph 6 and
+       3 is used everywhere instead of 66 and 13, which would assert. */
+    UnsignedInt glyphMapping[]{
+        7, 7, 7, 13, 7, 7, 66
+    };
+    FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f,
+        data.glyphMapping ? Containers::arrayView(glyphMapping) : nullptr);
 
     /* If using custom fonts, set the style to either something completely
        different or not set them at all -- they shouldn't get used for
@@ -6374,7 +6471,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
        TextDataFlags */
     DataHandle secondGlyph = layer.createGlyph(
         StyleIndex(2),
-        GlyphIndex(66),
+        GlyphIndex(data.glyphMapping ? 6 : 66),
         TextProperties{}
             .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
             .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt),
@@ -6748,6 +6845,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             layer.setText(dataHandleData(secondGlyph), "hey", textProperties, *data.flags) :
             layer.setText(dataHandleData(secondGlyph), "hey", textProperties);
         layer.setGlyph(dataHandleData(second),
+            /* LayerDataHandle overloads aren't used with custom glyph mapping,
+               so this is 13 / 66 always */
             data.customFont ? GlyphIndex(13) : GlyphIndex(66),
             textProperties);
         /* This changes empty text to a non-empty, i.e. there's no previous
@@ -6767,7 +6866,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             layer.setText(secondGlyph, "hey", textProperties, *data.flags) :
             layer.setText(secondGlyph, "hey", textProperties);
         layer.setGlyph(second,
-            data.customFont ? GlyphIndex(13) : GlyphIndex(66),
+            data.customFont ? GlyphIndex(13) :
+                GlyphIndex(data.glyphMapping ? 6 : 66),
             textProperties);
         layer.setText(fifth, "a\nh", textProperties, TextDataFlags{});
         layer.setGlyph(third, GlyphIndex(33), textProperties);
@@ -7018,7 +7118,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             layer.setText(secondGlyph, "ahoy", textProperties);
     }
     layer.setGlyph(second,
-        data.customFont ? GlyphIndex(66) : GlyphIndex(13),
+        data.customFont ? GlyphIndex(66) : GlyphIndex(data.glyphMapping ? 3 : 13),
         textProperties);
     CORRADE_COMPARE(layer.flags(second), TextDataFlags{});
     CORRADE_COMPARE(layer.flags(secondGlyph), data.flags ? *data.flags : TextDataFlags{});
@@ -7040,7 +7140,9 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         5u, 1u, 1u, 1u, 2u, data.customFont ? 3u : 1u, 1u, 2u, 1u, data.customFont ? 4u : 1u, 1u
     }), TestSuite::Compare::Container);
     /* Not verifying TextLayerGlyphData::glyphId and position as there's no new
-       variant to check */
+       variant to check. For glyph mapping the glyph 13 (or 3 mapped to 13)
+       isn't in cache anyway so it'd result in 0 in both cases, a verification
+       of glyph IDs wouldn't really check any new corner cases. */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
         0u, 1u, 2u, 3u, 5u, 3u, 2u, 6u, 4u, 3u, 2u
     }), TestSuite::Compare::Container);
@@ -7113,7 +7215,7 @@ void TextLayerTest::createRemoveHandleRecycle() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -7278,7 +7380,7 @@ void TextLayerTest::createStyleOutOfRange() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     shared.setStyle(
         TextLayerCommonStyleUniform{},
@@ -7374,7 +7476,7 @@ void TextLayerTest::setTextSetGlyph() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -7433,7 +7535,7 @@ void TextLayerTest::setCursor() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -7547,7 +7649,7 @@ void TextLayerTest::setCursorInvalid() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -7599,7 +7701,7 @@ void TextLayerTest::updateText() {
     } shared{cache, TextLayer::Shared::Configuration{3}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {FontHandle::Null, FontHandle::Null, shared.addFont(font, 1.0f)},
+        {FontHandle::Null, FontHandle::Null, shared.addFont(font, 1.0f, {})},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -7821,7 +7923,7 @@ void TextLayerTest::updateTextInvalid() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -7899,7 +8001,7 @@ void TextLayerTest::editText() {
     } shared{cache, TextLayer::Shared::Configuration{3}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {FontHandle::Null, FontHandle::Null, shared.addFont(font, 1.0f)},
+        {FontHandle::Null, FontHandle::Null, shared.addFont(font, 1.0f, {})},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -7987,7 +8089,7 @@ void TextLayerTest::editTextInvalid() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -8039,7 +8141,7 @@ void TextLayerTest::textEditCallback() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -8442,7 +8544,7 @@ void TextLayerTest::cycleGlyphEditableNonEditableText() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 12.0f)},
+        {shared.addFont(font, 12.0f, {})},
         {Text::Alignment::TopLeft},
         {}, {}, {}, {}, {}, {});
 
@@ -8584,7 +8686,7 @@ void TextLayerTest::createSetTextTextProperties() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 16.0f);
+    FontHandle fontHandle = shared.addFont(font, 16.0f, {});
     if(!data.dynamicStyleCount)
         shared.setStyle(TextLayerCommonStyleUniform{},
             {TextLayerStyleUniform{},
@@ -8758,8 +8860,8 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 16.0f);
-    FontHandle fontHandle2 = shared.addFont(font, 12.0f);
+    FontHandle fontHandle = shared.addFont(font, 16.0f, {});
+    FontHandle fontHandle2 = shared.addFont(font, 12.0f, {});
     if(!data.dynamicStyleCount)
         shared.setStyle(TextLayerCommonStyleUniform{},
             {TextLayerStyleUniform{},
@@ -8910,7 +9012,7 @@ void TextLayerTest::createSetTextTextPropertiesEditableInvalid() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         /* Using some features in the style itself should be okay */
         {{Text::Feature::Kerning, false}}, {0}, {1},
@@ -8971,7 +9073,7 @@ void TextLayerTest::createSetUpdateTextFromLayerItself() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -9036,7 +9138,7 @@ void TextLayerTest::setColor() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -9107,7 +9209,7 @@ void TextLayerTest::setPadding() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -9195,7 +9297,7 @@ void TextLayerTest::setPaddingInvalid() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
 
@@ -9251,7 +9353,7 @@ void TextLayerTest::setTransformation() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -9411,7 +9513,7 @@ void TextLayerTest::setTransformationInvalid() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
 
@@ -9639,7 +9741,7 @@ void TextLayerTest::invalidFontHandle() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
 
@@ -9692,7 +9794,7 @@ void TextLayerTest::nonEditableText() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
 
@@ -9775,7 +9877,7 @@ void TextLayerTest::nonEditableTextTransformation() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
 
@@ -9828,7 +9930,7 @@ void TextLayerTest::noSharedStyleFonts() {
         .setDynamicStyleCount(2)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
@@ -9883,8 +9985,8 @@ void TextLayerTest::noFontInstance() {
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{1}};
 
-    FontHandle fontHandle1 = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.1f);
-    FontHandle fontHandle2 = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.1f);
+    FontHandle fontHandle1 = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.1f, {});
+    FontHandle fontHandle2 = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.1f, {});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle1},
@@ -9911,6 +10013,9 @@ void TextLayerTest::noFontInstance() {
 }
 
 void TextLayerTest::glyphOutOfRange() {
+    auto&& data = GlyphOutOfRangeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: Text::AbstractGlyphCache {
@@ -9920,10 +10025,6 @@ void TextLayerTest::glyphOutOfRange() {
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
     } cache{PixelFormat::R8Unorm, {32, 32, 2}};
 
-    /* Add one more font to verify it's checking the right one */
-    cache.addFont(57);
-    UnsignedInt glyphCacheFontId = cache.addFont(56);
-
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
@@ -9931,7 +10032,10 @@ void TextLayerTest::glyphOutOfRange() {
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{2, 3}};
 
-    FontHandle fontHandle = shared.addInstancelessFont(glyphCacheFontId, 1.0f);
+    /* Add one more font to verify it's checking the right one */
+    shared.addInstancelessFont(cache.addFont(56), 1.0f, {});
+
+    FontHandle fontHandle = shared.addInstancelessFont(cache.addFont(13), 1.0f, data.glyphMapping);
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {0, 1, 0},
@@ -9943,15 +10047,16 @@ void TextLayerTest::glyphOutOfRange() {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    DataHandle data = layer.createGlyph(2, 55, {});
+    DataHandle layerData = layer.createGlyph(2, 5, {});
 
     Containers::String out;
     Error redirectError{&out};
-    layer.createGlyph(2, 56, {});
-    layer.setGlyph(data, 56, {});
-    CORRADE_COMPARE(out,
-        "Ui::TextLayer::createGlyph(): glyph 56 out of range for 56 glyphs in glyph cache font 1\n"
-        "Ui::TextLayer::setGlyph(): glyph 56 out of range for 56 glyphs in glyph cache font 1\n");
+    layer.createGlyph(2, data.expectedCount, {});
+    layer.setGlyph(layerData, data.expectedCount, {});
+    CORRADE_COMPARE_AS(out, Utility::format(
+        "Ui::TextLayer::createGlyph(): glyph {0} out of range for {0} glyphs in Ui::FontHandle(0x1, 0x1)\n"
+        "Ui::TextLayer::setGlyph(): glyph {0} out of range for {0} glyphs in Ui::FontHandle(0x1, 0x1)\n", data.expectedCount),
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::layoutEmpty() {
@@ -9981,7 +10086,7 @@ void TextLayerTest::layoutEmpty() {
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{1}};
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
@@ -10063,8 +10168,8 @@ void TextLayerTest::layout() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    FontHandle largeFont = shared.addFont(font, 16.0f);
-    FontHandle smallFont = shared.addFont(font, 8.0f);
+    FontHandle largeFont = shared.addFont(font, 16.0f, {});
+    FontHandle smallFont = shared.addFont(font, 8.0f, {});
 
     if(data.styleCount == 3) {
         shared.setStyle(TextLayerCommonStyleUniform{},
@@ -10232,7 +10337,7 @@ void TextLayerTest::updateEmpty() {
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{1}};
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
@@ -10334,8 +10439,10 @@ void TextLayerTest::updateCleanDataOrder() {
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0, this scale
        is baked into the quad size and also saved into the scale field if
        TextLayerSharedFlag::DistanceField is enabled */
-    FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f);
-    FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f);
+    FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f, {});
+    /* Glyph mapping is sufficiently tested in createRemoveSet(), no need to
+       replicate that here again */
+    FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f, {});
 
     if(data.styleCount == 6) {
         shared.setStyle(TextLayerCommonStyleUniform{},
@@ -11540,7 +11647,7 @@ void TextLayerTest::updateAlignment() {
 
     /* Font scaled 2x, so all metrics coming from the font or the cache should
        be scaled 2x */
-    FontHandle fontHandle = shared.addFont(font, 200.0f);
+    FontHandle fontHandle = shared.addFont(font, 200.0f, {});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
@@ -11660,7 +11767,7 @@ void TextLayerTest::updateAlignmentGlyph() {
 
     /* Font scaled 2x, so all metrics coming from the the cache should be
        scaled 2x */
-    FontHandle fontHandle = shared.addInstancelessFont(glyphCacheFontId, 2.0f);
+    FontHandle fontHandle = shared.addInstancelessFont(glyphCacheFontId, 2.0f, {});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
@@ -11808,7 +11915,7 @@ void TextLayerTest::updatePadding() {
 
     /* Font scaled 2x, so all metrics coming from the font or the cache should
        be scaled 2x */
-    FontHandle fontHandle = shared.addFont(font, 200.0f);
+    FontHandle fontHandle = shared.addFont(font, 200.0f, {});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
@@ -11928,7 +12035,7 @@ void TextLayerTest::updatePaddingGlyph() {
 
     /* Font scaled 2x, so all metrics coming from the the cache should be
        scaled 2x */
-    FontHandle fontHandle = shared.addInstancelessFont(glyphCacheFontId, 2.0f);
+    FontHandle fontHandle = shared.addInstancelessFont(glyphCacheFontId, 2.0f, {});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
@@ -12066,7 +12173,7 @@ void TextLayerTest::updateTransformation() {
         .setFlags(data.sharedLayerFlags)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 100.0f);
+    FontHandle fontHandle = shared.addFont(font, 100.0f, {});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
@@ -12444,7 +12551,7 @@ void TextLayerTest::keyTextEvent() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -12735,7 +12842,7 @@ void TextLayerTest::keyTextEventSynthesizedFromPointerPress() {
     } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {shared.addFont(font, 1.0f)},
+        {shared.addFont(font, 1.0f, {})},
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
@@ -12868,7 +12975,7 @@ void TextLayerTest::debugIntegration() {
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{4}};
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{},
@@ -12969,7 +13076,7 @@ void TextLayerTest::debugIntegrationNoCallback() {
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{4}};
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{},
@@ -13085,7 +13192,7 @@ void TextLayerTest::debugIntegrationLambdaStyleName() {
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{4}};
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{},

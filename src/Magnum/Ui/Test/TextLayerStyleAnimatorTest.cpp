@@ -524,7 +524,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
         .setDynamicStyleCount(1)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     /* Have non-trivial uniform mapping to verify the data get correctly
        fetched. Has to be set early in order to call TextLayer::create() to
@@ -710,7 +710,7 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
         .setDynamicStyleCount(1)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     /* Has to be called early to be able to call TextLayer::create() which we
        want to ensure there's nothing accidentally skipped when recycling
@@ -988,9 +988,9 @@ void TextLayerStyleAnimatorTest::advance() {
         .setDynamicStyleCount(4)
     };
 
-    FontHandle fontHandle1 = shared.addFont(font, 1.0f);
-    FontHandle fontHandle2 = shared.addFont(font, 2.0f);
-    FontHandle fontHandle3 = shared.addFont(font, 3.0f);
+    FontHandle fontHandle1 = shared.addFont(font, 1.0f, {});
+    FontHandle fontHandle2 = shared.addFont(font, 2.0f, {});
+    FontHandle fontHandle3 = shared.addFont(font, 3.0f, {});
 
     /* Has to be called early to be able to call TextLayer::create() which we
        need to to verify style ID updates, TextLayerStyleAnimator::create()
@@ -2145,7 +2145,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
         .setDynamicStyleCount(1)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     /* Has to be called early to be able to call TextLayer::create() which we
        need to to verify style ID updates, TextLayerStyleAnimator::create()
@@ -2364,7 +2364,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         .setDynamicStyleCount(1)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     /* Has to be called early to be able to call TextLayer::create() which we
        need to to verify style ID updates, TextLayerStyleAnimator::create()
@@ -2511,7 +2511,7 @@ void TextLayerStyleAnimatorTest::advanceConflictingAnimations() {
         .setDynamicStyleCount(2)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     /* Has to be called early to be able to call TextLayer::create() which we
        need to to verify style ID updates, TextLayerStyleAnimator::create()
@@ -2676,7 +2676,7 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
 
     /* The editing layer has only the non-editing style set to check both
        style assertions. The non-editing layer has no style set. */
-    FontHandle fontHandleEditing = sharedEditing.addFont(font, 1.0f);
+    FontHandle fontHandleEditing = sharedEditing.addFont(font, 1.0f, {});
     sharedEditing.setStyle(
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
@@ -2942,7 +2942,7 @@ void TextLayerStyleAnimatorTest::advanceInvalidCursorSelection() {
 
     /* Set the style after animation creation to verify it isn't needed
        earlier */
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
     shared.setStyle(
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
@@ -3064,7 +3064,7 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
         .setDynamicStyleCount(1)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     /* Has to be called early to be able to call TextLayer::create() which we
        need to to verify style ID updates, TextLayerStyleAnimator::create()
@@ -3229,7 +3229,7 @@ void TextLayerStyleAnimatorTest::uiAdvance() {
         .setDynamicStyleCount(1)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     /* Has to be called early to be able to call TextLayer::create() which we
        need to to verify style ID updates, TextLayerStyleAnimator::create()
@@ -3319,7 +3319,7 @@ void TextLayerStyleAnimatorTest::uiAdvanceEventTransition() {
         .setDynamicStyleCount(1)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle = shared.addFont(font, 1.0f, {});
 
     shared.setStyle(
         TextLayerCommonStyleUniform{},

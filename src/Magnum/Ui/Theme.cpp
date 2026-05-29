@@ -382,8 +382,8 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         /** @todo some DPI-aware machinery here, such as picking one of
             multiple icon images depending on the DPI scaling, or maybe just
             put these into a font */
-        fonts[Int(TextFont::Icon)] = shared.addInstancelessFont(iconFontId, 24.0f/64.0f);
-        fonts[Int(TextFont::LargeIcon)] = shared.addInstancelessFont(iconFontId, 32.0f/64.0f);
+        fonts[Int(TextFont::Icon)] = shared.addInstancelessFont(iconFontId, 24.0f/64.0f, {});
+        fonts[Int(TextFont::LargeIcon)] = shared.addInstancelessFont(iconFontId, 32.0f/64.0f, {});
     }
 
     /* Text layer fonts and style */
@@ -432,9 +432,9 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         /** @todo create some interface for "always open" fonts, ugh */
         CORRADE_INTERNAL_ASSERT_OUTPUT(passwordFont->openData({}, font->size()));
 
-        fonts[Int(TextFont::Main)] = shared.addFont(Utility::move(font), 16.0f);
-        fonts[Int(TextFont::Password)] = shared.addFont(Utility::move(passwordFont), 16.0f);
-        fonts[Int(TextFont::Large)] = shared.addFont(Utility::move(fontLarge), 24.0f);
+        fonts[Int(TextFont::Main)] = shared.addFont(Utility::move(font), 16.0f, {});
+        fonts[Int(TextFont::Password)] = shared.addFont(Utility::move(passwordFont), 16.0f, {});
+        fonts[Int(TextFont::Large)] = shared.addFont(Utility::move(fontLarge), 24.0f, {});
 
         /* Font handles matching all styles. References either the `mainFont`
            or the `iconFont` defined above. */

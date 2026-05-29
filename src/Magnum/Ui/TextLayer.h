@@ -947,7 +947,7 @@ coordinates at which a text using them should be rendered. The function then
 returns a @ref FontHandle, which is subsequently used to reference the font
 from styles. As with the glyph cache, the font instance is expected to be alive
 for the whole shared instance lifetime, or you can use
-@ref TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&&, Float)
+@ref TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&&, Float, const Containers::StridedArrayView1D<const UnsignedInt>&)
 to move the loaded plugin ownership to the shared instance. Note that you're
 still responsible for keeping the plugin manager instance around even in that
 case.
@@ -1282,6 +1282,21 @@ to style IDs, @ref createGlyph() accepts both plain integers and enums for a
 glyph ID:
 
 @snippet Ui.cpp TextLayer-single-glyph-enum
+
+<b></b>
+
+@m_class{m-block m-info}
+
+@par Custom mapping from enum values to glyph IDs
+    Alternatively to the above, to have the enum numbering independent from the
+    font (and thus making it possible to use the same enum with different icon
+    fonts), you can supply a glyph mapping in the last argument to
+    @ref TextLayer::Shared::addFont():
+@par
+    @snippet Ui.cpp TextLayer-single-glyph-enum-glyph-mapping
+@par
+    This mapping is only used by @ref createGlyph() and @ref setGlyph(), it
+    doesn't affect regular text shaping in any way.
 
 It's however also possible to insert your own image data into the glyph cache
 and reference them with this function. Assuming a list of images imported for
@@ -2238,10 +2253,15 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * cursor/selection style aren't used. If @ref TextProperties::font()
          * is not null it's used, otherwise the default @ref FontHandle assigned
          * to given style is used and is expected to not be null. The @p glyph
-         * is expected to be less than
-         * @ref Text::AbstractGlyphCache::fontGlyphCount() for given font. A
-         * subset of the style can be customized on a per-data basis with
-         * @ref setColor(), @ref setPadding() and @ref setTransformation().
+         * is expected to be less than @ref Shared::fontGlyphCount() for given
+         * font. If custom glyph mapping was passed to @ref Shared::addFont()
+         * or @ref Shared::addInstancelessFont() for given font, the @p glyph
+         * is first mapped to a real glyph ID within the font, which can be
+         * used for example to use the same icon enum with multiple fonts that
+         * may have glyphs in different order.
+         *
+         * A subset of the style can be customized on a per-data basis
+         * with @ref setColor(), @ref setPadding() and @ref setTransformation().
          *
          * Compared to @ref create(), the glyph is aligned according to
          * @ref TextProperties::alignment() based on its bounding rectangle
@@ -2853,8 +2873,12 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @ref FontHandle assigned to @ref style() is used and expected to not
          * be null. Note that it's not possible to change the font alone with
          * @ref setStyle(), it only can be done when setting the glyph. The
-         * @p glyph is expected to be less than
-         * @ref Text::AbstractGlyphCache::fontGlyphCount() for given font.
+         * @p glyph is expected to be less than @ref Shared::fontGlyphCount()
+         * for given font. If custom glyph mapping was passed to
+         * @ref Shared::addFont() or @ref Shared::addInstancelessFont() for
+         * given font, the @p glyph is first mapped to a real glyph ID within
+         * the font, which can be used for example to use the same icon enum
+         * with multiple fonts that may have glyphs in different order.
          *
          * Compared to @ref setText(), the glyph is aligned according to
          * @ref TextProperties::alignment() based on its bounding rectangle
@@ -3483,8 +3507,10 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
 
         /**
          * @brief Add a font
-         * @param font      Font instance
-         * @param size      Size in points at which to render the font
+         * @param font          Font instance
+         * @param size          Size in points at which to render the font
+         * @param glyphMapping  Glyph mapping for @ref createGlyph() and
+         *      @ref setGlyph() or an empty view
          * @return New font handle
          *
          * Expects that @ref glyphCache() is set and contains @p font. Doesn't
@@ -3496,32 +3522,50 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          *
          * It's the caller responsibility to ensure @p font stays in scope for
          * as long as the shared state is used. Use the
-         * @ref addFont(Containers::Pointer<Text::AbstractFont>&&, Float)
+         * @ref addFont(Containers::Pointer<Text::AbstractFont>&&, Float, const Containers::StridedArrayView1D<const UnsignedInt>&)
          * overload to make the shared state take over the font instance.
-         * @see @ref addInstancelessFont(), @ref Text-AbstractFont-font-size
+         *
+         * If the @p glyphMapping view is not empty, the @ref createGlyph() and
+         * @ref setGlyph() functions use it to map IDs to real glyph IDs in the
+         * font, which can be used for example to use the same icon enum with
+         * multiple fonts that may have glyphs in different order. The view
+         * values are expected to be less than
+         * @ref Text::AbstractGlyphCache::fontGlyphCount() for @p font.
+         * Duplicate values will result in multiple IDs resolving to the same
+         * glyph, and a value of @cpp 0 @ce marks given glyph as not available.
+         * If the @p glyphMapping view is empty, IDs passed to
+         * @ref createGlyph() and @ref setGlyph() are treated as real glyph
+         * IDs. The mapping only has an effect on single-glyph data, not on
+         * regular text shaped with @ref create() or @ref setText().
+         * @see @ref addInstancelessFont(), @ref Text-AbstractFont-font-size,
+         *      @ref fontGlyphCount()
          */
-        FontHandle addFont(Text::AbstractFont& font, Float size);
+        FontHandle addFont(Text::AbstractFont& font, Float size, const Containers::StridedArrayView1D<const UnsignedInt>& glyphMapping);
 
         /**
          * @brief Add a font and take over its ownership
-         * @param font      Font instance
-         * @param size      Size in points at which to render the font
+         * @param font          Font instance
+         * @param size          Size in points at which to render the font
+         * @param glyphMapping  Glyph mapping for @ref createGlyph() and
+         *      @ref setGlyph() or an empty view
          * @return New font handle
          *
-         * Like @ref addFont(Text::AbstractFont&, Float), but the shared state
-         * takes over the font ownership. You can access the instance using
-         * @ref font() later. It's the caller responsibility to ensure the
-         * plugin manager the font is coming from stays in scope for as long as
-         * the shared state is used.
+         * Like @ref addFont(Text::AbstractFont&, Float, const Containers::StridedArrayView1D<const UnsignedInt>&),
+         * but the shared state takes over the font ownership. You can access
+         * the instance using @ref font() later. It's the caller responsibility
+         * to ensure the plugin manager the font is coming from stays in scope
+         * for as long as the shared state is used.
          * @see @ref Text-AbstractFont-font-size
          */
-        FontHandle addFont(Containers::Pointer<Text::AbstractFont>&& font, Float size);
+        FontHandle addFont(Containers::Pointer<Text::AbstractFont>&& font, Float size, const Containers::StridedArrayView1D<const UnsignedInt>& glyphMapping);
 
         /**
          * @brief Add an instance-less font
          * @param glyphCacheFontId  ID of the font in the glyph cache
          * @param scale             Scale to apply to glyph rectangles coming
          *      from the glyph cache
+         * @param glyphMapping      Glyph mapping for @ref createGlyph() and
+         *      @ref setGlyph() or an empty view
          * @return New font handle
          *
          * Makes it possible to render arbitrary custom glyphs added to the
@@ -3537,9 +3581,21 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @ref TextProperties::setFont(). The instance-less font however can
          * be only used with @ref createGlyph() or @ref setGlyph() that takes a
          * glyph ID, not with @ref create() or @ref setText().
-         * @see @ref hasFontInstance(), @ref addFont()
+         *
+         * If the @p glyphMapping view is not empty, the @ref createGlyph() and
+         * @ref setGlyph() functions use it to map IDs to real glyph IDs in the
+         * font, which can be used for example to use the same icon enum with
+         * multiple fonts that may have glyphs in different order. The view
+         * values are expected to be less than
+         * @ref Text::AbstractGlyphCache::fontGlyphCount() for
+         * @p glyphCacheFontId. Duplicate values will result in multiple IDs
+         * resolving to the same glyph, and a value of @cpp 0 @ce marks given
+         * glyph as not available. If the @p glyphMapping view is empty, IDs
+         * passed to @ref createGlyph() and @ref setGlyph() are treated as real
+         * glyph IDs.
+         * @see @ref hasFontInstance(), @ref addFont(), @ref fontGlyphCount()
          */
-        FontHandle addInstancelessFont(UnsignedInt glyphCacheFontId, Float scale);
+        FontHandle addInstancelessFont(UnsignedInt glyphCacheFontId, Float scale, const Containers::StridedArrayView1D<const UnsignedInt>& glyphMapping);
 
         /**
          * @brief ID of a font in a glyph cache
@@ -3571,6 +3627,18 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          */
         Text::AbstractFont& font(FontHandle handle);
         const Text::AbstractFont& font(FontHandle handle) const; /**< @overload */
+
+        /**
+         * @brief Count of glyphs in given font
+         *
+         * Upper bound on IDs passed to @ref createGlyph() or @ref setGlyph().
+         * If @ref addFont() or @ref addInstancelessFont() was called with a
+         * custom glyph mapping, returns size of the mapping array. Otherwise
+         * returns the same value as
+         * @ref Text::AbstractGlyphCache::fontGlyphCount() for given font.
+         * @see @ref glyphCacheFontId()
+         */
+        UnsignedInt fontGlyphCount(FontHandle handle) const;
 
         /**
          * @brief Set style data with implicit mapping between styles and uniforms
@@ -3867,7 +3935,11 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         explicit Shared(NoCreateT) noexcept;
 
     private:
-        MAGNUM_UI_LOCAL FontHandle addFontInternal(Text::AbstractFont* font, Float scale, UnsignedInt glyphCacheFontId);
+        MAGNUM_UI_LOCAL FontHandle addFontInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            Text::AbstractFont* font, Float scale, UnsignedInt glyphCacheFontId, const Containers::StridedArrayView1D<const UnsignedInt>& glyphMapping);
         MAGNUM_UI_LOCAL void setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Int>& styleCursorStyles, const Containers::StridedArrayView1D<const Int>& styleSelectionStyles, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
         MAGNUM_UI_LOCAL void setEditingStyleInternal(const TextLayerCommonEditingStyleUniform& commonUniform, Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const Int>& styleTextUniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
 

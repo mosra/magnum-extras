@@ -60,6 +60,9 @@ struct TextLayerFont {
     /* Size at which to render divided by `font->size()` */
     Float scale;
     UnsignedInt glyphCacheFontId;
+    /* Glyph mapping for createGlyph() and setGlyph(). If empty, trivial
+       mapping is used. */
+    Containers::Array<UnsignedInt> glyphMapping;
 };
 
 struct TextLayerStyle {

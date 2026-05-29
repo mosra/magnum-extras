@@ -451,7 +451,7 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
             Text::GlyphCacheArrayGL{PixelFormat::RGBA8Unorm, {256, 256, 1}},
             Ui::TextLayerGL::Shared::Configuration{4}
         };
-        Ui::FontHandle font = textLayerShared.addInstancelessFont(textLayerShared.glyphCache().addFont(1), 1.0f);
+        Ui::FontHandle font = textLayerShared.addInstancelessFont(textLayerShared.glyphCache().addFont(1), 1.0f, {});
         textLayerShared.setStyle({}, {
             {}, {}, {}, {},
         }, {

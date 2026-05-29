@@ -220,7 +220,7 @@ bool TextLayer::Shared::isHandleValid(const FontHandle handle) const {
     return Ui::isHandleValid(static_cast<const State&>(*_state).fonts, handle);
 }
 
-FontHandle TextLayer::Shared::addFont(Text::AbstractFont& font, const Float size) {
+FontHandle TextLayer::Shared::addFont(Text::AbstractFont& font, const Float size, const Containers::StridedArrayView1D<const UnsignedInt>& glyphMapping) {
     State& state = static_cast<State&>(*_state);
     const Containers::Optional<UnsignedInt> glyphCacheFontId = state.glyphCache.findFont(font);
     CORRADE_ASSERT(glyphCacheFontId,
@@ -230,18 +230,22 @@ FontHandle TextLayer::Shared::addFont(Text::AbstractFont& font, const Float size
     /** @todo assert that the font is opened? doesn't prevent anybody from
         closing it, tho */
 
-    return addFontInternal(&font, size/font.size(), *glyphCacheFontId);
+    return addFontInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::TextLayer::Shared::addFont():",
+        #endif
+        &font, size/font.size(), *glyphCacheFontId, glyphMapping);
 }
 
-FontHandle TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&& font, const Float size) {
+FontHandle TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&& font, const Float size, const Containers::StridedArrayView1D<const UnsignedInt>& glyphMapping) {
     CORRADE_ASSERT(font,
         "Ui::TextLayer::Shared::addFont(): font is null", {});
-    const FontHandle handle = addFont(*font, size);
+    const FontHandle handle = addFont(*font, size, glyphMapping);
     static_cast<State&>(*_state).fonts.back().fontStorage = Utility::move(font);
     return handle;
 }
 
-FontHandle TextLayer::Shared::addInstancelessFont(const UnsignedInt glyphCacheFontId, const Float scale) {
+FontHandle TextLayer::Shared::addInstancelessFont(const UnsignedInt glyphCacheFontId, const Float scale, const Containers::StridedArrayView1D<const UnsignedInt>& glyphMapping) {
     #ifndef CORRADE_NO_ASSERT
     State& state = static_cast<State&>(*_state);
     #endif
@@ -252,12 +256,30 @@ FontHandle TextLayer::Shared::addInstancelessFont(const UnsignedInt glyphCacheFo
     CORRADE_ASSERT(state.fonts.size() < 1 << Implementation::FontHandleIdBits,
         "Ui::TextLayer::Shared::addInstancelessFont(): can only have at most" << (1 << Implementation::FontHandleIdBits) << "fonts", {});
 
-    return addFontInternal(nullptr, scale, glyphCacheFontId);
+    return addFontInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::TextLayer::Shared::addInstancelessFont():",
+        #endif
+        nullptr, scale, glyphCacheFontId, glyphMapping);
 }
 
-FontHandle TextLayer::Shared::addFontInternal(Text::AbstractFont* const font, const Float scale, const UnsignedInt glyphCacheFontId) {
+FontHandle TextLayer::Shared::addFontInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    Text::AbstractFont* const font, const Float scale, const UnsignedInt glyphCacheFontId, const Containers::StridedArrayView1D<const UnsignedInt>& glyphMapping)
+{
     State& state = static_cast<State&>(*_state);
-    arrayAppend(state.fonts, InPlaceInit, nullptr, font, nullptr, scale, glyphCacheFontId);
+    #ifndef CORRADE_NO_ASSERT
+    const UnsignedInt glyphCount = state.glyphCache.fontGlyphCount(glyphCacheFontId);
+    for(std::size_t i = 0; i != glyphMapping.size(); ++i)
+        CORRADE_ASSERT(glyphMapping[i] < glyphCount,
+            messagePrefix << "glyph" << glyphMapping[i] << "out of range for" << glyphCount << "glyphs" << "at index" << i, {});
+    #endif
+    Containers::Array<UnsignedInt> glyphMappingArray{NoInit, glyphMapping.size()};
+    Utility::copy(glyphMapping, glyphMappingArray);
+
+    arrayAppend(state.fonts, InPlaceInit, nullptr, font, nullptr, scale, glyphCacheFontId, Utility::move(glyphMappingArray));
     return fontHandle(state.fonts.size() - 1, 1);
 }
 
@@ -287,6 +309,17 @@ const Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) const
 
 Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) {
     return const_cast<Text::AbstractFont&>(const_cast<const TextLayer::Shared&>(*this).font(handle));
+}
+
+UnsignedInt TextLayer::Shared::fontGlyphCount(const FontHandle handle) const {
+    const State& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::Shared::fontGlyphCount(): invalid handle" << handle, 0);
+    const Implementation::TextLayerFont& font = state.fonts[fontHandleId(handle)];
+    /* The mapping array isn't filled with a trivial sequence if none was
+       provided as that'd be an unnecessary and potentially large allocation,
+       in that case the glyph count is taken from the font itself */
+    return font.glyphMapping ? font.glyphMapping.size() : state.glyphCache.fontGlyphCount(font.glyphCacheFontId);
 }
 
 void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Int>& styleCursorStyles, const Containers::StridedArrayView1D<const Int>& styleSelectionStyles, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
@@ -1260,14 +1293,21 @@ void TextLayer::shapeGlyphInternal(
     const Implementation::TextLayerFont& fontState = sharedState.fonts[fontHandleId(font)];
     const Text::AbstractGlyphCache& glyphCache = sharedState.glyphCache;
 
-    CORRADE_ASSERT(glyphId < glyphCache.fontGlyphCount(fontState.glyphCacheFontId),
-        messagePrefix << "glyph" << glyphId << "out of range for" << glyphCache.fontGlyphCount(fontState.glyphCacheFontId) << "glyphs in glyph cache font" << fontState.glyphCacheFontId, );
+    #ifndef CORRADE_NO_ASSERT
+    const UnsignedInt glyphCount = fontState.glyphMapping ? fontState.glyphMapping.size() : glyphCache.fontGlyphCount(fontState.glyphCacheFontId);
+    #endif
+    CORRADE_ASSERT(glyphId < glyphCount,
+        messagePrefix << "glyph" << glyphId << "out of range for" << glyphCount << "glyphs in" << font, );
 
     /* Query the glyph rectangle in order to align it. Compared to a regular
        text run, where the glyphs might not be present in the glyph cache yet
        (and can thus be filled in on-demand), here we require those to be
-       present upfront. */
-    const UnsignedInt cacheGlobalGlyphId = glyphCache.glyphId(fontState.glyphCacheFontId, glyphId);
+       present upfront.
+
+       The mapping array isn't filled with a trivial glyph mapping sequence if
+       none was provided as that'd be an unnecessary and potentially large
+       allocation, in that case the glyph ID is simply used as-is. */
+    const UnsignedInt cacheGlobalGlyphId = glyphCache.glyphId(fontState.glyphCacheFontId, fontState.glyphMapping ? fontState.glyphMapping[glyphId] : glyphId);
     const Containers::Triple<Vector2i, Int, Range2Di> glyph = glyphCache.glyph(cacheGlobalGlyphId);
     const Range2D glyphRectangle = Range2D{Range2Di::fromSize(glyph.first(), glyph.third().size())}
         .scaled(fontState.scale);

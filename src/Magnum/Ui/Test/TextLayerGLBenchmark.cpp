@@ -193,7 +193,7 @@ void TextLayerGLBenchmark::fragment() {
         shared.glyphCache().setProcessedImage({}, white);
     }
 
-    FontHandle fontHandle = shared.addFont(font, 2048.0f);
+    FontHandle fontHandle = shared.addFont(font, 2048.0f, {});
 
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}

@@ -153,8 +153,8 @@ int UiTextLayer::exec() {
             .setEditingStyleCount(6)
     };
 
-    Ui::FontHandle fontHandle = layerShared.addFont(*font, 12.0f);
-    Ui::FontHandle fontLargeHandle = layerShared.addFont(*fontLarge, 20.0f);
+    Ui::FontHandle fontHandle = layerShared.addFont(*font, 12.0f, {});
+    Ui::FontHandle fontLargeHandle = layerShared.addFont(*fontLarge, 20.0f, {});
 
     layerShared.setStyle(
         Ui::TextLayerCommonStyleUniform{},
@@ -381,7 +381,7 @@ int UiTextLayer::exec() {
         UnsignedInt fontId = glyphCacheDistanceField.addFont(1);
         glyphCacheDistanceField.addGlyph(fontId, 0, {-16, -16}, Range2Di::fromSize(*offset, image->size()));
 
-        needleFont = layerSharedDistanceField.addInstancelessFont(fontId, 0.125f);
+        needleFont = layerSharedDistanceField.addInstancelessFont(fontId, 0.125f, {});
     }
 
     /* Glyphs added after the needle to fit in the space next to it */
@@ -390,9 +390,9 @@ int UiTextLayer::exec() {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "1234567890! .#:'?");
 
-    Ui::FontHandle fontHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 12.0f);
-    Ui::FontHandle fontSmallHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 8.0f);
-    Ui::FontHandle fontLargeHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 16.0f);
+    Ui::FontHandle fontHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 12.0f, {});
+    Ui::FontHandle fontSmallHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 8.0f, {});
+    Ui::FontHandle fontLargeHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 16.0f, {});
 
     layerSharedDistanceField.setStyle(
         Ui::TextLayerCommonStyleUniform{}

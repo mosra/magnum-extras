@@ -26,6 +26,7 @@
 
 #include <Corrade/Containers/ArrayView.h> /* arraySize() */
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/StridedArrayView.h> /* addFont() glyphMapping */
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
@@ -1517,7 +1518,7 @@ FormatterTest::FormatterTest() {
     _shared.setStyle(
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
-        {_shared.addFont(_font, 1.0f)},
+        {_shared.addFont(_font, 1.0f, {})},
         {Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
 }
