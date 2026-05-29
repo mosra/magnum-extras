@@ -2054,7 +2054,8 @@ textLayerShared.glyphCache().flushImage(*flushRange);
 /* [TextLayer-single-glyph-instanceless1] */
 
 /* [TextLayer-single-glyph-instanceless2] */
-Ui::FontHandle iconFontHandle = textLayerShared.addInstancelessFont(iconFontId, 1.0f);
+Ui::FontHandle iconFontHandle = textLayerShared.addInstancelessFont(
+    iconFontId, 1.0f, {});
 
 DOXYGEN_ELLIPSIS()
 
