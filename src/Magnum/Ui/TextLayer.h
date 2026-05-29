@@ -942,12 +942,12 @@ custom widgets, pass the newly created layer to
 Afterwards, in order to be able to draw the layer, at least one font has to be
 added, and a style referencing the fonts has to be set. @ref Text::AbstractFont
 instances, commonly loaded using a plugin manager, are added with
-@ref TextLayerGL::Shared::addFont(), together with specifying size in UI
+@ref TextLayer::Shared::addFont(), together with specifying size in UI
 coordinates at which a text using them should be rendered. The function then
 returns a @ref FontHandle, which is subsequently used to reference the font
 from styles. As with the glyph cache, the font instance is expected to be alive
 for the whole shared instance lifetime, or you can use
-@ref TextLayerGL::Shared::addFont(Containers::Pointer<Text::AbstractFont>&&, Float)
+@ref TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&&, Float)
 to move the loaded plugin ownership to the shared instance. Note that you're
 still responsible for keeping the plugin manager instance around even in that
 case.
@@ -966,7 +966,7 @@ case.
 Assuming the UI size matches the framebuffer size, a good default is to use the
 same size in @ref Text::AbstractFont::openFile() /
 @relativeref{Text::AbstractFont,openData()} and
-@ref TextLayerGL::Shared::addFont(), like in the snippet above. See the
+@ref TextLayer::Shared::addFont(), like in the snippet above. See the
 @ref Ui-TextLayer-dpi section below for additional considerations.
 
 Finally, a style referencing the fonts has to be set with
@@ -1153,7 +1153,7 @@ framebuffer size, which is often the case on HiDPI systems and other scenarios
 described in @ref Ui-AbstractUserInterface-dpi "AbstractUserInterface DPI awareness docs",
 using the same font size in both @ref Text::AbstractFont::openFile() /
 @relativeref{Text::AbstractFont,openData()} and
-@ref TextLayerGL::Shared::addFont() will result in blurry text. Additionally,
+@ref TextLayer::Shared::addFont() will result in blurry text. Additionally,
 because glyphs are often placed at subpixel locations, it's often better to
 supersample the font at twice the size it's used in for crisper edges even if
 no HiDPI interface scaling is involved. Thus, the size at which the font is
@@ -1162,7 +1162,7 @@ compared to the size the font is used in the UI:
 
 @snippet Ui.cpp TextLayer-dpi
 
-Fonts added with @ref TextLayerGL::Shared::addInstancelessFont() should then
+Fonts added with @ref TextLayer::Shared::addInstancelessFont() should then
 use the `scale` directly.
 
 <b></b>
