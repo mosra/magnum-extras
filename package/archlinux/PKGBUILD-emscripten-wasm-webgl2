@@ -31,8 +31,10 @@ build() {
         cd "$_rootdir/build-emscripten-wasm-webgl2"
 
         cmake .. \
+            -DCMAKE_CONFIGURATION_TYPES="Release;Debug;RelWithDebInfo" \
+            -DCMAKE_CROSS_CONFIGS=all \
             -DCMAKE_TOOLCHAIN_FILE="$_rootdir/toolchains/generic/Emscripten-wasm.cmake" \
-            -G Ninja
+            -G "Ninja Multi-Config"
     fi
 
     cd "$_rootdir/build-emscripten-wasm-webgl2"
@@ -46,7 +48,6 @@ build() {
     # preserving colors when Ninja outputs to a pipe can be done with
     # CLICOLOR_FORCE=1: https://github.com/ninja-build/ninja/issues/2196
     cmake .. \
-        -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/lib/emscripten/system \
         -DMAGNUM_DEPLOY_PREFIX=/srv/http/emscripten-webgl2 \
         `# Make libc++ remove transitive includes, both for faster build` \
@@ -62,18 +63,18 @@ build() {
         -DCORRADE_TESTSUITE_TEST_TARGET=build-tests \
         `# TODO IcoImporter once magic detection is done, WebPImporter` \
         -DMAGNUM_PLAYER_STATIC_PLUGINS="Magnum::TgaImporter;MagnumPlugins::AstcImporter;MagnumPlugins::BasisImporter;MagnumPlugins::DdsImporter;MagnumPlugins::KtxImporter;MagnumPlugins::OpenExrImporter;MagnumPlugins::StanfordImporter;MagnumPlugins::StlImporter;MagnumPlugins::UfbxImporter"
-    ninja
+    ninja all:Release
 }
 
 check() {
     cd "$_rootdir/build-emscripten-wasm-webgl2"
 
-    ninja build-tests
+    ninja build-tests:Release
 
     CORRADE_TEST_COLOR=ON ctest --output-on-failure -E GLTest
 }
 
 package() {
     cd "$_rootdir/build-emscripten-wasm-webgl2"
-    DESTDIR="$pkgdir/" ninja install
+    DESTDIR="$pkgdir/" ninja install:Release
 }
