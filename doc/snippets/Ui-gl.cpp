@@ -699,7 +699,7 @@ struct: Ui::AbstractTheme {
     bool doApply(Ui::UserInterface&, Ui::ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
         return false;
     }
-} myCustomStyle;
+} myCustomTheme;
 /* [UserInterfaceGL-setup-features] */
 /* Pick everything except text animations from the builtin theme */
 Ui::UserInterfaceGL ui{{800, 600}, Ui::DarkTheme{},
@@ -708,7 +708,7 @@ Ui::UserInterfaceGL ui{{800, 600}, Ui::DarkTheme{},
 DOXYGEN_ELLIPSIS()
 
 /* Use animations from a custom theme instead */
-ui.setTheme(myCustomStyle, Ui::ThemeFeature::TextLayerAnimations);
+ui.setTheme(myCustomTheme, Ui::ThemeFeature::TextLayerAnimations);
 /* [UserInterfaceGL-setup-features] */
 }
 
