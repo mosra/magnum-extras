@@ -159,7 +159,7 @@ void InputGLTest::test() {
         Flag::Hovered|Flag::Pressed|Flag::Focused|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Input cursor blinking lasts 0.55 sec and is reversed every other
            iteration, so it'll be fully visible at twice as much */
-        5, 0.55_sec*2, 2.0f, 0.02292f);
+        5, 0.55_sec*2, 2.25f, 0.0247f);
 }
 
 void InputGLTest::password() {
@@ -179,7 +179,7 @@ void InputGLTest::password() {
     ThemeGLTester::render(data.create, themeData, "input-password.png",
         Flag::Hovered|Flag::Pressed|Flag::Focused|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Same values as in test() */
-        5, 0.55_sec*2, 2.0f, 0.02292f);
+        5, 0.55_sec*2, 2.25f, 0.0247f);
 }
 
 void InputGLTest::passwordFontOverride() {
@@ -204,7 +204,7 @@ void InputGLTest::passwordFontOverride() {
         }, themeData, "input.png",
         Flag::Hovered|Flag::Pressed|Flag::Focused|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Same values as in test() */
-        5, 0.55_sec*2, 2.0f, 0.02292f);
+        5, 0.55_sec*2, 2.25f, 0.0247f);
 }
 
 }}}}

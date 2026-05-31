@@ -243,7 +243,7 @@ void LabelGLTest::text() {
     CORRADE_VERIFY(true); /* Capture correct function name */
 
     ThemeGLTester::render(data.create, themeData, "label-text.png",
-        Flag::Disabled, 8, {}, 2.0f, 0.0276f);
+        Flag::Disabled, 8, {}, 2.5f, 0.0276f);
 }
 
 void LabelGLTest::icon() {

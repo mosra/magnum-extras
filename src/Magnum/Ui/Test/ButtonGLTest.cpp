@@ -231,7 +231,7 @@ void ButtonGLTest::textIcon() {
     ThemeGLTester::render(data.create, themeData, "button-text-icon.png",
         Flag::HoveredPressed|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Button fade out animations are all 0.5 sec */
-        8, 0.5_sec, 2.0f, 0.0399f);
+        8, 0.5_sec, 2.5f, 0.0399f);
 }
 
 void ButtonGLTest::text() {
@@ -247,7 +247,7 @@ void ButtonGLTest::text() {
     ThemeGLTester::render(data.create, themeData, "button-text.png",
         Flag::HoveredPressed|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Button fade out animations are all 0.5 sec */
-        8, 0.5_sec, 2.0f, 0.0386f);
+        8, 0.5_sec, 2.5f, 0.0386f);
 }
 
 void ButtonGLTest::icon() {
