@@ -1022,8 +1022,6 @@ void ThemeTest::removePreviousAnimationForBlinkingCursor() {
        transitioning to a focused style with blinking cursor. Otherwise it'd
        assert at runtime. */
 
-    PluginManager::Manager<Trade::AbstractImporter> importerManager;
-
     if(!(_fontManager.load("TrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("TrueTypeFont plugin not found.");
 
