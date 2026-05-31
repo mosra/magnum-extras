@@ -119,7 +119,7 @@ class MAGNUM_UI_EXPORT DarkTheme: public AbstractTheme {
         MAGNUM_UI_LOCAL Vector3i doTextLayerGlyphCacheSize(ThemeFeatures features) const override;
         MAGNUM_UI_LOCAL UnsignedInt doLayoutLayerStyleCount() const override;
 
-        MAGNUM_UI_LOCAL bool doApply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override;
+        MAGNUM_UI_LOCAL bool doApply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>* fontManager) const override;
 
         Features _features;
 };

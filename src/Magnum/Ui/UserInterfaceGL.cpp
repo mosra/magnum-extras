@@ -58,29 +58,29 @@ struct UserInterfaceGL::State: UserInterface::State {
 
 UserInterfaceGL::UserInterfaceGL(NoCreateT): UserInterface{NoCreate, Containers::pointer<State>()} {}
 
-UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{Vector2{size}, Vector2{size}, size, theme, themeFeatures, importerManager, fontManager} {}
+UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{Vector2{size}, Vector2{size}, size, theme, themeFeatures, fontManager} {}
 
-UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{size, theme, theme.features(), importerManager, fontManager} {}
+UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{size, theme, theme.features(), fontManager} {}
 
-UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    if(!tryCreateInternal(theme, themeFeatures, importerManager, fontManager))
+UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    if(!tryCreateInternal(theme, themeFeatures, fontManager))
         std::exit(1); /* LCOV_EXCL_LINE */
     return *this;
 }
 
-UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return createInternal(theme, theme.features(), importerManager, fontManager);
+UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractTheme& theme, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return createInternal(theme, theme.features(), fontManager);
 }
 
-UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return create(Vector2{size}, Vector2{size}, size, theme, themeFeatures, importerManager, fontManager);
+UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return create(Vector2{size}, Vector2{size}, size, theme, themeFeatures, fontManager);
 }
 
-UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return create(size, theme, theme.features(), importerManager, fontManager);
+UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return create(size, theme, theme.features(), fontManager);
 }
 
-bool UserInterfaceGL::tryCreateInternal(const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+bool UserInterfaceGL::tryCreateInternal(const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
     #ifndef CORRADE_NO_ASSERT
     State& state = static_cast<State&>(*_state);
     #endif
@@ -103,19 +103,19 @@ bool UserInterfaceGL::tryCreateInternal(const AbstractTheme& theme, const ThemeF
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
            through create() it doesn't std::exit() the whole executable */
         true);
-    return trySetTheme(theme, themeFeatures, importerManager, fontManager);
+    return trySetTheme(theme, themeFeatures, fontManager);
 }
 
-bool UserInterfaceGL::tryCreateInternal(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return tryCreateInternal(theme, theme.features(), importerManager, fontManager);
+bool UserInterfaceGL::tryCreateInternal(const AbstractTheme& theme, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return tryCreateInternal(theme, theme.features(), fontManager);
 }
 
-bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return tryCreate(Vector2{size}, Vector2{size}, size, theme, themeFeatures, importerManager, fontManager);
+bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return tryCreate(Vector2{size}, Vector2{size}, size, theme, themeFeatures, fontManager);
 }
 
-bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return tryCreate(size, theme, theme.features(), importerManager, fontManager);
+bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return tryCreate(size, theme, theme.features(), fontManager);
 }
 
 UserInterfaceGL& UserInterfaceGL::setRendererInstance(Containers::Pointer<RendererGL>&& instance) {
@@ -131,7 +131,7 @@ const RendererGL& UserInterfaceGL::renderer() const {
     return static_cast<const RendererGL&>(UserInterface::renderer());
 }
 
-bool UserInterfaceGL::trySetTheme(const AbstractTheme& theme, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+bool UserInterfaceGL::trySetTheme(const AbstractTheme& theme, const ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
     CORRADE_ASSERT(features,
         "Ui::UserInterfaceGL::trySetTheme(): no features specified", {});
     CORRADE_ASSERT(features <= theme.features(),
@@ -250,25 +250,6 @@ bool UserInterfaceGL::trySetTheme(const AbstractTheme& theme, const ThemeFeature
             _state->fontManager = &*_state->fontManagerStorage;
         }
     }
-    if(features >= ThemeFeature::TextLayerImages) {
-        /* If features contain ThemeFeature::TextLayer, state.textLayer was
-           already added above, so it's enough to check state.textLayer alone.
-           However, mention the StateFeature as well to hint that they can be
-           also applied both together. */
-        CORRADE_ASSERT(state.textLayer,
-            "Ui::UserInterfaceGL::trySetTheme(): text layer not present and" << ThemeFeature::TextLayer << "isn't being applied as well for" << ThemeFeature::TextLayerImages, {});
-
-        /* Create a local importer plugin manager if external wasn't passed. If
-           the text layer isn't present, the manager shouldn't be present
-           either. */
-        CORRADE_INTERNAL_ASSERT(!_state->importerManager);
-        if(importerManager) {
-            _state->importerManager = importerManager;
-        } else {
-            _state->importerManagerStorage.emplace();
-            _state->importerManager = &*_state->importerManagerStorage;
-        }
-    }
     if(features >= ThemeFeature::TextLayerAnimations) {
         CORRADE_ASSERT(!state.textLayerStyleAnimator,
             "Ui::UserInterfaceGL::trySetTheme(): text layer style animator already present", {});
@@ -308,21 +289,21 @@ bool UserInterfaceGL::trySetTheme(const AbstractTheme& theme, const ThemeFeature
         setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(createAnimator()));
     }
 
-    return theme.apply(*this, features, _state->importerManager, _state->fontManager);
+    return theme.apply(*this, features, _state->fontManager);
 }
 
-bool UserInterfaceGL::trySetTheme(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return trySetTheme(theme, theme.features(), importerManager, fontManager);
+bool UserInterfaceGL::trySetTheme(const AbstractTheme& theme, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return trySetTheme(theme, theme.features(), fontManager);
 }
 
-UserInterfaceGL& UserInterfaceGL::setTheme(const AbstractTheme& theme, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    if(!trySetTheme(theme, features, importerManager, fontManager))
+UserInterfaceGL& UserInterfaceGL::setTheme(const AbstractTheme& theme, const ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    if(!trySetTheme(theme, features, fontManager))
         std::exit(1); /* LCOV_EXCL_LINE */
     return *this;
 }
 
-UserInterfaceGL& UserInterfaceGL::setTheme(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return setTheme(theme, theme.features(), importerManager, fontManager);
+UserInterfaceGL& UserInterfaceGL::setTheme(const AbstractTheme& theme, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return setTheme(theme, theme.features(), fontManager);
 }
 
 UserInterfaceGL& UserInterfaceGL::setBackgroundLayerInstance(Containers::Pointer<BaseLayerGL>&& instance) {

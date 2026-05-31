@@ -89,7 +89,7 @@ void ApplicationGLTest::construct() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::EventLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             return true;
         }
     } style;
@@ -113,7 +113,7 @@ void ApplicationGLTest::create() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::EventLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             return true;
         }
     } style;

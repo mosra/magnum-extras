@@ -26,12 +26,12 @@
 
 #include <Corrade/Containers/ArrayView.h>
 #include <Corrade/Containers/String.h>
+#include <Corrade/PluginManager/Manager.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
-#include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/AbstractTheme.h"
 #include "Magnum/Ui/BaseLayer.h"
@@ -116,8 +116,6 @@ struct AbstractThemeTest: TestSuite::Tester {
     void applyTextLayerDifferentStyleCount();
     void applyTextLayerDifferentGlyphCache();
     void applyTextLayerNoFontManager();
-    void applyTextLayerImagesTextLayerNotPresent();
-    void applyTextLayerImagesNoImporterManager();
     void applyTextLayerStyleAnimatorNotPresent();
     void applyEventLayerNotPresent();
     void applyLayoutLayerNotPresent();
@@ -127,7 +125,6 @@ struct AbstractThemeTest: TestSuite::Tester {
     void applyNodeAnimatorNotPresent();
 
     private:
-        PluginManager::Manager<Trade::AbstractImporter> _importerManager;
         PluginManager::Manager<Text::AbstractFont> _fontManager;
 };
 
@@ -206,22 +203,6 @@ const struct {
         false, false,
         false, false, false,
         ThemeFeature::TextLayer, true},
-    {"text layer images only",
-        false,
-        false, false,
-        false, false,
-        true, false,
-        false, false,
-        false, false, false,
-        ThemeFeature::TextLayerImages, true},
-    {"text layer + text layer images",
-        false,
-        false, false,
-        false, false,
-        true, false,
-        false, false,
-        false, false, false,
-        ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, true},
     {"text layer animations only",
         false,
         false, false,
@@ -368,8 +349,6 @@ AbstractThemeTest::AbstractThemeTest() {
               &AbstractThemeTest::applyTextLayerDifferentStyleCount,
               &AbstractThemeTest::applyTextLayerDifferentGlyphCache,
               &AbstractThemeTest::applyTextLayerNoFontManager,
-              &AbstractThemeTest::applyTextLayerImagesTextLayerNotPresent,
-              &AbstractThemeTest::applyTextLayerImagesNoImporterManager,
               &AbstractThemeTest::applyTextLayerStyleAnimatorNotPresent,
               &AbstractThemeTest::applyEventLayerNotPresent,
               &AbstractThemeTest::applyLayoutLayerNotPresent,
@@ -394,7 +373,7 @@ void AbstractThemeTest::debugFeatures() {
 void AbstractThemeTest::construct() {
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::BaseLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
     CORRADE_COMPARE(theme.features(), ThemeFeature::BaseLayer);
 }
@@ -404,7 +383,7 @@ void AbstractThemeTest::constructCopy() {
         explicit Theme(ThemeFeatures features): _features{features} {}
 
         ThemeFeatures doFeatures() const override { return _features; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
 
         ThemeFeatures _features;
     };
@@ -427,7 +406,7 @@ void AbstractThemeTest::noFeaturesReturned() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return {}; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -447,7 +426,7 @@ void AbstractThemeTest::backgroundLayer() {
         UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return 11; }
         UnsignedInt doBackgroundLayerBlurRadius() const override { return 7; }
         Float doBackgroundLayerBlurCutoff() const override { return 0.5f; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
     CORRADE_COMPARE(theme.backgroundLayerStyleUniformCount(), 3);
     CORRADE_COMPARE(theme.backgroundLayerStyleCount(), 5);
@@ -488,7 +467,7 @@ void AbstractThemeTest::backgroundLayerNotSupported() {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     /* Capture correct function name */
@@ -523,7 +502,7 @@ void AbstractThemeTest::backgroundLayerNotImplemented() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::BackgroundLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -550,7 +529,7 @@ void AbstractThemeTest::backgroundLayerNotImplementedDefaults() {
         UnsignedInt doBackgroundLayerStyleCount() const override {
             return 17;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     CORRADE_COMPARE(theme.backgroundLayerDynamicStyleCount(), 0);
@@ -573,7 +552,7 @@ void AbstractThemeTest::backgroundLayerDynamicStyleCountInvalid() {
            interface is checked */
         UnsignedInt doBaseLayerDynamicStyleCount() const override { return 9; }
         UnsignedInt doTextLayerDynamicStyleCount() const override { return 3; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -588,7 +567,7 @@ void AbstractThemeTest::setBackgroundLayerDynamicStyleCount() {
             return ThemeFeature::BackgroundLayer;
         }
         UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return 9; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     /* By default it returns what the theme says */
@@ -617,7 +596,7 @@ void AbstractThemeTest::backgroundLayerFlags() {
         BaseLayerSharedFlags doBackgroundLayerFlags() const override {
             return _flags;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
 
         private:
             BaseLayerSharedFlags _flags;
@@ -664,7 +643,7 @@ void AbstractThemeTest::backgroundLayerFlagsInvalid() {
         BaseLayerSharedFlags doBackgroundLayerFlags() const override {
             return _flags;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
 
         private:
             BaseLayerSharedFlags _flags;
@@ -692,7 +671,7 @@ void AbstractThemeTest::baseLayer() {
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
         UnsignedInt doBaseLayerDynamicStyleCount() const override { return 11; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
     CORRADE_COMPARE(theme.baseLayerStyleUniformCount(), 3);
     CORRADE_COMPARE(theme.baseLayerStyleCount(), 5);
@@ -723,7 +702,7 @@ void AbstractThemeTest::baseLayerNotSupported() {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     /* Capture correct function name */
@@ -754,7 +733,7 @@ void AbstractThemeTest::baseLayerNotImplemented() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::BaseLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -780,7 +759,7 @@ void AbstractThemeTest::baseLayerNotImplementedDefaults() {
         UnsignedInt doBaseLayerStyleCount() const override {
             return 17;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     CORRADE_COMPARE(theme.baseLayerDynamicStyleCount(), 0);
@@ -801,7 +780,7 @@ void AbstractThemeTest::baseLayerDynamicStyleCountInvalid() {
            interface is checked */
         UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return 9; }
         UnsignedInt doTextLayerDynamicStyleCount() const override { return 9; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -816,7 +795,7 @@ void AbstractThemeTest::setBaseLayerDynamicStyleCount() {
             return ThemeFeature::BaseLayer;
         }
         UnsignedInt doBaseLayerDynamicStyleCount() const override { return 9; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     /* By default it returns what the theme says */
@@ -845,7 +824,7 @@ void AbstractThemeTest::baseLayerFlags() {
         BaseLayerSharedFlags doBaseLayerFlags() const override {
             return _flags;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
 
         private:
             BaseLayerSharedFlags _flags;
@@ -892,7 +871,7 @@ void AbstractThemeTest::baseLayerFlagsInvalid() {
         BaseLayerSharedFlags doBaseLayerFlags() const override {
             return _flags;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
 
         private:
             BaseLayerSharedFlags _flags;
@@ -932,7 +911,7 @@ void AbstractThemeTest::textLayer() {
         Vector2i doTextLayerGlyphCachePadding() const override {
             return {2, 4};
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
     CORRADE_COMPARE(theme.textLayerStyleUniformCount(), 3);
     CORRADE_COMPARE(theme.textLayerStyleCount(), 5);
@@ -984,7 +963,7 @@ void AbstractThemeTest::textLayerNotSupported() {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     /* Capture correct function name */
@@ -1023,7 +1002,7 @@ void AbstractThemeTest::textLayerNotImplemented() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::TextLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -1052,7 +1031,7 @@ void AbstractThemeTest::textLayerNotImplementedDefaults() {
         UnsignedInt doTextLayerStyleCount() const override {
             return 35;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     CORRADE_COMPARE(theme.textLayerEditingStyleUniformCount(), 0);
@@ -1078,7 +1057,7 @@ void AbstractThemeTest::textLayerDynamicStyleCountInvalid() {
            interface is checked */
         UnsignedInt doBaseLayerDynamicStyleCount() const override { return 9; }
         UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return 3; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -1093,7 +1072,7 @@ void AbstractThemeTest::setTextLayerDynamicStyleCount() {
             return ThemeFeature::TextLayer;
         }
         UnsignedInt doTextLayerDynamicStyleCount() const override { return 9; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     /* By default it returns what the theme says */
@@ -1119,7 +1098,7 @@ void AbstractThemeTest::textLayerGlyphCacheSizeNoTextFeature() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::TextLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -1135,7 +1114,7 @@ void AbstractThemeTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::TextLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -1147,21 +1126,24 @@ void AbstractThemeTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
 void AbstractThemeTest::setTextLayerGlyphCacheSize() {
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override {
-            return ThemeFeature::TextLayer|ThemeFeature::TextLayerImages;
+            return ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations;
         }
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures features) const override {
-            if(features >= ThemeFeature::TextLayerImages)
+            /** @todo switch to some actual practical feature once it exists,
+                such as toggling distance field fonts, this doesn't make much
+                sense */
+            if(features >= ThemeFeature::TextLayerAnimations)
                 return {256, 128, 32};
             return {16, 32, 8};
         }
         Vector2i doTextLayerGlyphCachePadding() const override {
             return {4, 2};
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     /* By default it returns what the theme says */
-    CORRADE_COMPARE(theme.textLayerGlyphCacheSize(ThemeFeature::TextLayer|ThemeFeature::TextLayerImages), (Vector3i{256, 128, 32}));
+    CORRADE_COMPARE(theme.textLayerGlyphCacheSize(ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations), (Vector3i{256, 128, 32}));
     CORRADE_COMPARE(theme.textLayerGlyphCacheSize(ThemeFeature::TextLayer), (Vector3i{16, 32, 8}));
     CORRADE_COMPARE(theme.textLayerGlyphCachePadding(), (Vector2i{4, 2}));
 
@@ -1172,7 +1154,7 @@ void AbstractThemeTest::setTextLayerGlyphCacheSize() {
 
     /* It doesn't get overwritten or forgotten when asking for a size with
        different features */
-    CORRADE_COMPARE(theme.textLayerGlyphCacheSize(ThemeFeature::TextLayer|ThemeFeature::TextLayerImages), (Vector3i{256, 128, 32}));
+    CORRADE_COMPARE(theme.textLayerGlyphCacheSize(ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations), (Vector3i{256, 128, 32}));
     CORRADE_COMPARE(theme.textLayerGlyphCacheSize(ThemeFeature::TextLayer), (Vector3i{48, 56, 12}));
 
     /* Setting a new but smaller value than before */
@@ -1207,7 +1189,7 @@ void AbstractThemeTest::layoutLayer() {
             return ThemeFeature::LayoutLayer|ThemeFeature(0x1000);
         }
         UnsignedInt doLayoutLayerStyleCount() const override { return 15; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
     CORRADE_COMPARE(theme.layoutLayerStyleCount(), 15);
 }
@@ -1224,7 +1206,7 @@ void AbstractThemeTest::layoutLayerNotSupported() {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     /* Capture correct function name */
@@ -1245,7 +1227,7 @@ void AbstractThemeTest::layoutLayerNotImplemented() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::LayoutLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } theme;
 
     Containers::String out;
@@ -1333,7 +1315,7 @@ void AbstractThemeTest::apply() {
                 ThemeFeature::DataLayer|
                 ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations|
                 ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations|
-                ThemeFeature::TextLayer|ThemeFeature::TextLayerImages|ThemeFeature::TextLayerAnimations|
+                ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations|
                 ThemeFeature::EventLayer|ThemeFeature::LayoutLayer|
                 ThemeFeature::SnapLayouter|ThemeFeature::GenericLayouter|
                 ThemeFeature::NodeAnimations;
@@ -1355,12 +1337,10 @@ void AbstractThemeTest::apply() {
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override { return {16, 24, 2}; }
         Vector2i doTextLayerGlyphCachePadding() const override { return {3, 1}; }
         UnsignedInt doLayoutLayerStyleCount() const override { return 13; }
-        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override {
+        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>* fontManager) const override {
             CORRADE_COMPARE(features, _expectedFeatures);
             if(features >= ThemeFeature::TextLayer)
                 CORRADE_VERIFY(fontManager);
-            if(features >= ThemeFeature::TextLayerImages)
-                CORRADE_VERIFY(importerManager);
             ++_applyCalled;
             return _succeed;
         }
@@ -1370,7 +1350,7 @@ void AbstractThemeTest::apply() {
         bool _succeed;
     } theme{applyCalled, data.features, data.succeed};
 
-    CORRADE_COMPARE(theme.apply(ui, data.features, data.features >= ThemeFeature::TextLayerImages ? &_importerManager : nullptr, data.features >= ThemeFeature::TextLayer ? &_fontManager : nullptr), data.succeed);
+    CORRADE_COMPARE(theme.apply(ui, data.features, data.features >= ThemeFeature::TextLayer ? &_fontManager : nullptr), data.succeed);
     CORRADE_COMPARE(applyCalled, 1);
 }
 
@@ -1383,7 +1363,7 @@ void AbstractThemeTest::applyNoFeatures() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1394,7 +1374,7 @@ void AbstractThemeTest::applyNoFeatures() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, {}, nullptr, nullptr);
+    theme.apply(ui, {}, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): no features specified\n");
 }
 
@@ -1407,7 +1387,7 @@ void AbstractThemeTest::applyFeaturesNotSupported() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1418,7 +1398,7 @@ void AbstractThemeTest::applyFeaturesNotSupported() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::BaseLayer, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::BaseLayer, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): Ui::ThemeFeature::BaseLayer|Ui::ThemeFeature::TextLayer not a subset of supported Ui::ThemeFeature::TextLayer\n");
 }
 
@@ -1431,7 +1411,7 @@ void AbstractThemeTest::applyNoSizeSet() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1442,7 +1422,7 @@ void AbstractThemeTest::applyNoSizeSet() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::TextLayer, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): user interface size wasn't set\n");
 }
 
@@ -1462,7 +1442,7 @@ void AbstractThemeTest::applyDataLayerNotPresent() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::DataLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1473,7 +1453,7 @@ void AbstractThemeTest::applyDataLayerNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::DataLayer, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::DataLayer, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): data layer not present in the user interface\n");
 }
 
@@ -1506,7 +1486,7 @@ void AbstractThemeTest::applyBackgroundLayerNotPresent() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::BackgroundLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1517,7 +1497,7 @@ void AbstractThemeTest::applyBackgroundLayerNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::BackgroundLayer, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::BackgroundLayer, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): background layer not present in the user interface\n");
 }
 
@@ -1551,7 +1531,7 @@ void AbstractThemeTest::applyBackgroundLayerDifferentStyleCount() {
         UnsignedInt doBackgroundLayerStyleUniformCount() const override { return _styleUniformCount; }
         UnsignedInt doBackgroundLayerStyleCount() const override { return _styleCount; }
         UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return _dynamicStyleCount; }
-        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL_IF(
                 ui.backgroundLayer().shared().styleCount() != _styleCount ||
                 ui.backgroundLayer().shared().styleUniformCount() != _styleUniformCount ||
@@ -1569,18 +1549,18 @@ void AbstractThemeTest::applyBackgroundLayerDifferentStyleCount() {
     /* Applying a theme with a smaller or equal dynamic style count is
        alright */
     CORRADE_VERIFY(Theme{3, 5, 11}
-        .apply(ui, ThemeFeature::BackgroundLayer, nullptr, nullptr));
+        .apply(ui, ThemeFeature::BackgroundLayer, nullptr));
     CORRADE_VERIFY(Theme{3, 5, 10}
-        .apply(ui, ThemeFeature::BackgroundLayer, nullptr, nullptr));
+        .apply(ui, ThemeFeature::BackgroundLayer, nullptr));
 
     Containers::String out;
     Error redirectError{&out};
     Theme{4, 5, 11}
-        .apply(ui, ThemeFeature::BackgroundLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::BackgroundLayer, nullptr);
     Theme{3, 4, 11}
-        .apply(ui, ThemeFeature::BackgroundLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::BackgroundLayer, nullptr);
     Theme{3, 5, 12}
-        .apply(ui, ThemeFeature::BackgroundLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::BackgroundLayer, nullptr);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractTheme::apply(): theme wants 4 uniforms, 5 styles and at least 11 dynamic styles but the background layer has 3, 5 and 11\n"
         "Ui::AbstractTheme::apply(): theme wants 3 uniforms, 4 styles and at least 11 dynamic styles but the background layer has 3, 5 and 11\n"
@@ -1613,7 +1593,7 @@ void AbstractThemeTest::applyBackgroundLayerStyleAnimatorNotPresent() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::BackgroundLayerAnimations;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1624,7 +1604,7 @@ void AbstractThemeTest::applyBackgroundLayerStyleAnimatorNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::BackgroundLayerAnimations, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::BackgroundLayerAnimations, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): background layer style animator not present in the user interface\n");
 }
 
@@ -1654,7 +1634,7 @@ void AbstractThemeTest::applyBaseLayerNotPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::BaseLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1665,7 +1645,7 @@ void AbstractThemeTest::applyBaseLayerNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::BaseLayer, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::BaseLayer, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): base layer not present in the user interface\n");
 }
 
@@ -1697,7 +1677,7 @@ void AbstractThemeTest::applyBaseLayerDifferentStyleCount() {
         UnsignedInt doBaseLayerStyleUniformCount() const override { return _styleUniformCount; }
         UnsignedInt doBaseLayerStyleCount() const override { return _styleCount; }
         UnsignedInt doBaseLayerDynamicStyleCount() const override { return _dynamicStyleCount; }
-        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL_IF(
                 ui.baseLayer().shared().styleCount() != _styleCount ||
                 ui.baseLayer().shared().styleUniformCount() != _styleUniformCount ||
@@ -1715,18 +1695,18 @@ void AbstractThemeTest::applyBaseLayerDifferentStyleCount() {
     /* Applying a theme with a smaller or equal dynamic style count is
        alright */
     CORRADE_VERIFY(Theme{3, 5, 11}
-        .apply(ui, ThemeFeature::BaseLayer, nullptr, nullptr));
+        .apply(ui, ThemeFeature::BaseLayer, nullptr));
     CORRADE_VERIFY(Theme{3, 5, 10}
-        .apply(ui, ThemeFeature::BaseLayer, nullptr, nullptr));
+        .apply(ui, ThemeFeature::BaseLayer, nullptr));
 
     Containers::String out;
     Error redirectError{&out};
     Theme{4, 5, 11}
-        .apply(ui, ThemeFeature::BaseLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::BaseLayer, nullptr);
     Theme{3, 4, 11}
-        .apply(ui, ThemeFeature::BaseLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::BaseLayer, nullptr);
     Theme{3, 5, 12}
-        .apply(ui, ThemeFeature::BaseLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::BaseLayer, nullptr);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractTheme::apply(): theme wants 4 uniforms, 5 styles and at least 11 dynamic styles but the base layer has 3, 5 and 11\n"
         "Ui::AbstractTheme::apply(): theme wants 3 uniforms, 4 styles and at least 11 dynamic styles but the base layer has 3, 5 and 11\n"
@@ -1757,7 +1737,7 @@ void AbstractThemeTest::applyBaseLayerStyleAnimatorNotPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::BaseLayerAnimations; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1768,7 +1748,7 @@ void AbstractThemeTest::applyBaseLayerStyleAnimatorNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::BaseLayerAnimations, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::BaseLayerAnimations, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): base layer style animator not present in the user interface\n");
 }
 
@@ -1794,7 +1774,7 @@ void AbstractThemeTest::applyTextLayerNotPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1805,7 +1785,7 @@ void AbstractThemeTest::applyTextLayerNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::TextLayer, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): text layer not present in the user interface\n");
 }
 
@@ -1849,7 +1829,7 @@ void AbstractThemeTest::applyTextLayerDifferentStyleCount() {
         UnsignedInt doTextLayerEditingStyleCount() const override { return _editingStyleCount; }
         UnsignedInt doTextLayerDynamicStyleCount() const override { return _dynamicStyleCount; }
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override { return {16, 16, 1}; }
-        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL_IF(
                 ui.textLayer().shared().styleCount() != _styleCount ||
                 ui.textLayer().shared().styleUniformCount() != _styleUniformCount ||
@@ -1869,22 +1849,22 @@ void AbstractThemeTest::applyTextLayerDifferentStyleCount() {
     /* Applying a theme with a smaller or equal dynamic style count is
        alright */
     CORRADE_VERIFY(Theme{3, 5, 7, 2, 11}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        .apply(ui, ThemeFeature::TextLayer, &_fontManager));
     CORRADE_VERIFY(Theme{3, 5, 7, 2, 10}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        .apply(ui, ThemeFeature::TextLayer, &_fontManager));
 
     Containers::String out;
     Error redirectError{&out};
     Theme{4, 5, 7, 2, 11}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     Theme{3, 4, 7, 2, 11}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     Theme{3, 5, 8, 2, 11}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     Theme{3, 5, 7, 1, 11}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     Theme{3, 5, 7, 2, 12}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractTheme::apply(): theme wants 4 uniforms, 5 styles, 7 editing uniforms, 2 editing styles and at least 11 dynamic styles but the text layer has 3, 5, 7, 2 and 11\n"
         "Ui::AbstractTheme::apply(): theme wants 3 uniforms, 4 styles, 7 editing uniforms, 2 editing styles and at least 11 dynamic styles but the text layer has 3, 5, 7, 2 and 11\n"
@@ -1929,7 +1909,7 @@ void AbstractThemeTest::applyTextLayerDifferentGlyphCache() {
         PixelFormat doTextLayerGlyphCacheFormat() const override { return _format; }
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override { return _size; }
         Vector2i doTextLayerGlyphCachePadding() const override { return _padding; }
-        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL_IF(
                 (ui.textLayer().shared().glyphCache().size() < _size).any() ||
                 (ui.textLayer().shared().glyphCache().padding() < _padding).any(),
@@ -1947,32 +1927,32 @@ void AbstractThemeTest::applyTextLayerDifferentGlyphCache() {
 
     /* Applying a theme with a smaller or equal size or padding is alright */
     CORRADE_VERIFY(Theme{PixelFormat::RG16F, {3, 5, 2}, {4, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        .apply(ui, ThemeFeature::TextLayer, &_fontManager));
     CORRADE_VERIFY(Theme{PixelFormat::RG16F, {3, 5, 2}, {4, 0}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        .apply(ui, ThemeFeature::TextLayer, &_fontManager));
     CORRADE_VERIFY(Theme{PixelFormat::RG16F, {3, 5, 2}, {3, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        .apply(ui, ThemeFeature::TextLayer, &_fontManager));
     CORRADE_VERIFY(Theme{PixelFormat::RG16F, {3, 5, 1}, {4, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        .apply(ui, ThemeFeature::TextLayer, &_fontManager));
     CORRADE_VERIFY(Theme{PixelFormat::RG16F, {3, 4, 2}, {4, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        .apply(ui, ThemeFeature::TextLayer, &_fontManager));
     CORRADE_VERIFY(Theme{PixelFormat::RG16F, {2, 5, 2}, {4, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        .apply(ui, ThemeFeature::TextLayer, &_fontManager));
 
     Containers::String out;
     Error redirectError{&out};
     Theme{PixelFormat::R8Unorm, {3, 5, 2}, {4, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     Theme{PixelFormat::RG16F, {4, 5, 2}, {4, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     Theme{PixelFormat::RG16F, {3, 6, 2}, {4, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     Theme{PixelFormat::RG16F, {3, 5, 3}, {4, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     Theme{PixelFormat::RG16F, {3, 5, 2}, {5, 1}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     Theme{PixelFormat::RG16F, {3, 5, 2}, {4, 2}}
-        .apply(ui, ThemeFeature::TextLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::TextLayer, nullptr);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractTheme::apply(): theme wants a PixelFormat::R8Unorm glyph cache of size at least {3, 5, 2} and padding at least {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
        "Ui::AbstractTheme::apply(): theme wants a PixelFormat::RG16F glyph cache of size at least {4, 5, 2} and padding at least {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
@@ -2014,7 +1994,7 @@ void AbstractThemeTest::applyTextLayerNoFontManager() {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayer; }
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override { return {16, 16, 1}; }
         UnsignedInt doTextLayerStyleCount() const override { return 1; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -2025,81 +2005,8 @@ void AbstractThemeTest::applyTextLayerNoFontManager() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::TextLayer, &_importerManager, nullptr);
+    theme.apply(ui, ThemeFeature::TextLayer, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): fontManager has to be specified for applying a text layer style\n");
-}
-
-void AbstractThemeTest::applyTextLayerImagesTextLayerNotPresent() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct Interface: UserInterface {
-        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
-    } ui{NoCreate};
-    ui.setSize({200, 300});
-
-    struct: AbstractTheme {
-        ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayerImages; }
-        Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override { return {16, 16, 1}; }
-        UnsignedInt doTextLayerStyleCount() const override { return 1; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-    } theme;
-
-    /* Capture correct function name */
-    CORRADE_VERIFY(true);
-
-    Containers::String out;
-    Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::TextLayerImages, nullptr, nullptr);
-    CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): text layer not present in the user interface\n");
-}
-
-void AbstractThemeTest::applyTextLayerImagesNoImporterManager() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct: Text::AbstractGlyphCache {
-        using Text::AbstractGlyphCache::AbstractGlyphCache;
-
-        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
-        void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } cache{PixelFormat::R8Unorm, {16, 16}};
-
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{cache, TextLayer::Shared::Configuration{1}};
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    };
-
-    struct Interface: UserInterface {
-        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
-    } ui{NoCreate};
-    ui.setSize({200, 300})
-      .setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-
-    struct: AbstractTheme {
-        ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayerImages; }
-        Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override { return {16, 16, 1}; }
-        UnsignedInt doTextLayerStyleCount() const override { return 1; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-    } theme;
-
-    /* Capture correct function name */
-    CORRADE_VERIFY(true);
-
-    Containers::String out;
-    Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::TextLayerImages, nullptr, &_fontManager);
-    CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): importerManager has to be specified for applying text layer style images\n");
 }
 
 void AbstractThemeTest::applyTextLayerStyleAnimatorNotPresent() {
@@ -2131,7 +2038,7 @@ void AbstractThemeTest::applyTextLayerStyleAnimatorNotPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayerAnimations; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -2142,7 +2049,7 @@ void AbstractThemeTest::applyTextLayerStyleAnimatorNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::TextLayerAnimations, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::TextLayerAnimations, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): text layer style animator not present in the user interface\n");
 }
 
@@ -2186,7 +2093,7 @@ void AbstractThemeTest::applyEventLayerNotPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::EventLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -2197,7 +2104,7 @@ void AbstractThemeTest::applyEventLayerNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::EventLayer, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::EventLayer, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): event layer not present in the user interface\n");
 }
 
@@ -2223,7 +2130,7 @@ void AbstractThemeTest::applyLayoutLayerNotPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::LayoutLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -2234,7 +2141,7 @@ void AbstractThemeTest::applyLayoutLayerNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::LayoutLayer, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::LayoutLayer, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): layout layer not present in the user interface\n");
 }
 
@@ -2254,7 +2161,7 @@ void AbstractThemeTest::applyLayoutLayerDifferentStyleCount() {
 
         ThemeFeatures doFeatures() const override { return ThemeFeature::LayoutLayer; }
         UnsignedInt doLayoutLayerStyleCount() const override { return _styleCount; }
-        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface& ui, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL_IF(
                 ui.layoutLayer().styleCount() != _styleCount,
                 "This shouldn't get called.");
@@ -2270,7 +2177,7 @@ void AbstractThemeTest::applyLayoutLayerDifferentStyleCount() {
     Containers::String out;
     Error redirectError{&out};
     Theme{6}
-        .apply(ui, ThemeFeature::LayoutLayer, nullptr, nullptr);
+        .apply(ui, ThemeFeature::LayoutLayer, nullptr);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractTheme::apply(): theme wants 6 styles but the layout layer has 7\n",
         TestSuite::Compare::String);
@@ -2287,7 +2194,7 @@ void AbstractThemeTest::applySnapLayouterNotPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::SnapLayouter; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -2298,7 +2205,7 @@ void AbstractThemeTest::applySnapLayouterNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::SnapLayouter, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::SnapLayouter, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): snap layouter not present in the user interface\n");
 }
 
@@ -2313,7 +2220,7 @@ void AbstractThemeTest::applyGenericLayouterNotPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::GenericLayouter; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -2324,7 +2231,7 @@ void AbstractThemeTest::applyGenericLayouterNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::GenericLayouter, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::GenericLayouter, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): generic layouter not present in the user interface\n");
 }
 
@@ -2354,7 +2261,7 @@ void AbstractThemeTest::applyNodeAnimatorNotPresent() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::NodeAnimations;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -2365,7 +2272,7 @@ void AbstractThemeTest::applyNodeAnimatorNotPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    theme.apply(ui, ThemeFeature::NodeAnimations, nullptr, nullptr);
+    theme.apply(ui, ThemeFeature::NodeAnimations, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractTheme::apply(): node animator not present in the user interface\n");
 }
 

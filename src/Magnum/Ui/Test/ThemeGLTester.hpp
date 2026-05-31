@@ -125,7 +125,7 @@ ThemeGLTester::ThemeGLTester(const Containers::ArrayView<const Theme>& themes): 
     {
         _themeUis = Containers::Array<UserInterfaceGL>{DirectInit, themes.size(), NoCreate};
         for(std::size_t i = 0; i != themes.size(); ++i)
-            _themeUis[i].create({1024, 1024}, *themes[i].theme, nullptr, &_fontManager);
+            _themeUis[i].create({1024, 1024}, *themes[i].theme, &_fontManager);
     }
 }
 
@@ -232,7 +232,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Fla
             .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()))
             .setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
 
-        themeData.theme->apply(ui, ThemeFeature::LayoutLayer, nullptr, nullptr);
+        themeData.theme->apply(ui, ThemeFeature::LayoutLayer, nullptr);
 
         /* If dynamic styles are present (because the theme requested them for
            animators), add also default style animators. Can't hook to just

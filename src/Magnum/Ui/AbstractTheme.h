@@ -35,7 +35,6 @@
 #include <Corrade/PluginManager/PluginManager.h>
 #include <Magnum/Math/Vector3.h>
 #include <Magnum/Text/Text.h>
-#include <Magnum/Trade/Trade.h>
 
 #include "Magnum/Ui/Ui.h"
 #include "Magnum/Ui/visibility.h"
@@ -126,18 +125,6 @@ enum class ThemeFeature: UnsignedShort {
     TextLayer = 1 << 5,
 
     /**
-     * Additional images such as icons for use with
-     * @ref TextLayer::createGlyph(). Can only be used with
-     * @ref AbstractTheme::apply() if a @ref TextLayer instance is already set
-     * up on the @ref UserInterface; can only be used with
-     * @ref UserInterfaceGL::setTheme() /
-     * @relativeref{UserInterfaceGL,trySetTheme()} if set together with
-     * @ref ThemeFeature::TextLayer or if a @ref TextLayer instance is already
-     * set up on the @ref UserInterface.
-     */
-    TextLayerImages = 1 << 6,
-
-    /**
      * Text layer animations using @ref TextLayerStyleAnimator. Can only be
      * used with @ref AbstractTheme::apply() if a @ref TextLayerStyleAnimator
      * instance is already set up on the @ref UserInterface; can only be used
@@ -148,7 +135,7 @@ enum class ThemeFeature: UnsignedShort {
      * @see @ref UserInterface::textLayerStyleAnimator(),
      *      @ref UserInterface::hasTextLayerStyleAnimator()
      */
-    TextLayerAnimations = 1 << 7,
+    TextLayerAnimations = 1 << 6,
 
     /**
      * Event layer. Ensures an @ref EventLayer instance is set up on the
@@ -156,7 +143,7 @@ enum class ThemeFeature: UnsignedShort {
      * @see @ref UserInterface::eventLayer(),
      *      @ref UserInterface::hasEventLayer()
      */
-    EventLayer = 1 << 8,
+    EventLayer = 1 << 7,
 
     /**
      * Layout layer. Ensures a @ref LayoutLayer instance is set up on the
@@ -165,7 +152,7 @@ enum class ThemeFeature: UnsignedShort {
      * @see @ref UserInterface::layoutLayer(),
      *      @ref UserInterface::hasLayoutLayer()
      */
-    LayoutLayer = 1 << 9,
+    LayoutLayer = 1 << 8,
 
     /**
      * Snap layouter. Ensures a @ref SnapLayouter instance is set up on the
@@ -173,7 +160,7 @@ enum class ThemeFeature: UnsignedShort {
      * @see @ref UserInterface::snapLayouter(),
      *      @ref UserInterface::hasSnapLayouter()
      */
-    SnapLayouter = 1 << 10,
+    SnapLayouter = 1 << 9,
 
     /**
      * Generic layouter. Ensures a @ref GenericLayouter instance is set up on
@@ -181,7 +168,7 @@ enum class ThemeFeature: UnsignedShort {
      * @see @ref UserInterface::genericLayouter(),
      *      @ref UserInterface::hasGenericLayouter()
      */
-    GenericLayouter = 1 << 11,
+    GenericLayouter = 1 << 10,
 
     /**
      * Node animations. Ensures a @ref NodeAnimator instance is set up on the
@@ -189,7 +176,7 @@ enum class ThemeFeature: UnsignedShort {
      * @see @ref UserInterface::nodeAnimator(),
      *      @ref UserInterface::hasNodeAnimator()
      */
-    NodeAnimations = 1 << 12,
+    NodeAnimations = 1 << 11,
 };
 
 /**
@@ -213,7 +200,6 @@ typedef Containers::EnumSet<ThemeFeature
       UnsignedInt(ThemeFeature::BaseLayer)|
       UnsignedInt(ThemeFeature::BaseLayerAnimations)|
       UnsignedInt(ThemeFeature::TextLayer)|
-      UnsignedInt(ThemeFeature::TextLayerImages)|
       UnsignedInt(ThemeFeature::TextLayerAnimations)|
       UnsignedInt(ThemeFeature::EventLayer)|
       UnsignedInt(ThemeFeature::LayoutLayer)|
@@ -242,8 +228,8 @@ subset of the other virtual functions based on what features are actually
 supplied by the theme. See their documentation for more information.
 
 @see @ref UserInterfaceGL::setTheme(),
-    @ref UserInterfaceGL::UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
-    @ref UserInterfaceGL::UserInterfaceGL(const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
+    @ref UserInterfaceGL::UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, PluginManager::Manager<Text::AbstractFont>*),
+    @ref UserInterfaceGL::UserInterfaceGL(const Vector2i&, const AbstractTheme&, PluginManager::Manager<Text::AbstractFont>*),
 */
 class MAGNUM_UI_EXPORT AbstractTheme {
     public:
@@ -557,10 +543,10 @@ class MAGNUM_UI_EXPORT AbstractTheme {
          * Expects that @ref ThemeFeature::TextLayer is supported and that
          * @p features are a subset of @ref features() and contain at least
          * @ref ThemeFeature::TextLayer. The implementation may choose to
-         * return a different value based on whether
-         * @ref ThemeFeature::TextLayerImages is present in @p features or not.
-         * The returned value is passed to text layer's @ref Text::GlyphCacheGL
-         * constructor by @ref UserInterfaceGL::setTheme(). Call
+         * return a different value based on which other features are present
+         * in @p features. The returned value is passed to text layer's
+         * @ref Text::GlyphCacheGL constructor by
+         * @ref UserInterfaceGL::setTheme(). Call
          * @ref setTextLayerGlyphCacheSize() to enlarge the glyph cache if the
          * application needs to store more glyphs.
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
@@ -645,17 +631,12 @@ class MAGNUM_UI_EXPORT AbstractTheme {
          * @ref textLayerGlyphCacheFormat(), has size at least
          * @ref textLayerGlyphCacheSize() for @p features and padding at least
          * @ref textLayerGlyphCachePadding() and that @p fontManager is not
-         * @cpp nullptr @ce; and if @ref ThemeFeature::TextLayerImages is
-         * present in @p features, expects that either the @ref TextLayer is
-         * already present in the user interface or that
-         * @ref ThemeFeature::TextLayer is included in @p features as well, and
-         * that @p importerManager is not @cpp nullptr @ce. Returns
-         * @cpp true @ce on success, prints a message to
-         * @relativeref{Magnum,Error} and returns @cpp false @ce if some
+         * @cpp nullptr @ce. Returns @cpp true @ce on success, prints a message
+         * to @relativeref{Magnum,Error} and returns @cpp false @ce if some
          * run-time error happened during theme preparation, such as a plugin
          * not being found or external data failing to load.
          */
-        bool apply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const;
+        bool apply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>* fontManager) const;
 
     private:
         /**
@@ -890,11 +871,9 @@ class MAGNUM_UI_EXPORT AbstractTheme {
          * @ref textLayerGlyphCacheFormat(), with a size at least
          * @ref textLayerGlyphCacheSize() for @p features and padding at least
          * @ref textLayerGlyphCachePadding(), and @p fontManager is guaranteed
-         * to not be @cpp nullptr @ce; and if
-         * @ref ThemeFeature::TextLayerImages is present in @p features, the
-         * @p importerManager is guaranteed to not be @cpp nullptr @ce.
+         * to not be @cpp nullptr @ce.
          */
-        virtual bool doApply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const = 0;
+        virtual bool doApply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>* fontManager) const = 0;
 
         /* When more user-overridable properties are present, might want to put
            them into a PIMPL instead, and remove the Vector3 include again */

@@ -696,30 +696,29 @@ ui.setRendererInstance(Containers::pointer<Ui::RendererGL>());
 {
 struct: Ui::AbstractTheme {
     Ui::ThemeFeatures doFeatures() const override { return {}; }
-    bool doApply(Ui::UserInterface&, Ui::ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+    bool doApply(Ui::UserInterface&, Ui::ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
         return false;
     }
 } myCustomStyle;
 /* [UserInterfaceGL-setup-features] */
-/* Pick everything except icons from the builtin theme */
+/* Pick everything except text animations from the builtin theme */
 Ui::UserInterfaceGL ui{{800, 600}, Ui::DarkTheme{},
-    ~Ui::ThemeFeature::TextLayerImages};
+    ~Ui::ThemeFeature::TextLayerAnimations};
 
 DOXYGEN_ELLIPSIS()
 
-/* Use icons from a custom theme instead */
-ui.setTheme(myCustomStyle, Ui::ThemeFeature::TextLayerImages);
+/* Use animations from a custom theme instead */
+ui.setTheme(myCustomStyle, Ui::ThemeFeature::TextLayerAnimations);
 /* [UserInterfaceGL-setup-features] */
 }
 
 {
-/* [UserInterfaceGL-setup-managers] */
-PluginManager::Manager<Trade::AbstractImporter> importerManager;
+/* [UserInterfaceGL-setup-manager] */
 PluginManager::Manager<Text::AbstractFont> fontManager;
 DOXYGEN_ELLIPSIS()
 
-Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}, Ui::DarkTheme{}), &importerManager, &fontManager};
-/* [UserInterfaceGL-setup-managers] */
+Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}, Ui::DarkTheme{}), &fontManager};
+/* [UserInterfaceGL-setup-manager] */
 }
 
 {

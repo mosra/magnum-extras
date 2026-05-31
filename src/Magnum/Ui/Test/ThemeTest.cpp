@@ -642,7 +642,7 @@ void ThemeTest::apply() {
     /* The AbstractTheme can have the set of features bigger than what the
        particular DarkTheme supports, which would then fail if data.features is
        ~ThemeFeatures{}. Make it an union with what's actually supported. */
-    CORRADE_VERIFY(theme.apply(ui, data.features & theme.features(), nullptr, &_fontManager));
+    CORRADE_VERIFY(theme.apply(ui, data.features & theme.features(), &_fontManager));
 
     /* Style transition for disabled functions should be set if base / text
        layer style is set and not if not */
@@ -759,7 +759,7 @@ void ThemeTest::applyTextLayerCannotOpenFont() {
 
     Containers::String out;
     Error redirectError{&out};
-    CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayer, nullptr, &fontManager));
+    CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayer, &fontManager));
     /* Error from the PluginManager is printed before */
     CORRADE_COMPARE_AS(out,
         "\nUi::DarkTheme::apply(): cannot open a font\n",
@@ -808,7 +808,7 @@ void ThemeTest::applyTextLayerCannotFillCache() {
 
     Containers::String out;
     Error redirectError{&out};
-    CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+    CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayer, &_fontManager));
     /* Error from the font fillGlyphCache() is printed before */
     CORRADE_COMPARE_AS(out, Utility::format(
         "\nUi::DarkTheme::apply(): {}\n", data.expected),
@@ -848,13 +848,13 @@ void ThemeTest::applyTextLayerTwice() {
     ui.setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared));
 
     DarkTheme theme;
-    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer, &_fontManager));
     CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 5);
     CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 5);
 
     {
         CORRADE_EXPECT_FAIL("This shouldn't fail but should instead replace the previous fonts, *somehow*.");
-        CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer, &_fontManager));
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 5);
     }
     /* This doesn't fail because the fonts are added only after glyph cache
@@ -899,7 +899,7 @@ void ThemeTest::removePreviousAnimationForBlinkingCursor() {
     ui.setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(ui.createAnimator()));
 
     DarkTheme theme{DarkTheme::Feature::Animations};
-    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, nullptr, &_fontManager));
+    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, &_fontManager));
 
     /* Not using Input as that would require also the base layer, setting up a
        styled data directly */

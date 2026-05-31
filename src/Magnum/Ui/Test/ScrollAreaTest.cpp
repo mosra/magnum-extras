@@ -661,7 +661,7 @@ ScrollAreaTest::ScrollAreaTest() {
        as otherwise most inner nodes would have zero sizes, being impossible to
        fire events on */
     /** @todo move to WidgetTester once this is needed by more widgets */
-    CORRADE_INTERNAL_ASSERT_OUTPUT(DarkTheme{}.apply(ui, ThemeFeature::LayoutLayer, {}, {}));
+    CORRADE_INTERNAL_ASSERT_OUTPUT(DarkTheme{}.apply(ui, ThemeFeature::LayoutLayer, {}));
 }
 
 void ScrollAreaTest::debugFlag() {
@@ -1274,7 +1274,7 @@ template<UnsignedInt nodeCount, ScrollAreaFlag flag> void ScrollAreaTest::scroll
     /* Need the LayoutLayer populated with actual real paddings and min sizes
        as otherwise most inner nodes would have zero sizes, being impossible to
        fire events on */
-    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::LayoutLayer, {}, {}));
+    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::LayoutLayer, {}));
 
     /* If this is the first repeat, fill the index array, otherwise turn it
        into the next permutation. Cannot just call std::next_permutation() in a

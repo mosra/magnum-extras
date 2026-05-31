@@ -138,7 +138,7 @@ class GenericLayouter;
 class RendererGL;
 
 enum class ThemeFeature: UnsignedShort;
-typedef Containers::EnumSet<ThemeFeature, (1 << 13) - 1> ThemeFeatures;
+typedef Containers::EnumSet<ThemeFeature, (1 << 12) - 1> ThemeFeatures;
 class AbstractTheme;
 
 enum class Icon: UnsignedInt;

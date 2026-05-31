@@ -51,7 +51,6 @@ Debug& operator<<(Debug& debug, const ThemeFeature value) {
         _c(BaseLayer)
         _c(BaseLayerAnimations)
         _c(TextLayer)
-        _c(TextLayerImages)
         _c(TextLayerAnimations)
         _c(EventLayer)
         _c(LayoutLayer)
@@ -73,7 +72,6 @@ Debug& operator<<(Debug& debug, const ThemeFeatures value) {
         ThemeFeature::BaseLayer,
         ThemeFeature::BaseLayerAnimations,
         ThemeFeature::TextLayer,
-        ThemeFeature::TextLayerImages,
         ThemeFeature::TextLayerAnimations,
         ThemeFeature::EventLayer,
         ThemeFeature::LayoutLayer,
@@ -353,7 +351,7 @@ UnsignedInt AbstractTheme::doLayoutLayerStyleCount() const {
     CORRADE_ASSERT_UNREACHABLE("Ui::AbstractTheme::layoutLayerStyleCount(): feature advertised but not implemented", {});
 }
 
-bool AbstractTheme::apply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) const {
+bool AbstractTheme::apply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>* const fontManager) const {
     CORRADE_ASSERT(features,
         "Ui::AbstractTheme::apply(): no features specified", {});
     CORRADE_ASSERT(features <= this->features(),
@@ -421,12 +419,6 @@ bool AbstractTheme::apply(UserInterface& ui, const ThemeFeatures features, Plugi
         CORRADE_ASSERT(fontManager,
             "Ui::AbstractTheme::apply(): fontManager has to be specified for applying a text layer style", {});
     }
-    if(features >= ThemeFeature::TextLayerImages) {
-        CORRADE_ASSERT(ui.hasTextLayer(),
-            "Ui::AbstractTheme::apply(): text layer not present in the user interface", {});
-        CORRADE_ASSERT(importerManager,
-            "Ui::AbstractTheme::apply(): importerManager has to be specified for applying text layer style images", {});
-    }
     if(features >= ThemeFeature::TextLayerAnimations) {
         CORRADE_ASSERT(ui.hasTextLayerStyleAnimator(),
             "Ui::AbstractTheme::apply(): text layer style animator not present in the user interface", {});
@@ -457,7 +449,7 @@ bool AbstractTheme::apply(UserInterface& ui, const ThemeFeatures features, Plugi
     }
     #endif
 
-    return doApply(ui, features, importerManager, fontManager);
+    return doApply(ui, features, fontManager);
 }
 
 namespace Implementation {

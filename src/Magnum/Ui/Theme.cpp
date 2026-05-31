@@ -332,7 +332,7 @@ UnsignedInt DarkTheme::doLayoutLayerStyleCount() const {
     return Containers::arraySize(LayoutStylesDark);
 }
 
-bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>* fontManager) const {
+bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>* fontManager) const {
     /* Base layer style */
     if(features >= ThemeFeature::BaseLayer) {
         ui.baseLayer().shared()

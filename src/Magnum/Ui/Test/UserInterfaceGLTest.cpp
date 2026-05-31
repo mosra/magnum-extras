@@ -32,7 +32,6 @@
 #include <Magnum/GL/OpenGLTester.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/GlyphCacheGL.h>
-#include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/AbstractTheme.h"
 #include "Magnum/Ui/BaseLayerGL.h"
@@ -82,7 +81,6 @@ struct UserInterfaceGLTest: GL::OpenGLTester {
     void setThemeBaseLayerStyleAnimationsBaseLayerNotPresentNotApplied();
     void setThemeBaseLayerStyleAnimationsBaseLayerNoDynamicStyles();
     void setThemeTextLayerAlreadyPresent();
-    void setThemeTextLayerImagesTextLayerNotPresentNotApplied();
     void setThemeTextLayerStyleAnimatorAlreadyPresent();
     void setThemeTextLayerStyleAnimationsTextLayerNotPresentNotApplied();
     void setThemeTextLayerStyleAnimationsTextLayerNoDynamicStyles();
@@ -93,7 +91,6 @@ struct UserInterfaceGLTest: GL::OpenGLTester {
     void setThemeNodeAnimatorAlreadyPresent();
 
     private:
-        PluginManager::Manager<Trade::AbstractImporter> _importerManager;
         PluginManager::Manager<Text::AbstractFont> _fontManager;
 };
 
@@ -197,48 +194,48 @@ const struct {
     bool succeed, explicitCompositingFramebuffer;
     UnsignedInt expectedLayerCount, expectedLayouterCount, expectedAnimatorCount;
     Containers::Array<ThemeFeatures> features;
-    bool explicitImporterManager, explicitFontManager;
+    bool explicitFontManager;
 } SetThemeData[]{
     {"data layer only", ThemeFeature::DataLayer, ThemeFeature::DataLayer, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::DataLayer
-    }}, false, false},
+    }}, false},
     {"data layer only, everything supported", ThemeFeature::DataLayer, ~ThemeFeatures{}, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::DataLayer
-    }}, false, false},
+    }}, false},
 
     {"background layer only", ThemeFeature::BackgroundLayer, ThemeFeature::BackgroundLayer, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::BackgroundLayer
-    }}, false, false},
+    }}, false},
     {"background layer only, everything supported", ThemeFeature::BackgroundLayer, ~ThemeFeatures{}, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::BackgroundLayer
-    }}, false, false},
+    }}, false},
     {"background layer + animations only", ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations, ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations, true, false, 1, 0, 1, {InPlaceInit, {
         ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations
-    }}, false, false},
+    }}, false},
     {"background layer + animations, applied gradually", ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations, ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations, true, false, 1, 0, 1, {InPlaceInit, {
         ThemeFeature::BackgroundLayer,
         ThemeFeature::BackgroundLayerAnimations
-    }}, false, false},
+    }}, false},
     {"background layer + animations only, everything supported", ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations, ~ThemeFeatures{}, true, false, 1, 0, 1, {InPlaceInit, {
         ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations
-    }}, false, false},
+    }}, false},
 
     {"base layer only", ThemeFeature::BaseLayer, ThemeFeature::BaseLayer, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::BaseLayer
-    }}, false, false},
+    }}, false},
     {"base layer only, everything supported", ThemeFeature::BaseLayer, ~ThemeFeatures{}, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::BaseLayer
-    }}, false, false},
+    }}, false},
     {"base layer + animations only", ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, true, false, 1, 0, 1, {InPlaceInit, {
         ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations
-    }}, false, false},
+    }}, false},
     {"base layer + animations, applied gradually", ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, true, false, 1, 0, 1, {InPlaceInit, {
         ThemeFeature::BaseLayer,
         ThemeFeature::BaseLayerAnimations
-    }}, false, false},
+    }}, false},
     {"base layer + animations only, everything supported", ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, ~ThemeFeatures{}, true, false, 1, 0, 1, {InPlaceInit, {
         ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations
-    }}, false, false},
+    }}, false},
 
     /* To verify that the background layer (animations) isn't treated as
        already set when base layer (animations) are present, and that setting
@@ -248,11 +245,11 @@ const struct {
         /* Because this is applied later, an explicit compositing framebuffer
            has to be supplied */
         ThemeFeature::BackgroundLayer,
-    }}, false, false},
+    }}, false},
     {"base layer applied after background layer is set", ThemeFeature::BackgroundLayer|ThemeFeature::BaseLayer, ThemeFeature::BackgroundLayer|ThemeFeature::BaseLayer, true, false, 2, 0, 0, {InPlaceInit, {
         ThemeFeature::BackgroundLayer,
         ThemeFeature::BaseLayer,
-    }}, false, false},
+    }}, false},
     {"background layer + animations applied after base layer + animations is set", ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, true, true, 2, 0, 2, {InPlaceInit, {
         ThemeFeature::BaseLayer,
         ThemeFeature::BaseLayerAnimations,
@@ -260,7 +257,7 @@ const struct {
            has to be supplied */
         ThemeFeature::BackgroundLayer,
         ThemeFeature::BackgroundLayerAnimations,
-    }}, false, false},
+    }}, false},
     {"background layer + animations applied after base layer + animations is set, different order", ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, true, true, 2, 0, 2, {InPlaceInit, {
         ThemeFeature::BaseLayer,
         /* Because this is applied later, an explicit compositing framebuffer
@@ -268,96 +265,85 @@ const struct {
         ThemeFeature::BackgroundLayer,
         ThemeFeature::BaseLayerAnimations,
         ThemeFeature::BackgroundLayerAnimations,
-    }}, false, false},
+    }}, false},
     {"base layer + animations applied after background layer + animations is set", ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, true, false, 2, 0, 2, {InPlaceInit, {
         ThemeFeature::BackgroundLayer,
         ThemeFeature::BackgroundLayerAnimations,
         ThemeFeature::BaseLayer,
         ThemeFeature::BaseLayerAnimations,
-    }}, false, false},
+    }}, false},
     {"base layer + animations applied after background layer + animations is set, different order", ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, true, false, 2, 0, 2, {InPlaceInit, {
         ThemeFeature::BackgroundLayer,
         ThemeFeature::BaseLayer,
         ThemeFeature::BackgroundLayerAnimations,
         ThemeFeature::BaseLayerAnimations,
-    }}, false, false},
+    }}, false},
     {"background layer with no animations and base layer + animations", ThemeFeature::BackgroundLayer|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, ThemeFeature::BackgroundLayer|ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, true, false, 2, 0, 1, {InPlaceInit, {
         ThemeFeature::BackgroundLayer,
         ThemeFeature::BaseLayer,
         ThemeFeature::BaseLayerAnimations,
-    }}, false, false},
+    }}, false},
 
     {"text layer only", ThemeFeature::TextLayer, ThemeFeature::TextLayer, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::TextLayer
-    }}, false, true},
+    }}, true},
     {"text layer only, everything supported", ThemeFeature::TextLayer, ~ThemeFeatures{}, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::TextLayer
-    }}, false, true},
-    {"text layer + images only", ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, true, false, 1, 0, 0, {InPlaceInit, {
-        ThemeFeature::TextLayer|ThemeFeature::TextLayerImages
-    }}, true, true},
-    {"text layer + images, applied gradually", ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, true, false, 1, 0, 0, {InPlaceInit, {
-        ThemeFeature::TextLayer,
-        ThemeFeature::TextLayerImages
-    }}, true, true},
-    {"text layer + images only, everything supported", ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, ~ThemeFeatures{}, true, false, 1, 0, 0, {InPlaceInit, {
-        ThemeFeature::TextLayer|ThemeFeature::TextLayerImages
-    }}, true, true},
+    }}, true},
     {"text layer + animations only", ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, true, false, 1, 0, 1, {InPlaceInit, {
         ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations
-    }}, false, true},
+    }}, true},
     {"text layer + animations, applied gradually", ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, true, false, 1, 0, 1, {InPlaceInit, {
         ThemeFeature::TextLayer,
         ThemeFeature::TextLayerAnimations
-    }}, false, true},
+    }}, true},
     {"text layer + animations only, everything supported", ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, ~ThemeFeatures{}, true, false, 1, 0, 1, {InPlaceInit, {
         ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations
-    }}, false, true},
+    }}, true},
 
     {"event layer only", ThemeFeature::EventLayer, ThemeFeature::EventLayer, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::EventLayer
-    }}, false, false},
+    }}, false},
     {"event layer only, everything supported", ThemeFeature::EventLayer, ~ThemeFeatures{}, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::EventLayer
-    }}, false, false},
+    }}, false},
 
     {"layout layer only", ThemeFeature::LayoutLayer, ThemeFeature::LayoutLayer, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::LayoutLayer
-    }}, false, false},
+    }}, false},
     {"layout layer only, everything supported", ThemeFeature::LayoutLayer, ~ThemeFeatures{}, true, false, 1, 0, 0, {InPlaceInit, {
         ThemeFeature::LayoutLayer
-    }}, false, false},
+    }}, false},
 
     {"snap layouter only", ThemeFeature::SnapLayouter, ThemeFeature::SnapLayouter, true, false, 0, 1, 0, {InPlaceInit, {
         ThemeFeature::SnapLayouter
-    }}, false, false},
+    }}, false},
     {"snap layouter only, everything supported", ThemeFeature::SnapLayouter, ~ThemeFeatures{}, true, false, 0, 1, 0, {InPlaceInit, {
         ThemeFeature::SnapLayouter
-    }}, false, false},
+    }}, false},
 
     {"generic layouter only", ThemeFeature::GenericLayouter, ThemeFeature::GenericLayouter, true, false, 0, 1, 0, {InPlaceInit, {
         ThemeFeature::GenericLayouter
-    }}, false, false},
+    }}, false},
     {"generic layouter only, everything supported", ThemeFeature::GenericLayouter, ~ThemeFeatures{}, true, false, 0, 1, 0, {InPlaceInit, {
         ThemeFeature::GenericLayouter
-    }}, false, false},
+    }}, false},
 
     {"node animations only", ThemeFeature::NodeAnimations, ThemeFeature::NodeAnimations, true, false, 0, 0, 1, {InPlaceInit, {
         ThemeFeature::NodeAnimations
-    }}, false, false},
+    }}, false},
     {"node animations only, everything supported", ThemeFeature::NodeAnimations, ~ThemeFeatures{}, true, false, 0, 0, 1, {InPlaceInit, {
         ThemeFeature::NodeAnimations
-    }}, false, false},
+    }}, false},
 
     /* Explicitly verifying the case with background layer disabled and thus
        base layer used for it instead, to catch various layer aliasing edge
        cases */
     {"everything except background layer (and its animations)", ~(ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations), ~(ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations), true, false, 5, 2, 3, {InPlaceInit, {
         ~(ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations)
-    }}, true, true},
+    }}, true},
     {"everything except background layer (and its animations), applied gradually", ~(ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations), ~(ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations), true, false, 5, 2, 3, {InPlaceInit, {
         ThemeFeature::TextLayer,
-        ThemeFeature::TextLayerImages,
         ThemeFeature::BaseLayer,
         ThemeFeature::GenericLayouter,
         ThemeFeature::DataLayer,
@@ -367,17 +353,16 @@ const struct {
         ThemeFeature::SnapLayouter,
         ThemeFeature::BaseLayerAnimations,
         ThemeFeature::EventLayer,
-    }}, true, true},
+    }}, true},
     {"everything except background layer (and its animations), everything supported", ~(ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations), ~ThemeFeatures{}, true, false, 5, 2, 3, {InPlaceInit, {
         ~(ThemeFeature::BackgroundLayer|ThemeFeature::BackgroundLayerAnimations)
-    }}, true, true},
+    }}, true},
 
     {"everything except base layer (and its animations)", ~(ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations), ~(ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations), true, false, 5, 2, 3, {InPlaceInit, {
         ~(ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations)
-    }}, true, true},
+    }}, true},
     {"everything except base layer (and its animations), applied gradually", ~(ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations), ~(ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations), true, true, 5, 2, 3, {InPlaceInit, {
         ThemeFeature::TextLayer,
-        ThemeFeature::TextLayerImages,
         /* Because this is applied later, an explicit compositing framebuffer
            has to be supplied */
         ThemeFeature::BackgroundLayer,
@@ -389,27 +374,20 @@ const struct {
         ThemeFeature::SnapLayouter,
         ThemeFeature::BackgroundLayerAnimations,
         ThemeFeature::EventLayer,
-    }}, true, true},
+    }}, true},
     {"everything except base layer (and its animations), everything supported", ~(ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations), ~ThemeFeatures{}, true, false, 5, 2, 3, {InPlaceInit, {
         ~(ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations)
-    }}, true, true},
+    }}, true},
 
     {"everything", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {InPlaceInit, {
         ~ThemeFeatures{}
-    }}, true, true},
-    {"everything, implicit importer manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {InPlaceInit, {
-        ~ThemeFeatures{}
-    }}, false, true},
+    }}, true},
     {"everything, implicit font manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {InPlaceInit, {
         ~ThemeFeatures{}
-    }}, true, false},
-    {"everything, implicit importer & font manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {InPlaceInit, {
-        ~ThemeFeatures{}
-    }}, false, false},
+    }}, false},
 
     {"everything, applied gradually", ~ThemeFeatures{}, ~ThemeFeatures{}, true, true, 6, 2, 4, {InPlaceInit, {
         ThemeFeature::TextLayer,
-        ThemeFeature::TextLayerImages,
         /* Because this is applied later, an explicit compositing framebuffer
            has to be supplied */
         ThemeFeature::BackgroundLayer,
@@ -423,27 +401,9 @@ const struct {
         ThemeFeature::BaseLayer,
         ThemeFeature::LayoutLayer,
         ThemeFeature::BaseLayerAnimations,
-    }}, true, true},
-    {"everything, applied gradually, implicit importer manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, true, 6, 2, 4, {InPlaceInit, {
-        ThemeFeature::TextLayer,
-        ThemeFeature::TextLayerImages,
-        /* Because this is applied later, an explicit compositing framebuffer
-           has to be supplied */
-        ThemeFeature::BackgroundLayer,
-        ThemeFeature::DataLayer,
-        ThemeFeature::GenericLayouter,
-        ThemeFeature::TextLayerAnimations,
-        ThemeFeature::EventLayer,
-        ThemeFeature::NodeAnimations,
-        ThemeFeature::SnapLayouter,
-        ThemeFeature::BackgroundLayerAnimations,
-        ThemeFeature::BaseLayer,
-        ThemeFeature::LayoutLayer,
-        ThemeFeature::BaseLayerAnimations,
-    }}, false, true},
+    }}, true},
     {"everything, applied gradually, implicit font manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, true, 6, 2, 4, {InPlaceInit, {
         ThemeFeature::TextLayer,
-        ThemeFeature::TextLayerImages,
         /* Because this is applied later, an explicit compositing framebuffer
            has to be supplied */
         ThemeFeature::BackgroundLayer,
@@ -457,37 +417,18 @@ const struct {
         ThemeFeature::BaseLayer,
         ThemeFeature::LayoutLayer,
         ThemeFeature::BaseLayerAnimations,
-    }}, true, false},
-    {"everything, applied gradually, implicit importer & font manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, true, 6, 2, 4, {InPlaceInit, {
-        ThemeFeature::TextLayer,
-        ThemeFeature::TextLayerImages,
-        /* Because this is applied later, an explicit compositing framebuffer
-           has to be supplied */
-        ThemeFeature::BackgroundLayer,
-        ThemeFeature::GenericLayouter,
-        ThemeFeature::TextLayerAnimations,
-        ThemeFeature::DataLayer,
-        ThemeFeature::EventLayer,
-        ThemeFeature::NodeAnimations,
-        ThemeFeature::SnapLayouter,
-        ThemeFeature::BackgroundLayerAnimations,
-        ThemeFeature::BaseLayer,
-        ThemeFeature::LayoutLayer,
-        ThemeFeature::BaseLayerAnimations,
-    }}, false, false},
+    }}, false},
 
     {"application failed", ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations|ThemeFeature::EventLayer|ThemeFeature::SnapLayouter, ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations|ThemeFeature::EventLayer|ThemeFeature::SnapLayouter, false, false, 2, 1, 1, {InPlaceInit, {
         ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations|ThemeFeature::EventLayer|ThemeFeature::SnapLayouter
-    }}, true, true},
+    }}, true},
 
-    {"everything, implicitly", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {}, true, true},
-    {"everything, implicitl, implicit importer manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {}, false, true},
-    {"everything, implicitl, implicit font manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {}, true, false},
-    {"everything, implicitl, implicit importer & font manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {}, false, false},
-    {"everything, implicitly, application failed", ~ThemeFeatures{}, ~ThemeFeatures{}, false, false, 6, 2, 4, {}, true, true},
-    {"everything, implicitly, only unknown feature supported", ThemeFeatures{0x8000}, ThemeFeatures{0x8000}, true, false, 0, 0, 0, {}, true, true},
-    {"everything, implicitly, only base layer supported", ThemeFeature::BaseLayer, ThemeFeature::BaseLayer, true, false, 1, 0, 0, {}, false, false},
-    {"everything, implicitly, everything except text layer (and its images and animations) supported", ~(ThemeFeature::TextLayer|ThemeFeature::TextLayerImages|ThemeFeature::TextLayerAnimations), ~(ThemeFeature::TextLayer|ThemeFeature::TextLayerImages|ThemeFeature::TextLayerAnimations), true, false, 5, 2, 3, {}, false, false},
+    {"everything, implicitly", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {}, true},
+    {"everything, implicitl, implicit font manager", ~ThemeFeatures{}, ~ThemeFeatures{}, true, false, 6, 2, 4, {}, false},
+    {"everything, implicitly, application failed", ~ThemeFeatures{}, ~ThemeFeatures{}, false, false, 6, 2, 4, {}, true},
+    {"everything, implicitly, only unknown feature supported", ThemeFeatures{0x8000}, ThemeFeatures{0x8000}, true, false, 0, 0, 0, {}, true},
+    {"everything, implicitly, only base layer supported", ThemeFeature::BaseLayer, ThemeFeature::BaseLayer, true, false, 1, 0, 0, {}, false},
+    {"everything, implicitly, everything except text layer (and its animations) supported", ~(ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations), ~(ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations), true, false, 5, 2, 3, {}, false},
 };
 
 UserInterfaceGLTest::UserInterfaceGLTest() {
@@ -525,7 +466,6 @@ UserInterfaceGLTest::UserInterfaceGLTest() {
               &UserInterfaceGLTest::setThemeBaseLayerStyleAnimationsBaseLayerNotPresentNotApplied,
               &UserInterfaceGLTest::setThemeBaseLayerStyleAnimationsBaseLayerNoDynamicStyles,
               &UserInterfaceGLTest::setThemeTextLayerAlreadyPresent,
-              &UserInterfaceGLTest::setThemeTextLayerImagesTextLayerNotPresentNotApplied,
               &UserInterfaceGLTest::setThemeTextLayerStyleAnimatorAlreadyPresent,
               &UserInterfaceGLTest::setThemeTextLayerStyleAnimationsTextLayerNotPresentNotApplied,
               &UserInterfaceGLTest::setThemeTextLayerStyleAnimationsTextLayerNoDynamicStyles,
@@ -553,7 +493,7 @@ void UserInterfaceGLTest::construct() {
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override {
             return Vector3i{1};
         }
-        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_COMPARE(features, expectedFeatures);
             ++applyCalled;
             return true;
@@ -568,9 +508,9 @@ void UserInterfaceGLTest::construct() {
 
     Containers::Optional<UserInterfaceGL> ui;
     if(data.themeFeatures)
-        ui.emplace(Vector2{100.0f, 150.0f}, Vector2{50.0f, 75.0f}, Vector2i{200, 300}, theme, *data.themeFeatures, &_importerManager, &_fontManager);
+        ui.emplace(Vector2{100.0f, 150.0f}, Vector2{50.0f, 75.0f}, Vector2i{200, 300}, theme, *data.themeFeatures, &_fontManager);
     else
-        ui.emplace(Vector2{100.0f, 150.0f}, Vector2{50.0f, 75.0f}, Vector2i{200, 300}, theme, &_importerManager, &_fontManager);
+        ui.emplace(Vector2{100.0f, 150.0f}, Vector2{50.0f, 75.0f}, Vector2i{200, 300}, theme, &_fontManager);
     CORRADE_COMPARE(ui->size(), (Vector2{100.0f, 150.0f}));
     CORRADE_COMPARE(ui->windowSize(), (Vector2{50.0f, 75.0f}));
     CORRADE_COMPARE(ui->framebufferSize(), (Vector2i{200, 300}));
@@ -606,7 +546,7 @@ void UserInterfaceGLTest::constructSingleSize() {
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override {
             return Vector3i{1};
         }
-        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_COMPARE(features, expectedFeatures);
             ++applyCalled;
             return true;
@@ -621,9 +561,9 @@ void UserInterfaceGLTest::constructSingleSize() {
 
     Containers::Optional<UserInterfaceGL> ui;
     if(data.themeFeatures)
-        ui.emplace(Vector2i{200, 300}, theme, *data.themeFeatures, &_importerManager, &_fontManager);
+        ui.emplace(Vector2i{200, 300}, theme, *data.themeFeatures, &_fontManager);
     else
-        ui.emplace(Vector2i{200, 300}, theme, &_importerManager, &_fontManager);
+        ui.emplace(Vector2i{200, 300}, theme, &_fontManager);
     CORRADE_COMPARE(ui->size(), (Vector2{200.0f, 300.0f}));
     CORRADE_COMPARE(ui->windowSize(), (Vector2{200.0f, 300.0f}));
     CORRADE_COMPARE(ui->framebufferSize(), (Vector2i{200, 300}));
@@ -652,17 +592,17 @@ void UserInterfaceGLTest::constructMove() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeatures{0x8000};
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return true; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return true; }
     } theme;
 
-    UserInterfaceGL a{{200, 300}, theme, &_importerManager, &_fontManager};
+    UserInterfaceGL a{{200, 300}, theme, &_fontManager};
     a.setEventLayerInstance(Containers::pointer<EventLayer>(a.createLayer()));
 
     UserInterfaceGL b{Utility::move(a)};
     CORRADE_COMPARE(b.size(), (Vector2{200.0f, 300.0f}));
     CORRADE_VERIFY(b.hasEventLayer());
 
-    UserInterfaceGL c{{10, 10}, theme, &_importerManager, &_fontManager};
+    UserInterfaceGL c{{10, 10}, theme, &_fontManager};
     c = Utility::move(b);
     CORRADE_COMPARE(c.size(), (Vector2{200.0f, 300.0f}));
     CORRADE_VERIFY(c.hasEventLayer());
@@ -688,7 +628,7 @@ void UserInterfaceGLTest::create() {
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override {
             return Vector3i{1};
         }
-        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_COMPARE(features, expectedFeatures);
             ++applyCalled;
             return true;
@@ -704,14 +644,14 @@ void UserInterfaceGLTest::create() {
     UserInterfaceGL ui{NoCreate};
     if(data.tryCreate) {
         if(data.themeFeatures)
-            CORRADE_VERIFY(ui.tryCreate({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, theme, *data.themeFeatures, &_importerManager, &_fontManager));
+            CORRADE_VERIFY(ui.tryCreate({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, theme, *data.themeFeatures, &_fontManager));
         else
-            CORRADE_VERIFY(ui.tryCreate({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, theme, &_importerManager, &_fontManager));
+            CORRADE_VERIFY(ui.tryCreate({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, theme, &_fontManager));
     } else {
         if(data.themeFeatures)
-            ui.create({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, theme, *data.themeFeatures, &_importerManager, &_fontManager);
+            ui.create({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, theme, *data.themeFeatures, &_fontManager);
         else
-            ui.create({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, theme, &_importerManager, &_fontManager);
+            ui.create({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, theme, &_fontManager);
     }
     CORRADE_COMPARE(ui.size(), (Vector2{100.0f, 150.0f}));
     CORRADE_COMPARE(ui.windowSize(), (Vector2{50.0f, 75.0f}));
@@ -746,7 +686,7 @@ void UserInterfaceGLTest::createSingleSize() {
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override {
             return Vector3i{1};
         }
-        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_COMPARE(features, expectedFeatures);
             ++applyCalled;
             return true;
@@ -762,14 +702,14 @@ void UserInterfaceGLTest::createSingleSize() {
     UserInterfaceGL ui{NoCreate};
     if(data.tryCreate) {
         if(data.themeFeatures)
-            CORRADE_VERIFY(ui.tryCreate({200, 300}, theme, *data.themeFeatures, &_importerManager, &_fontManager));
+            CORRADE_VERIFY(ui.tryCreate({200, 300}, theme, *data.themeFeatures, &_fontManager));
         else
-            CORRADE_VERIFY(ui.tryCreate({200, 300}, theme, &_importerManager, &_fontManager));
+            CORRADE_VERIFY(ui.tryCreate({200, 300}, theme, &_fontManager));
     } else {
         if(data.themeFeatures)
-            ui.create({200, 300}, theme, *data.themeFeatures, &_importerManager, &_fontManager);
+            ui.create({200, 300}, theme, *data.themeFeatures, &_fontManager);
         else
-            ui.create({200, 300}, theme, &_importerManager, &_fontManager);
+            ui.create({200, 300}, theme, &_fontManager);
     }
     CORRADE_COMPARE(ui.size(), (Vector2{200.0f, 300.0f}));
     CORRADE_COMPARE(ui.windowSize(), (Vector2{200.0f, 300.0f}));
@@ -805,7 +745,7 @@ void UserInterfaceGLTest::createAlreadyCreated() {
         Vector3i doTextLayerGlyphCacheSize(ThemeFeatures) const override {
             return {100, 100, 1};
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             return true;
         }
     } theme;
@@ -857,7 +797,7 @@ void UserInterfaceGLTest::createFailed() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::EventLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             return false;
         }
     } theme;
@@ -909,7 +849,7 @@ void UserInterfaceGLTest::setTheme() {
         }
         Vector2i doTextLayerGlyphCachePadding() const override { return {3, 1}; }
         UnsignedInt doLayoutLayerStyleCount() const override { return 15; }
-        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override {
+        bool doApply(UserInterface&, ThemeFeatures features, PluginManager::Manager<Text::AbstractFont>* fontManager) const override {
             /* The features passed to this function and to the
                doTextLayerGlyphCacheSize() query, if called, should match */
             if(_glyphCacheSizeQueriedFeatures)
@@ -919,8 +859,6 @@ void UserInterfaceGLTest::setTheme() {
             _actualFeatures |= features;
             if(features >= ThemeFeature::TextLayer)
                 CORRADE_VERIFY(fontManager);
-            if(features >= ThemeFeature::TextLayerImages)
-                CORRADE_VERIFY(importerManager);
             ++_applyCalled;
             return _succeed;
         }
@@ -946,11 +884,9 @@ void UserInterfaceGLTest::setTheme() {
 
     if(data.features.isEmpty())
         CORRADE_COMPARE(ui.trySetTheme(theme,
-            data.explicitImporterManager ? &_importerManager : nullptr,
             data.explicitFontManager ? &_fontManager : nullptr), data.succeed);
     else for(ThemeFeatures features: data.features)
         CORRADE_COMPARE(ui.trySetTheme(theme, features,
-            data.explicitImporterManager ? &_importerManager : nullptr,
             data.explicitFontManager ? &_fontManager : nullptr), data.succeed);
     CORRADE_COMPARE(ui.layerUsedCount(), data.expectedLayerCount);
     CORRADE_COMPARE(ui.layouterUsedCount(), data.expectedLayouterCount);
@@ -1041,7 +977,7 @@ void UserInterfaceGLTest::setThemeRendererAlreadyPresent() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeatures{0x8000};
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return true; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return true; }
     } theme;
 
     /* Setting a theme shouldn't attempt to set a renderer instance again if
@@ -1066,12 +1002,12 @@ void UserInterfaceGLTest::setThemeRendererNotCompositing() {
             return BaseLayerSharedFlag::BackgroundBlur;
         }
         UnsignedInt doBackgroundLayerStyleCount() const override { return 1; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return true; }
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return true; }
     } theme;
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): background layer style requires a framebuffer with Ui::RendererGL::Flag::CompositingFramebuffer enabled\n");
 }
 
@@ -1083,7 +1019,7 @@ void UserInterfaceGLTest::setThemeNoFeatures() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::BaseLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1094,7 +1030,7 @@ void UserInterfaceGLTest::setThemeNoFeatures() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, {}, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, {}, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): no features specified\n");
 }
 
@@ -1106,7 +1042,7 @@ void UserInterfaceGLTest::setThemeFeaturesNotSupported() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::BaseLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1117,7 +1053,7 @@ void UserInterfaceGLTest::setThemeFeaturesNotSupported() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, ThemeFeature::BaseLayer|ThemeFeature::TextLayer, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, ThemeFeature::BaseLayer|ThemeFeature::TextLayer, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): Ui::ThemeFeature::BaseLayer|Ui::ThemeFeature::TextLayer not a subset of supported Ui::ThemeFeature::BaseLayer\n");
 }
 
@@ -1128,7 +1064,7 @@ void UserInterfaceGLTest::setThemeNoSizeSet() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::EventLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             return false;
         }
     } theme;
@@ -1153,7 +1089,7 @@ void UserInterfaceGLTest::setThemeDataLayerAlreadyPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::DataLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1164,7 +1100,7 @@ void UserInterfaceGLTest::setThemeDataLayerAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): data layer already present\n");
 }
 
@@ -1180,7 +1116,7 @@ void UserInterfaceGLTest::setThemeBackgroundLayerAlreadyPresent() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::BackgroundLayer;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1191,7 +1127,7 @@ void UserInterfaceGLTest::setThemeBackgroundLayerAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): background layer already present\n");
 }
 
@@ -1217,7 +1153,7 @@ void UserInterfaceGLTest::setThemeBackgroundLayerStyleAnimatorAlreadyPresent() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::BackgroundLayerAnimations;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1228,11 +1164,11 @@ void UserInterfaceGLTest::setThemeBackgroundLayerStyleAnimatorAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     /* This assertion should *not* be triggered if the base layer animator
        (which implicitly aliases to background layer animator) is present,
        instead it should fall through to the other assertions */
-    uiWithBaseLayerAnimator.trySetTheme(theme, &_importerManager, &_fontManager);
+    uiWithBaseLayerAnimator.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE_AS(out,
         "Ui::UserInterfaceGL::trySetTheme(): background layer style animator already present\n"
         "Ui::UserInterfaceGL::trySetTheme(): background layer not present and Ui::ThemeFeature::BackgroundLayer isn't being applied as well for Ui::ThemeFeature::BackgroundLayerAnimations\n",
@@ -1258,7 +1194,7 @@ void UserInterfaceGLTest::setThemeBackgroundLayerStyleAnimationsBackgroundLayerN
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::BackgroundLayerAnimations;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1269,10 +1205,10 @@ void UserInterfaceGLTest::setThemeBackgroundLayerStyleAnimationsBackgroundLayerN
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     /* The same assertion should be triggered even if base layer (which
        implicitly aliases to background layer) is present */
-    uiWithBaseLayer.trySetTheme(theme, &_importerManager, &_fontManager);
+    uiWithBaseLayer.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE_AS(out,
         "Ui::UserInterfaceGL::trySetTheme(): background layer not present and Ui::ThemeFeature::BackgroundLayer isn't being applied as well for Ui::ThemeFeature::BackgroundLayerAnimations\n"
         "Ui::UserInterfaceGL::trySetTheme(): background layer not present and Ui::ThemeFeature::BackgroundLayer isn't being applied as well for Ui::ThemeFeature::BackgroundLayerAnimations\n",
@@ -1292,7 +1228,7 @@ void UserInterfaceGLTest::setThemeBackgroundLayerStyleAnimationsBackgroundLayerN
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::BackgroundLayerAnimations;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1303,7 +1239,7 @@ void UserInterfaceGLTest::setThemeBackgroundLayerStyleAnimationsBackgroundLayerN
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): Ui::ThemeFeature::BackgroundLayerAnimations requires the background layer to have least one dynamic style\n");
 }
 
@@ -1317,7 +1253,7 @@ void UserInterfaceGLTest::setThemeBaseLayerAlreadyPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::BaseLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1328,7 +1264,7 @@ void UserInterfaceGLTest::setThemeBaseLayerAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): base layer already present\n");
 }
 
@@ -1345,7 +1281,7 @@ void UserInterfaceGLTest::setThemeBaseLayerStyleAnimatorAlreadyPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::BaseLayerAnimations; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1356,7 +1292,7 @@ void UserInterfaceGLTest::setThemeBaseLayerStyleAnimatorAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): base layer style animator already present\n");
 }
 
@@ -1368,7 +1304,7 @@ void UserInterfaceGLTest::setThemeBaseLayerStyleAnimationsBaseLayerNotPresentNot
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::BaseLayerAnimations; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1379,7 +1315,7 @@ void UserInterfaceGLTest::setThemeBaseLayerStyleAnimationsBaseLayerNotPresentNot
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): base layer not present and Ui::ThemeFeature::BaseLayer isn't being applied as well for Ui::ThemeFeature::BaseLayerAnimations\n");
 }
 
@@ -1394,7 +1330,7 @@ void UserInterfaceGLTest::setThemeBaseLayerStyleAnimationsBaseLayerNoDynamicStyl
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::BaseLayerAnimations; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1405,7 +1341,7 @@ void UserInterfaceGLTest::setThemeBaseLayerStyleAnimationsBaseLayerNoDynamicStyl
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): Ui::ThemeFeature::BaseLayerAnimations requires the base layer to have least one dynamic style\n");
 }
 
@@ -1421,7 +1357,7 @@ void UserInterfaceGLTest::setThemeTextLayerAlreadyPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1432,31 +1368,8 @@ void UserInterfaceGLTest::setThemeTextLayerAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): text layer already present\n");
-}
-
-void UserInterfaceGLTest::setThemeTextLayerImagesTextLayerNotPresentNotApplied() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    UserInterfaceGL ui{NoCreate};
-    ui.setSize({200, 300});
-
-    struct: AbstractTheme {
-        ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayerImages; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-    } theme;
-
-    /* Capture correct function name */
-    CORRADE_VERIFY(true);
-
-    Containers::String out;
-    Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): text layer not present and Ui::ThemeFeature::TextLayer isn't being applied as well for Ui::ThemeFeature::TextLayerImages\n");
 }
 
 void UserInterfaceGLTest::setThemeTextLayerStyleAnimatorAlreadyPresent() {
@@ -1474,7 +1387,7 @@ void UserInterfaceGLTest::setThemeTextLayerStyleAnimatorAlreadyPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayerAnimations; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1485,7 +1398,7 @@ void UserInterfaceGLTest::setThemeTextLayerStyleAnimatorAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): text layer style animator already present\n");
 }
 
@@ -1497,7 +1410,7 @@ void UserInterfaceGLTest::setThemeTextLayerStyleAnimationsTextLayerNotPresentNot
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayerAnimations; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1508,7 +1421,7 @@ void UserInterfaceGLTest::setThemeTextLayerStyleAnimationsTextLayerNotPresentNot
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): text layer not present and Ui::ThemeFeature::TextLayer isn't being applied as well for Ui::ThemeFeature::TextLayerAnimations\n");
 }
 
@@ -1525,7 +1438,7 @@ void UserInterfaceGLTest::setThemeTextLayerStyleAnimationsTextLayerNoDynamicStyl
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::TextLayerAnimations; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1536,7 +1449,7 @@ void UserInterfaceGLTest::setThemeTextLayerStyleAnimationsTextLayerNoDynamicStyl
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): Ui::ThemeFeature::TextLayerAnimations requires the text layer to have least one dynamic style\n");
 }
 
@@ -1549,7 +1462,7 @@ void UserInterfaceGLTest::setThemeEventLayerAlreadyPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::EventLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1560,7 +1473,7 @@ void UserInterfaceGLTest::setThemeEventLayerAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): event layer already present\n");
 }
 
@@ -1573,7 +1486,7 @@ void UserInterfaceGLTest::setThemeLayoutLayerAlreadyPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::LayoutLayer; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1584,7 +1497,7 @@ void UserInterfaceGLTest::setThemeLayoutLayerAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): layout layer already present\n");
 }
 
@@ -1597,7 +1510,7 @@ void UserInterfaceGLTest::setThemeSnapLayouterAlreadyPresent() {
 
     struct: AbstractTheme {
         ThemeFeatures doFeatures() const override { return ThemeFeature::SnapLayouter; }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1608,7 +1521,7 @@ void UserInterfaceGLTest::setThemeSnapLayouterAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): snap layouter already present\n");
 }
 
@@ -1623,7 +1536,7 @@ void UserInterfaceGLTest::setThemeGenericLayouterAlreadyPresent() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::GenericLayouter;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1634,7 +1547,7 @@ void UserInterfaceGLTest::setThemeGenericLayouterAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): generic layouter already present\n");
 }
 
@@ -1649,7 +1562,7 @@ void UserInterfaceGLTest::setThemeNodeAnimatorAlreadyPresent() {
         ThemeFeatures doFeatures() const override {
             return ThemeFeature::NodeAnimations;
         }
-        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -1660,7 +1573,7 @@ void UserInterfaceGLTest::setThemeNodeAnimatorAlreadyPresent() {
 
     Containers::String out;
     Error redirectError{&out};
-    ui.trySetTheme(theme, &_importerManager, &_fontManager);
+    ui.trySetTheme(theme, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetTheme(): node animator already present\n");
 }
 
