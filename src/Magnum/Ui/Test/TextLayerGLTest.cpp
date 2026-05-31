@@ -107,9 +107,8 @@ struct TextLayerGLTest: GL::OpenGLTester {
         GL::Texture2D _color{NoCreate};
         GL::Framebuffer _framebuffer{NoCreate};
 
-        /* stb_truetype's rasterization is extremely slow, so the cache filling
-           is done just once for all tests that need it; thus also the font has
-           to be shared among all */
+        /* To avoid duplicating the same cache filling code over and over, it's
+           done just once for all tests that need it */
         Containers::Pointer<Text::AbstractFont> _font, _fontDistanceField;
         /* Cache size picked so it *has to* use more than one layer to fit all
            glyphs, checked in the constructor */
@@ -1561,8 +1560,8 @@ TextLayerGLTest::TextLayerGLTest() {
     }
 
     /* Open the font and pre-fill the glyph cache so each test iteration
-       doesn't have to suffer stb_truetype's extreme rasterization slowness
-       again and again. They only check that the font was opened afterwards. */
+       doesn't have to duplicate this code over and over. They only check that
+       the font was opened afterwards. */
     if((_font = _fontManager.loadAndInstantiate("StbTrueTypeFont")) &&
        _font->openFile(Utility::Path::join(UI_DIR, "SourceSans3-Regular.otf"), 32.0f)) {
         CORRADE_INTERNAL_ASSERT_OUTPUT(_font->fillGlyphCache(_fontGlyphCache, "Magi"));
@@ -1822,8 +1821,8 @@ void TextLayerGLTest::render() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     /* Testing the ArrayView overload, others cases use the initializer list */
@@ -1989,8 +1988,8 @@ void TextLayerGLTest::renderRvalueGlyphCache() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     TextLayerGL::Shared layerShared{NoCreate};
@@ -2074,8 +2073,8 @@ void TextLayerGLTest::renderDistanceFieldWidthSmoothness() {
     AbstractUserInterface ui{Vector2{RenderSize}*data.uiScale, {1, 1}, RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     Text::DistanceFieldGlyphCacheArrayGL cache{{256, 256, 1}, Vector2i{256/data.cacheProcessedScale}, data.cacheRadius};
@@ -2156,8 +2155,8 @@ void TextLayerGLTest::renderEditingSmoothness() {
     AbstractUserInterface ui{data.scale*Vector2{RenderSize}, {1, 1}, (data.setSizeLater ? Vector2i{1} : RenderSize)};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{1}
@@ -2252,8 +2251,8 @@ void TextLayerGLTest::renderAlignmentPadding() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{1}
@@ -2334,8 +2333,8 @@ void TextLayerGLTest::renderCustomColor() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     TextLayerGL::Shared layerShared{NoCreate};
@@ -2455,8 +2454,8 @@ void TextLayerGLTest::renderChangeStyle() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{4, 3}
@@ -2553,8 +2552,8 @@ void TextLayerGLTest::renderChangeText() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{2, 1}
@@ -2641,8 +2640,8 @@ void TextLayerGLTest::renderDynamicStyles() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     TextLayerGL::Shared layerShared{_fontGlyphCache,
@@ -3374,8 +3373,8 @@ void TextLayerGLTest::eventStyleTransition() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
+    /* Opened in the constructor together with cache filling to reduce code
+       duplication */
     CORRADE_VERIFY(_font && _font->isOpened());
 
     TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{5, 4}
