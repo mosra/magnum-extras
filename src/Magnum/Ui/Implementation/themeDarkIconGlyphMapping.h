@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_Icon_h
-#define Magnum_Ui_Icon_h
 /*
     This file is part of Magnum.
 
@@ -26,43 +24,11 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Enum @ref Magnum::Ui::Icon
- * @m_since_latest_{extras}
- */
+/* This file is generated using GenerateTheme.cpp, don't edit directly */
 
-#include <Magnum/Magnum.h>
-
-#include "Magnum/Ui/visibility.h"
-
-namespace Magnum { namespace Ui {
-
-/**
-@brief Icon
-@m_since_latest_{extras}
-
-For use in @ref Button and other widgets.
-*/
-enum class Icon: UnsignedInt {
-    /**
-     * No icon. When returned, means given widget has no icon. When passed as
-     * an argument, causes a widget icon to be unset.
-     */
-    None = 0,
-
-    Yes,        /**< Yes */
-    No          /**< No */
-
-    /* Make sure to update IconCount in Ui/AbstractTheme.hpp when adding new
-       icons as otherwise attempting to use them will cause an OOB assert. */
-};
-
-/**
-@debugoperatorenum{Icon}
-@m_since_latest_{extras}
-*/
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Icon value);
-
-}}
-
+/* Glyph IDs in icons.ttf matching the Icon enum */
+#ifdef _c
+_c(0)
+_c(3) /* Yes */
+_c(4) /* No */
 #endif

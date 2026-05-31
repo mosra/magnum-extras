@@ -30,15 +30,18 @@
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Triple.h>
+#include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Arguments.h>
 #include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Path.h>
 #include <Magnum/Math/Swizzle.h>
+#include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/Alignment.h>
 
 /* All these are just header-only dependencies */
 #include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/Implementation/Theme.h" /* TextFont enum */
 
@@ -1628,6 +1631,40 @@ int main(int argc, char** argv) {
         arrayAppend(output, "#endif\n"_s);
 
         const Containers::String filename = Utility::Path::join({*Utility::Path::currentDirectory(), args.value<Containers::StringView>("output"), filePrefix + "LayoutStyles.h"});
+        if(!Utility::Path::write(filename, output))
+            return 1; /* LCOV_EXCL_LINE */
+        Debug{} << "Wrote" << filename;
+
+    /* Icon to glyph mapping. While it could be done at runtime, it's quite a
+       lot of extra code and string data, and not all font plugins implement
+       glyph name mapping. */
+    } {
+        EnumNames<Ui::Implementation::IconCount + 1, Ui::Icon> enumNames{"Icon::"};
+        const Containers::StringView iconsTtf = "icons.ttf";
+
+        /* FreeTypeFont supports glyph name mapping, StbTrueTypeFont not */
+        PluginManager::Manager<Text::AbstractFont> manager;
+        Containers::Pointer<Text::AbstractFont> font = manager.loadAndInstantiate("FreeTypeFont");
+        if(!font->openFile(Utility::Path::join({Utility::Path::path(__FILE__), "..", iconsTtf}), 1.0f))
+            return 1; /* LCOV_EXCL_LINE */
+
+        Containers::Array<char> output;
+        arrayAppend(output, preamble);
+        arrayAppend(output, Utility::format(
+            "/* Glyph IDs in {} matching the Icon enum */\n"
+            "#ifdef _c\n"
+            "_c(0)\n", iconsTtf));
+
+        /* Zero value reserved for an empty icon, which is also excluded from
+           the icon count */
+        for(UnsignedInt i = 0; i != Ui::Implementation::IconCount; ++i) {
+            Containers::StringView name = enumNames[i + 1];
+            arrayAppend(output, Utility::format("_c({}) /* {} */\n", font->glyphForName(name), name));
+        }
+
+        arrayAppend(output, "#endif\n"_s);
+
+        const Containers::String filename = Utility::Path::join({*Utility::Path::currentDirectory(), args.value<Containers::StringView>("output"), filePrefix + "IconGlyphMapping.h"});
         if(!Utility::Path::write(filename, output))
             return 1; /* LCOV_EXCL_LINE */
         Debug{} << "Wrote" << filename;

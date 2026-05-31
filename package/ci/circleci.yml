@@ -257,6 +257,7 @@ commands:
           if [ "$TARGET_EGL" != "ON" ]; then export TARGET_EGL=OFF; fi
           if [ "$TARGET_GLES2" == "ON" ]; then export TARGET_GLES3=OFF; fi
           if [ "$TARGET_GLES2" == "OFF" ]; then export TARGET_GLES3=ON; fi
+          if [ "$UI_CHECK_GENERATE_THEME" != "OFF" ]; then export UI_CHECK_GENERATE_THEME=ON; fi
           ./package/ci/<< parameters.script >>
 
   lcov:
@@ -340,8 +341,9 @@ jobs:
     steps:
     # Not installing the old GCC 4.8 and CMake 3.5 to speed up. These are
     # tested more than enough on other jobs. Machine executors need sudo.
+    # Freetype is needed by the theme generator.
     - install-base-linux:
-        extra: gcc cmake libgl1-mesa-dev libsdl2-dev libglfw3-dev
+        extra: gcc cmake libgl1-mesa-dev libsdl2-dev libglfw3-dev libfreetype6-dev
         sudo: sudo
     - build:
         script: unix-desktop.sh
@@ -479,9 +481,9 @@ jobs:
       #   merged
       TARGET_EGL: "OFF"
     steps:
-    # libidn11 needed by CMake
+    # libidn11 needed by CMake, freetype by the theme generator
     - install-base-linux:
-        extra: libidn11 libgl1-mesa-dev libsdl2-dev libglfw3-dev
+        extra: libidn11 libgl1-mesa-dev libsdl2-dev libglfw3-dev libfreetype6-dev
     - install-clang
     - install-cmake:
         version: "3.5.2"
@@ -498,8 +500,9 @@ jobs:
       CMAKE_CXX_FLAGS: --coverage -D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES
       CONFIGURATION: Debug
     steps:
+    # freetype is needed by the theme generator
     - install-base-macos:
-        extra: sdl2 glfw
+        extra: sdl2 glfw freetype
     - build:
         script: unix-desktop.sh
     # The 14.3 image seems to have the new lcov, which is very picky and throws
@@ -564,8 +567,9 @@ jobs:
       CMAKE_CXX_FLAGS: --coverage -D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES
       CONFIGURATION: Debug
     steps:
+    # freetype is needed by the theme generator
     - install-base-macos:
-        extra: sdl2 glfw
+        extra: sdl2 glfw freetype
     - build:
         script: unix-desktop.sh
     # The 14.3 image seems to have the new lcov, which is very picky and throws

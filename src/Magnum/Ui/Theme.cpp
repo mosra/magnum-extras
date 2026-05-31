@@ -29,19 +29,13 @@
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/Utility/Algorithms.h>
+#include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Resource.h>
-#include <Magnum/ImageView.h>
-#include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Color.h>
-#include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
 #include <Magnum/Text/Alignment.h>
-#include <Magnum/TextureTools/Atlas.h>
-#include <Magnum/Trade/AbstractImporter.h>
-#include <Magnum/Trade/ImageData.h>
 
 #include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/BaseLayer.h"
@@ -268,6 +262,12 @@ constexpr LayoutLayerStyle LayoutStylesDark[]{
     #undef _c
 };
 
+constexpr UnsignedInt IconGlyphMapping[]{
+    #define _c(id) id,
+    #include "Magnum/Ui/Implementation/themeDarkIconGlyphMapping.h"
+    #undef _c
+};
+
 }
 
 DarkTheme::DarkTheme(const Features features): _features{features} {}
@@ -277,7 +277,6 @@ ThemeFeatures DarkTheme::doFeatures() const {
         ThemeFeature::DataLayer|
         ThemeFeature::BaseLayer|
         ThemeFeature::TextLayer|
-        ThemeFeature::TextLayerImages|
         ThemeFeature::EventLayer|
         ThemeFeature::LayoutLayer|
         ThemeFeature::SnapLayouter|
@@ -333,7 +332,7 @@ UnsignedInt DarkTheme::doLayoutLayerStyleCount() const {
     return Containers::arraySize(LayoutStylesDark);
 }
 
-bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const {
+bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>* fontManager) const {
     /* Base layer style */
     if(features >= ThemeFeature::BaseLayer) {
         ui.baseLayer().shared()
@@ -366,41 +365,29 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
        the TextFont enum */
     Ui::FontHandle fonts[Int(TextFont::Count)]{};
 
-    /* Icon font. Add also if just the text layer style is applied (where it
-       gets assigned to icon styles, but without any icons actually loaded). */
-    if(features & (ThemeFeature::TextLayer|ThemeFeature::TextLayerImages)) {
+    /* Text layer fonts and style */
+    /** @todo figure out how to apply another style and replace the previous
+        now-unused font *somehow*, such as by keeping track of which fonts
+        correspond to which ThemeFeature, and then pruning the cache also */
+    if(features >= ThemeFeature::TextLayer) {
         #ifdef MAGNUM_UI_BUILD_STATIC
         importShaderResources();
         #endif
 
         TextLayer::Shared& shared = ui.textLayer().shared();
         Text::AbstractGlyphCache& glyphCache = shared.glyphCache();
-        /* The Icon enum reserves 0 for an invalid glyph, so add 1 */
-        const UnsignedInt iconFontId = glyphCache.addFont(Implementation::IconCount + 1);
-        /* The input is 64x64 squares, which are meant to be shown as 24x24 /
-           32x32 squares in the UI units */
-        /** @todo some DPI-aware machinery here, such as picking one of
-            multiple icon images depending on the DPI scaling, or maybe just
-            put these into a font */
-        fonts[Int(TextFont::Icon)] = shared.addInstancelessFont(iconFontId, 24.0f/64.0f, {});
-        fonts[Int(TextFont::LargeIcon)] = shared.addInstancelessFont(iconFontId, 32.0f/64.0f, {});
-    }
-
-    /* Text layer fonts and style */
-    /** @todo figure out how to apply another style and replace the previous
-        now-unused font *somehow*, such as by keeping track of which fonts
-        correspond to which ThemeFeature, and then pruning the cache also */
-    if(features >= ThemeFeature::TextLayer) {
-        TextLayer::Shared& shared = ui.textLayer().shared();
-        Text::AbstractGlyphCache& glyphCache = shared.glyphCache();
         const Utility::Resource rs{"MagnumUi"_s};
 
         Containers::Pointer<Text::AbstractFont> font = fontManager->loadAndInstantiate("TrueTypeFont");
         Containers::Pointer<Text::AbstractFont> fontLarge = fontManager->loadAndInstantiate("TrueTypeFont");
-        if(!font || !fontLarge ||
+        Containers::Pointer<Text::AbstractFont> iconFont = fontManager->loadAndInstantiate("TrueTypeFont");
+        Containers::Pointer<Text::AbstractFont> iconFontLarge = fontManager->loadAndInstantiate("TrueTypeFont");
+        if(!font || !fontLarge || !iconFont || !iconFontLarge ||
            !font->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 16.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
-           !fontLarge->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 24.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()))
-        {
+           !fontLarge->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 24.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
+           !iconFont->openData(rs.getRaw("icons.ttf"_s), 24.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
+           !iconFontLarge->openData(rs.getRaw("icons.ttf"_s), 32.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max())
+        ) {
             Error{} << "Ui::DarkTheme::apply(): cannot open a font";
             return {};
         }
@@ -414,6 +401,14 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             "•")
         ) {
             Error{} << "Ui::DarkTheme::apply(): cannot fill a glyph cache";
+            return {};
+        }
+        /* Use the glyph mapping array to pick just the icons that are actually
+           used */
+        /** @todo here in particular we likely don't need all icon x size
+            combinations, switch to on-demand here as well */
+        for(Text::AbstractFont* const i: {&*iconFont, &*iconFontLarge}) if(!i->fillGlyphCache(glyphCache, IconGlyphMapping)) {
+            Error{} << "Ui::DarkTheme::apply(): cannot fill a glyph cache with icons";
             return {};
         }
 
@@ -435,6 +430,8 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         fonts[Int(TextFont::Main)] = shared.addFont(Utility::move(font), 16.0f, {});
         fonts[Int(TextFont::Password)] = shared.addFont(Utility::move(passwordFont), 16.0f, {});
         fonts[Int(TextFont::Large)] = shared.addFont(Utility::move(fontLarge), 24.0f, {});
+        fonts[Int(TextFont::Icon)] = shared.addFont(Utility::move(iconFont), 24.0f, IconGlyphMapping);
+        fonts[Int(TextFont::LargeIcon)] = shared.addFont(Utility::move(iconFontLarge), 32.0f, IconGlyphMapping);
 
         /* Font handles matching all styles. References either the `mainFont`
            or the `iconFont` defined above. */
@@ -469,76 +466,6 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
                 Implementation::styleTransitionToPressedOut,
                 Implementation::styleTransitionToPressedOver,
                 Implementation::styleTransitionToDisabled>();
-    }
-
-    /* Text layer images */
-    if(features >= ThemeFeature::TextLayerImages) {
-        TextLayer::Shared& shared = ui.textLayer().shared();
-        Text::AbstractGlyphCache& glyphCache = shared.glyphCache();
-        const Utility::Resource rs{"MagnumUi"_s};
-
-        Containers::Pointer<Trade::AbstractImporter> importer = importerManager->loadAndInstantiate("AnyImageImporter");
-        Containers::Optional<Trade::ImageData2D> image;
-        if(!importer || !importer->openMemory(rs.getRaw("icons.png")) || !(image = importer->image2D(0))) {
-            Error{} << "Ui::DarkTheme::apply(): cannot open an icon atlas";
-            return {};
-        }
-
-        /* The image is originally grayscale 8-bit, expect that it's still
-           imported with 8-bit channels. The importer can be globally
-           configured to import them with more channels (which is fine, for
-           example in testing context, where we might always want to compare to
-           a RGBA image even if the on-disk representation has the alpha
-           dropped), in which case just the red channel is taken, but it's
-           important that it isn't expanded to 16 bits or to floats, for
-           example. */
-        if(pixelFormatChannelFormat(image->format()) != PixelFormat::R8Unorm) {
-            Error{} << "Ui::DarkTheme::apply(): expected" << PixelFormat::R8Unorm << "icons but got an image with" << image->format();
-            return {};
-        }
-        const std::size_t channelSize = image->pixelSize()/pixelFormatChannelCount(image->format());
-
-        /* At the moment it's a single row of square icons, with the image
-           height denoting the square size, and the order matching the Icon
-           enum. Reserve space for all of them in the glyph cache. */
-        const Vector2i imageSize{image->size().y()};
-        CORRADE_INTERNAL_ASSERT(image->size().x() % image->size().y() == 0);
-        Vector3i offsets[Implementation::IconCount];
-        if(!glyphCache.atlas().add(Containers::stridedArrayView(&imageSize, 1).broadcasted<0>(Implementation::IconCount), offsets)) {
-            Error{} << "Ui::DarkTheme::apply(): cannot fit" << Implementation::IconCount << "icons into the glyph cache";
-            return {};
-        }
-
-        /* The font was added above, query the glyph cache ID of it */
-        const UnsignedInt iconFontId = shared.glyphCacheFontId(fonts[Int(TextFont::Icon)]);
-
-        /* Copy the image data */
-        Containers::StridedArrayView3D<const char> src = image->pixels();
-        Containers::StridedArrayView4D<char> dst = glyphCache.image().pixels();
-        Range2Di updated;
-        for(UnsignedInt i = 0; i != Implementation::IconCount; ++i) {
-            Range2Di rectangle = Range2Di::fromSize(offsets[i].xy(),
-                                                    imageSize);
-            /* The Icon enum reserves 0 for an invalid glyph, so add 1 */
-            glyphCache.addGlyph(iconFontId, i + 1, {}, rectangle);
-
-            /* Copy assuming all input images have the same pixel format */
-            const Containers::Size3D size{
-                std::size_t(imageSize.y()),
-                std::size_t(imageSize.x()),
-                channelSize};
-            Utility::copy(
-                src.sliceSize({0, std::size_t(i*imageSize.x()), 0}, size),
-                dst[offsets[i].z()].sliceSize({std::size_t(offsets[i].y()),
-                                                std::size_t(offsets[i].x()),
-                                                0}, size));
-
-            /* Maintain a range that was updated in the glyph cache */
-            updated = Math::join(updated, rectangle);
-        }
-
-        /* Reflect the image data update to the actual GPU-side texture */
-        glyphCache.flushImage(updated);
     }
 
     /* Animations for the text layer. Advertised only if they were enabled

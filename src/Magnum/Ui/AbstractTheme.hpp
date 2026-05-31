@@ -43,10 +43,10 @@ header from application code.
 #ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Magnum { namespace Ui { namespace Implementation {
 
-enum: UnsignedInt {
-    /** @todo drop this once icons are coming from a font as well */
-    IconCount = 2
-};
+/* Used to size & populate the enum-to-glyph mapping table in
+   Implementation/GenerateTheme.cpp. Update when adding new icons in Icon.h as
+   otherwise attempting to use them will cause an OOB assert. */
+enum: UnsignedInt { IconCount = 2 };
 
 enum class BaseStyle: UnsignedShort {
     /* All properties left at defaults. Not used by builtin widgets, meant to

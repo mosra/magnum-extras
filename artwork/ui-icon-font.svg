@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="ui-icon-font.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="0.50394254"
+     inkscape:cx="214.31015"
+     inkscape:cy="304.59822"
+     inkscape:window-width="1920"
+     inkscape:window-height="1031"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer6">
+    <sodipodi:guide
+       position="0,512"
+       orientation="0,1000"
+       id="ink-font-guide-ascender"
+       inkscape:label="horní dotah"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="0,512"
+       orientation="0,1000"
+       id="ink-font-guide-caps"
+       inkscape:label="verzálky"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="0,512"
+       orientation="0,1000"
+       id="ink-font-guide-x-height"
+       inkscape:label="střední výška písma"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="0,0"
+       orientation="0,1000"
+       id="ink-font-guide-baseline"
+       inkscape:label="účaří"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="0,0"
+       orientation="0,1000"
+       id="ink-font-guide-descender"
+       inkscape:label="dolní dotah"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <font
+       horiz-adv-x="512"
+       id="font1"
+       inkscape:label="Magnum Icon Font"
+       horiz-origin-x="0"
+       horiz-origin-y="0"
+       vert-origin-x="512"
+       vert-origin-y="768"
+       vert-adv-y="1024">
+      <font-face
+         units-per-em="512"
+         ascent="512"
+         cap-height="512"
+         x-height="512"
+         descent="0"
+         id="font-face1"
+         font-family="Magnum Icon Font" />
+      <missing-glyph
+         d="M0,0h1000v1000h-1000z"
+         id="missing-glyph1" />
+      <glyph
+         glyph-name="Yes"
+         unicode=""
+         id="glyph1"
+         d="m 498.35937,453.34375 a 16,16 0 0 1 -14.88476,-5.86914 L 205.45703,97.73242 26.685547,258.11523 A 16,16 0 0 1 4.0898437,256.89063 16,16 0 0 1 5.3144531,234.29688 L 196.72852,62.57031 a 16.0016,16.0016 0 0 1 23.20898,1.95313 L 508.52539,427.5625 a 16,16 0 0 1 -2.56836,22.48047 16,16 0 0 1 -7.59766,3.30078 z"
+         horiz-adv-x="0,00" />
+      <glyph
+         glyph-name="No"
+         unicode=""
+         id="glyph3"
+         d="m 66,462 a 16,16 0 0 1 -4.140625,-0.54492 16,16 0 0 1 -7.173828,-4.14063 16,16 0 0 1 0,-22.6289 L 233.37109,256 54.685547,77.31445 a 16,16 0 0 1 0,-22.6289 16,16 0 0 1 22.628906,0 L 256,233.37109 434.68555,54.68555 a 16,16 0 0 1 22.6289,0 16,16 0 0 1 0,22.6289 L 278.62891,256 457.31445,434.68555 a 16,16 0 0 1 0,22.6289 16,16 0 0 1 -15.45507,4.14063 16,16 0 0 1 -7.17383,-4.14063 L 256,278.62891 77.314453,457.31445 A 16,16 0 0 1 66,462 Z" />
+    </font>
+  </defs>
+  <g
+     inkscape:groupmode="layer"
+     id="layer5"
+     inkscape:label="Magnum Icon Font"
+     style="display:inline">
+    <g
+       inkscape:groupmode="layer"
+       id="layer7"
+       inkscape:label="-  Yes"
+       style="display:none"
+       sodipodi:insensitive="true">
+      <path
+         style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:0.265;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         d="m 498.35937,58.65625 a 16,16 0 0 0 -14.88476,5.869141 L 205.45703,414.26758 26.685547,253.88477 a 16,16 0 0 0 -22.5957033,1.2246 16,16 0 0 0 1.2246094,22.59375 L 196.72852,449.42969 a 16.0016,16.0016 0 0 0 23.20898,-1.95313 L 508.52539,84.4375 a 16,16 0 0 0 -2.56836,-22.480469 16,16 0 0 0 -7.59766,-3.300781 z"
+         id="path1" />
+    </g>
+    <g
+       inkscape:groupmode="layer"
+       id="layer6"
+       inkscape:label="-  No"
+       style="display:inline">
+      <path
+         d=""
+         id="path3" />
+      <path
+         id="path2-3"
+         style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:0.265;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         d="m 66,50 a 16,16 0 0 0 -4.140625,0.544922 16,16 0 0 0 -7.173828,4.140625 16,16 0 0 0 0,22.628906 L 233.37109,256 54.685547,434.68555 a 16,16 0 0 0 0,22.6289 16,16 0 0 0 22.628906,0 L 256,278.62891 434.68555,457.31445 a 16,16 0 0 0 22.6289,0 16,16 0 0 0 0,-22.6289 L 278.62891,256 457.31445,77.314453 a 16,16 0 0 0 0,-22.628906 16,16 0 0 0 -15.45507,-4.140625 16,16 0 0 0 -7.17383,4.140625 L 256,233.37109 77.314453,54.685547 A 16,16 0 0 0 66,50 Z" />
+    </g>
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="g6"
+     inkscape:label="No"
+     style="display:none"
+     sodipodi:insensitive="true">
+    <path
+       d=""
+       id="path4" />
+    <path
+       style="font-variation-settings:normal;display:inline;fill:none;fill-opacity:1;stroke:#000000;stroke-width:32;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0.265;stroke-opacity:1;stop-color:#000000"
+       d="M 66,65.999997 446,446"
+       id="path5" />
+    <path
+       style="font-variation-settings:normal;display:inline;fill:none;fill-opacity:1;stroke:#000000;stroke-width:32;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0.265;stroke-opacity:1;stop-color:#000000"
+       d="M 446,65.999997 66,446"
+       id="path6" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="g2"
+     inkscape:label="Yes"
+     style="display:none"
+     sodipodi:insensitive="true">
+    <path
+       style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:none;fill-opacity:1;stroke:#000000;stroke-width:32;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0.265;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000;stop-opacity:1"
+       d="M 16,265.79341 207.41352,437.51937 496,74.481351"
+       id="path2"
+       sodipodi:nodetypes="ccc" />
+  </g>
+</svg>

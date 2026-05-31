@@ -246,21 +246,32 @@ if(MAGNUM_BUILD_TESTS AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR NOT CMAKE
         ${PROJECT_BINARY_DIR}/src)
     target_link_libraries(UiGenerateTheme PRIVATE
         Magnum::Magnum
-        Magnum::Text) # just for Text::Alignment string conversion
+        Magnum::Text)
+    if(MAGNUM_BUILD_STATIC)
+        # Link FreeTypeFont that's required for generating name-to-glyph
+        # mapping for icons (as StbTrueTypeFont doesn't support glyph names).
+        # Don't make it REQUIRED tho, as it's only needed if actually running
+        # the theme generation target, which is relatively rare.
+        find_package(MagnumPlugins COMPONENTS FreeTypeFont)
+        if(MagnumPlugins_FreeTypeFont_FOUND)
+            target_link_libraries(UiGenerateTheme PRIVATE MagnumPlugins::FreeTypeFont)
+        endif()
+    endif()
 
     # Build the MagnumUi-generate-theme target to regenerate the files
     add_custom_target(MagnumUi-generate-theme
-        COMMAND UiGenerateTheme ${CMAKE_CURRENT_SOURCE_DIR}/Implementation)
+        COMMAND UiGenerateTheme ${CMAKE_CURRENT_SOURCE_DIR}/Implementation
+        # Older CMake uses paths relative to the build dir, make it a working
+        # directory so paths using __FILE__ are found correctly
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
 
 if(MAGNUM_WITH_UI_GALLERY)
     find_package(Magnum REQUIRED DebugTools)
     if(CORRADE_TARGET_EMSCRIPTEN)
         find_package(Magnum REQUIRED
-            AnyImageImporter
             EmscriptenApplication)
         find_package(MagnumPlugins REQUIRED
-            StbImageImporter
             StbTrueTypeFont)
     else()
         find_package(Magnum REQUIRED Sdl2Application)
@@ -286,8 +297,6 @@ if(MAGNUM_WITH_UI_GALLERY)
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES")
     elseif(CORRADE_TARGET_EMSCRIPTEN)
         target_link_libraries(magnum-ui-gallery PRIVATE
-            Magnum::AnyImageImporter
-            MagnumPlugins::StbImageImporter
             MagnumPlugins::StbTrueTypeFont)
         if(CMAKE_VERSION VERSION_LESS 3.13)
             message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")

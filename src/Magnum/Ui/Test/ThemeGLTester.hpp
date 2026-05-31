@@ -125,7 +125,7 @@ ThemeGLTester::ThemeGLTester(const Containers::ArrayView<const Theme>& themes): 
     {
         _themeUis = Containers::Array<UserInterfaceGL>{DirectInit, themes.size(), NoCreate};
         for(std::size_t i = 0; i != themes.size(); ++i)
-            _themeUis[i].create({1024, 1024}, *themes[i].theme, &_importerManager, &_fontManager);
+            _themeUis[i].create({1024, 1024}, *themes[i].theme, nullptr, &_fontManager);
     }
 }
 

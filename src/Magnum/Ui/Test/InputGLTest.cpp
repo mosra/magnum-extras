@@ -197,7 +197,7 @@ void InputGLTest::passwordFontOverride() {
         [](UserInterface& ui, Int style, Flags, Int counter) {
             /** @todo the fontHandle() is hardcoded, ideally there would be a
                 way to query particular style fonts */
-            PasswordInput input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", fontHandle(2, 1), InputStyle(style)};
+            PasswordInput input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", fontHandle(0, 1), InputStyle(style)};
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();

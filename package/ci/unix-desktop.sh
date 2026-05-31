@@ -71,6 +71,9 @@ cmake .. \
     `# CI. Those are however needed only if targeting EGL.` \
     -DMAGNUM_WITH_STBIMAGECONVERTER=$TARGET_EGL \
     -DMAGNUM_WITH_STBTRUETYPEFONT=ON \
+    `# FreeTypeFont is used by the theme generator to create a name-to-glyph` \
+    `# mapping. StbTrueTypeFont doesn't support glyph names, unfortunately.` \
+    -DMAGNUM_WITH_FREETYPEFONT=$UI_CHECK_GENERATE_THEME \
     -G Ninja
 ninja install
 cd ../..

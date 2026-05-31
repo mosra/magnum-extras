@@ -26,20 +26,19 @@
 
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/String.h>
 #include <Corrade/Containers/StringIterable.h>
 #include <Corrade/Containers/Triple.h>
 #include <Corrade/PluginManager/Manager.h>
-#include <Corrade/PluginManager/PluginMetadata.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/ConfigurationGroup.h>
+#include <Corrade/Utility/Format.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/TextureTools/Atlas.h>
-#include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/AbstractTheme.hpp" /* TextStyle in a single test case */
 #include "Magnum/Ui/BaseLayer.h"
@@ -78,15 +77,11 @@ struct ThemeTest: TestSuite::Tester {
     void apply();
     void applyTextLayerCannotOpenFont();
     void applyTextLayerCannotFillCache();
-    void applyTextLayerImagesCannotOpen();
-    void applyTextLayerImagesCannotFit();
-    void applyTextLayerImagesUnexpectedFormat();
     void applyTextLayerTwice();
 
     void removePreviousAnimationForBlinkingCursor();
 
     private:
-        PluginManager::Manager<Trade::AbstractImporter> _importerManager;
         PluginManager::Manager<Text::AbstractFont> _fontManager;
 };
 
@@ -129,56 +124,59 @@ const struct {
     const char* name;
     DarkTheme::Features themeFeatures;
     ThemeFeatures features;
-    Containers::Optional<UnsignedInt> imageImporterChannelCount;
     Float dpiScaling, expectedFontSize;
 } ApplyData[]{
     {"data layer", {},
-        ThemeFeature::DataLayer, {}, 1.0f, 0.0f},
+        ThemeFeature::DataLayer, 1.0f, 0.0f},
     {"base layer only", {},
-        ThemeFeature::BaseLayer, {}, 1.0f, 0.0f},
+        ThemeFeature::BaseLayer, 1.0f, 0.0f},
     {"base layer, animations enabled but not applied",
         DarkTheme::Feature::Animations,
-        ThemeFeature::BaseLayer, {}, 1.0f, 0.0f},
+        ThemeFeature::BaseLayer, 1.0f, 0.0f},
     /* There are currently no essential animations in BaseLayer */
     {"base layer + base layer animations",
         DarkTheme::Feature::Animations,
-        ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, {}, 1.0f, 0.0f},
+        ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, 1.0f, 0.0f},
     {"base layer animations only",
         DarkTheme::Feature::Animations,
-        ThemeFeature::BaseLayerAnimations, {}, 1.0f, 0.0f},
+        ThemeFeature::BaseLayerAnimations, 1.0f, 0.0f},
     {"text layer only", {},
-        ThemeFeature::TextLayer, {}, 1.0f, 16.0f*2},
-    {"text layer + text layer images", {},
-        ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, {}, 1.0f, 16.0f*2},
-    {"text layer images only", {},
-        ThemeFeature::TextLayerImages, {}, 1.0f, 16.0f*2},
-    {"text layer images only, imported as RG", {},
-        ThemeFeature::TextLayerImages, 2, 1.0f, 16.0f*2},
+        ThemeFeature::TextLayer, 1.0f, 16.0f*2},
     {"text layer, animations enabled but not applied",
         DarkTheme::Feature::Animations,
-        ThemeFeature::TextLayer, {}, 1.0f, 16.0f*2},
+        ThemeFeature::TextLayer, 1.0f, 16.0f*2},
     {"text layer + essential text layer animations",
         DarkTheme::Feature::EssentialAnimations,
-        ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, {}, 1.0f, 16.0f*2},
+        ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, 1.0f, 16.0f*2},
     {"text layer + text layer animations",
         DarkTheme::Feature::Animations,
-        ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, {}, 1.0f, 16.0f*2},
+        ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, 1.0f, 16.0f*2},
     {"text layer animations only",
         DarkTheme::Feature::Animations,
-        ThemeFeature::TextLayerAnimations, {}, 1.0f, 16.0f*2},
+        ThemeFeature::TextLayerAnimations, 1.0f, 16.0f*2},
     {"event layer", {},
-        ThemeFeature::EventLayer, {}, 1.0f, 0.0f},
+        ThemeFeature::EventLayer, 1.0f, 0.0f},
     {"layout layer", {},
-        ThemeFeature::LayoutLayer, {}, 1.0f, 0.0f},
+        ThemeFeature::LayoutLayer, 1.0f, 0.0f},
     {"snap layouter", {},
-        ThemeFeature::SnapLayouter, {}, 1.0f, 0.0f},
+        ThemeFeature::SnapLayouter, 1.0f, 0.0f},
     {"generic layouter", {},
-        ThemeFeature::GenericLayouter, {}, 1.0f, 0.0f},
+        ThemeFeature::GenericLayouter, 1.0f, 0.0f},
     {"everything",
         DarkTheme::Feature::Animations,
-        ~ThemeFeatures{}, {}, 1.0f, 16.0f*2},
-    {"text layer + text layer images, 0.625x DPI scaling", {},
-        ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, {}, 0.625f, 10.0f*2},
+        ~ThemeFeatures{}, 1.0f, 16.0f*2},
+    {"text layer, 0.625x DPI scaling", {},
+        ThemeFeature::TextLayer, 0.625f, 10.0f*2},
+};
+
+const struct {
+    const char* name;
+    Vector2i extraImageSize;
+    const char* expected;
+} ApplyTextLayerCannotFillCacheData[]{
+    /* The sizes may need adjustment when more fonts are added */
+    {"fonts fail", {1000, 500}, "cannot fill a glyph cache"},
+    {"icons fail", {1000, 380}, "cannot fill a glyph cache with icons"},
 };
 
 ThemeTest::ThemeTest() {
@@ -198,12 +196,12 @@ ThemeTest::ThemeTest() {
     addInstancedTests({&ThemeTest::apply},
         Containers::arraySize(ApplyData));
 
-    addTests({&ThemeTest::applyTextLayerCannotOpenFont,
-              &ThemeTest::applyTextLayerCannotFillCache,
-              &ThemeTest::applyTextLayerImagesCannotOpen,
-              &ThemeTest::applyTextLayerImagesCannotFit,
-              &ThemeTest::applyTextLayerImagesUnexpectedFormat,
-              &ThemeTest::applyTextLayerTwice,
+    addTests({&ThemeTest::applyTextLayerCannotOpenFont});
+
+    addInstancedTests({&ThemeTest::applyTextLayerCannotFillCache},
+        Containers::arraySize(ApplyTextLayerCannotFillCacheData));
+
+    addTests({&ThemeTest::applyTextLayerTwice,
 
               &ThemeTest::removePreviousAnimationForBlinkingCursor});
 }
@@ -587,23 +585,8 @@ void ThemeTest::apply() {
     auto&& data = ApplyData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    PluginManager::Manager<Trade::AbstractImporter> importerManager;
-
-    if(!(importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
-       !(importerManager.load("PngImporter") & PluginManager::LoadState::Loaded))
-        CORRADE_SKIP("AnyImageImporter / PngImporter plugins not found.");
     if(!(_fontManager.load("TrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("TrueTypeFont plugin not found.");
-
-    /* If overriding channel count is requested, make StbImageImporter the
-       preferred plugin to load PNGs */
-    if(data.imageImporterChannelCount) {
-        if(!(importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
-            CORRADE_SKIP("StbImageImporter plugin not found.");
-
-        importerManager.setPreferredPlugins("PngImporter", {"StbImageImporter"});
-        importerManager.metadata("StbImageImporter")->configuration().setValue("forceChannelCount", *data.imageImporterChannelCount);
-    }
 
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
@@ -659,7 +642,7 @@ void ThemeTest::apply() {
     /* The AbstractTheme can have the set of features bigger than what the
        particular DarkTheme supports, which would then fail if data.features is
        ~ThemeFeatures{}. Make it an union with what's actually supported. */
-    CORRADE_VERIFY(theme.apply(ui, data.features & theme.features(), &importerManager, &_fontManager));
+    CORRADE_VERIFY(theme.apply(ui, data.features & theme.features(), nullptr, &_fontManager));
 
     /* Style transition for disabled functions should be set if base / text
        layer style is set and not if not */
@@ -709,24 +692,17 @@ void ThemeTest::apply() {
     }
     if(data.features >= ThemeFeature::TextLayer) {
         CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 5);
-        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 4);
+        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 5);
 
-        /* Enumerating only real fonts, icon font is currently instanceless */
-        /** @todo update once icons are a real font also */
         /** @todo there's no way to get a font handle out of a style, have to
             fake it like this */
-        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(2, 1)).size(), data.expectedFontSize);
-        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(3, 1)).size(), data.expectedFontSize);
-        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(4, 1)).size(), data.expectedFontSize*3/2);
+        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(0, 1)).size(), data.expectedFontSize);
+        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(1, 1)).size(), data.expectedFontSize);
+        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(2, 1)).size(), data.expectedFontSize*3/2);
+        /* Icons are 24/32 instead of 16/24 */
+        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(3, 1)).size(), data.expectedFontSize*3/2);
+        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(4, 1)).size(), data.expectedFontSize*2);
 
-        /* No other way to check the contents. Widget visuals tested in
-           <Widget>GLTest. */
-    }
-    if(data.features >= ThemeFeature::TextLayerImages) {
-        CORRADE_COMPARE(ui.textLayer().shared().fontCount(),
-            data.features >= ThemeFeature::TextLayer ? 5 : 2);
-        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(),
-            data.features >= ThemeFeature::TextLayer ? 4 : 1);
         /* No other way to check the contents. Widget visuals tested in
            <Widget>GLTest. */
     }
@@ -791,6 +767,9 @@ void ThemeTest::applyTextLayerCannotOpenFont() {
 }
 
 void ThemeTest::applyTextLayerCannotFillCache() {
+    auto&& data = ApplyTextLayerCannotFillCacheData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     if(!(_fontManager.load("TrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("TrueTypeFont plugin not found.");
 
@@ -809,7 +788,7 @@ void ThemeTest::applyTextLayerCannotFillCache() {
     /* Add a monster image to the atlas which in turn should make it impossible
        to put anything else there */
     Vector2i offset[1];
-    CORRADE_VERIFY(glyphCache.atlas().add({{500, 500}}, offset));
+    CORRADE_VERIFY(glyphCache.atlas().add({data.extraImageSize}, offset));
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
@@ -831,159 +810,21 @@ void ThemeTest::applyTextLayerCannotFillCache() {
     Error redirectError{&out};
     CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
     /* Error from the font fillGlyphCache() is printed before */
-    CORRADE_COMPARE_AS(out,
-        "\nUi::DarkTheme::apply(): cannot fill a glyph cache\n",
+    CORRADE_COMPARE_AS(out, Utility::format(
+        "\nUi::DarkTheme::apply(): {}\n", data.expected),
         TestSuite::Compare::StringHasSuffix);
-}
-
-void ThemeTest::applyTextLayerImagesCannotOpen() {
-    /* Manager that deliberately picks a nonexistent plugin directory to not
-       have any plugins loaded */
-    PluginManager::Manager<Trade::AbstractImporter> importerManager{"nonexistent"};
-
-    /* Happens on builds with static plugins. Can't really do much there. */
-    if(importerManager.loadState("AnyImageImporter") != PluginManager::LoadState::NotFound)
-        CORRADE_SKIP("AnyImageImporter plugin loaded, cannot test");
-
-    struct Interface: UserInterface {
-        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
-    } ui{NoCreate};
-    ui.setSize({200, 300});
-
-    struct: Text::AbstractGlyphCache {
-        using Text::AbstractGlyphCache::AbstractGlyphCache;
-
-        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
-        void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
-
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
-            .setEditingStyleCount(TextEditingStyleUniformCount)
-        } {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } layerShared{glyphCache};
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    };
-    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), layerShared));
-
-    DarkTheme theme;
-
-    Containers::String out;
-    Error redirectError{&out};
-    CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayerImages, &importerManager, nullptr));
-    CORRADE_COMPARE_AS(out,
-        "\nUi::DarkTheme::apply(): cannot open an icon atlas\n",
-        TestSuite::Compare::StringHasSuffix);
-}
-
-void ThemeTest::applyTextLayerImagesCannotFit() {
-    if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
-       !(_importerManager.load("PngImporter") & PluginManager::LoadState::Loaded))
-        CORRADE_SKIP("AnyImageImporter / PngImporter plugins not found.");
-
-    struct Interface: UserInterface {
-        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
-    } ui{NoCreate};
-    ui.setSize({200, 300});
-
-    struct: Text::AbstractGlyphCache {
-        using Text::AbstractGlyphCache::AbstractGlyphCache;
-
-        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
-        void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
-
-    /* Add a monster image to the atlas which in turn should make it impossible
-       to put anything else there */
-    Vector2i offset[1];
-    CORRADE_VERIFY(glyphCache.atlas().add({{1000, 500}}, offset));
-
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
-            .setEditingStyleCount(TextEditingStyleUniformCount)
-        } {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } layerShared{glyphCache};
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    };
-    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), layerShared));
-
-    DarkTheme theme;
-
-    Containers::String out;
-    Error redirectError{&out};
-    CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayerImages, &_importerManager, nullptr));
-    CORRADE_COMPARE(out, "Ui::DarkTheme::apply(): cannot fit 2 icons into the glyph cache\n");
-}
-
-void ThemeTest::applyTextLayerImagesUnexpectedFormat() {
-    PluginManager::Manager<Trade::AbstractImporter> importerManager;
-
-    if(!(importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
-       !(importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
-        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
-
-    /* Make StbImageImporter the preferred plugin to load PNGs, but configure
-       it to open the image as a different format */
-    importerManager.setPreferredPlugins("PngImporter", {"StbImageImporter"});
-    importerManager.metadata("StbImageImporter")->configuration().setValue("forceBitDepth", 32);
-
-    struct Interface: UserInterface {
-        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
-    } ui{NoCreate};
-    ui.setSize({200, 300});
-
-    struct: Text::AbstractGlyphCache {
-        using Text::AbstractGlyphCache::AbstractGlyphCache;
-
-        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
-        void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
-
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
-            .setEditingStyleCount(TextEditingStyleUniformCount)
-        } {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } layerShared{glyphCache};
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    };
-    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), layerShared));
-
-    DarkTheme theme;
-
-    Containers::String out;
-    Error redirectError{&out};
-    CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayerImages, &importerManager, nullptr));
-    CORRADE_COMPARE(out, "Ui::DarkTheme::apply(): expected PixelFormat::R8Unorm icons but got an image with PixelFormat::R32F\n");
 }
 
 void ThemeTest::applyTextLayerTwice() {
-    if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
-       !(_importerManager.load("PngImporter") & PluginManager::LoadState::Loaded))
-        CORRADE_SKIP("AnyImageImporter / PngImporter plugins not found.");
     if(!(_fontManager.load("TrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("TrueTypeFont plugin not found.");
 
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    /* Window size isn't used for anything, use a 2x DPI scaling to have the
+    /* Window size isn't used for anything, use a 1.5x DPI scaling to have the
        glyph cache fully filled */
-    ui.setSize({200, 300}, {1, 1}, {400, 600});
+    ui.setSize({200, 300}, {1, 1}, {300, 450});
 
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
@@ -1007,14 +848,18 @@ void ThemeTest::applyTextLayerTwice() {
     ui.setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared));
 
     DarkTheme theme;
-    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, &_importerManager, &_fontManager));
+    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
     CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 5);
-    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 4);
+    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 5);
 
-    CORRADE_EXPECT_FAIL("This shouldn't fail but should instead replace the previous font and image font, *somehow*.");
-    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, &_importerManager, &_fontManager));
+    {
+        CORRADE_EXPECT_FAIL("This shouldn't fail but should instead replace the previous fonts, *somehow*.");
+        CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 5);
+    }
+    /* This doesn't fail because the fonts are added only after glyph cache
+       filling succeeds */
     CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 5);
-    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 4);
 }
 
 void ThemeTest::removePreviousAnimationForBlinkingCursor() {
