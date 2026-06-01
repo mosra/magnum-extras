@@ -484,6 +484,8 @@ jobs:
     # libidn11 needed by CMake, freetype by the theme generator
     - install-base-linux:
         extra: libidn11 libgl1-mesa-dev libsdl2-dev libglfw3-dev libfreetype6-dev
+    # Default leads to OOMs as of 2026-05-31
+    - cap-ninja-jobs
     - install-clang
     - install-cmake:
         version: "3.5.2"
