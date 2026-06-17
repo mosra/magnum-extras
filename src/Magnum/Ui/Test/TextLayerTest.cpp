@@ -2594,6 +2594,7 @@ void TextLayerTest::sharedAddFont() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2669,6 +2670,7 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
             ++_destructed;
         }
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2780,6 +2782,7 @@ void TextLayerTest::sharedAddFontNotFoundInCache() {
         bool doIsOpened() const override { return false; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2803,6 +2806,7 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2852,6 +2856,7 @@ void TextLayerTest::sharedAddInstancelessFontHasInstance() {
         bool doIsOpened() const override { return false; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2906,6 +2911,7 @@ void TextLayerTest::sharedAddFontGlyphMappingOutOfRange() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2943,6 +2949,7 @@ void TextLayerTest::sharedFontInvalidHandle() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -3003,6 +3010,7 @@ void TextLayerTest::sharedFontNoInstance() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -3055,6 +3063,7 @@ void TextLayerTest::sharedSetStyle() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -3188,6 +3197,7 @@ void TextLayerTest::sharedSetStyleImplicitFeatures() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -3373,6 +3383,7 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -3597,6 +3608,7 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -3967,6 +3979,7 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -4087,6 +4100,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -4251,6 +4265,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -4445,6 +4460,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -4641,6 +4657,7 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -5402,6 +5419,7 @@ void TextLayerTest::dynamicStyle() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -6223,9 +6241,11 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float size) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
-            return {size, 8.0f, -4.0f, 16.0f, 98};
+        }
+        Properties doProperties() override {
+            return {16.0f, 8.0f, -4.0f, 16.0f, 98};
         }
         void doClose() override { _opened = false; }
 
@@ -6236,14 +6256,16 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
 
         bool _opened = false;
     } threeGlyphFont;
-    threeGlyphFont.openFile({}, 16.0f);
+    threeGlyphFont.openFile({}, {});
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float size) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
-            return {size, 1.0f, -0.5f, 2.0f, 67};
+        }
+        Properties doProperties() override {
+            return {2.0f, 1.0f, -0.5f, 2.0f, 67};
         }
         void doClose() override { _opened = false; }
 
@@ -6254,7 +6276,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
 
         bool _opened = false;
     } oneGlyphFont;
-    oneGlyphFont.openFile({}, 2.0f);
+    oneGlyphFont.openFile({}, {});
 
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
@@ -7193,6 +7215,7 @@ void TextLayerTest::createRemoveHandleRecycle() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -7354,6 +7377,7 @@ void TextLayerTest::createStyleOutOfRange() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -7454,6 +7478,7 @@ void TextLayerTest::setTextSetGlyph() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -7513,6 +7538,7 @@ void TextLayerTest::setCursor() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -7627,6 +7653,7 @@ void TextLayerTest::setCursorInvalid() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -7679,6 +7706,7 @@ void TextLayerTest::updateText() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -7901,6 +7929,7 @@ void TextLayerTest::updateTextInvalid() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -7974,6 +8003,7 @@ void TextLayerTest::editText() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -8067,6 +8097,7 @@ void TextLayerTest::editTextInvalid() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -8119,6 +8150,7 @@ void TextLayerTest::textEditCallback() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -8512,8 +8544,10 @@ void TextLayerTest::cycleGlyphEditableNonEditableText() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             return {12.0f, 4.0f, -4.0f, 8.0f, 1};
         }
         void doClose() override { _opened = false; }
@@ -8525,7 +8559,7 @@ void TextLayerTest::cycleGlyphEditableNonEditableText() {
 
         bool _opened = false;
     } font;
-    font.openFile({}, 0.0f);
+    font.openFile({}, {});
 
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
@@ -8602,8 +8636,10 @@ void TextLayerTest::createSetTextTextProperties() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             return {1.0f, 1.0f, 1.0f, 2.0f, 1};
         }
         void doClose() override { _opened = false; }
@@ -8665,7 +8701,7 @@ void TextLayerTest::createSetTextTextProperties() {
 
         bool _opened = false;
     } font;
-    font.openFile({}, 16.0f);
+    font.openFile({}, {});
 
     /* A trivial glyph cache */
     struct: Text::AbstractGlyphCache {
@@ -8777,8 +8813,10 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
     struct Font: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             return {1.0f, 1.0f, 1.0f, 2.0f, 1};
         }
         void doClose() override { _opened = false; }
@@ -8839,7 +8877,7 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
 
         bool _opened = false;
     } font;
-    font.openFile({}, 16.0f);
+    font.openFile({}, {});
 
     /* A trivial glyph cache */
     struct: Text::AbstractGlyphCache {
@@ -8990,6 +9028,7 @@ void TextLayerTest::createSetTextTextPropertiesEditableInvalid() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9051,6 +9090,7 @@ void TextLayerTest::createSetUpdateTextFromLayerItself() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9116,6 +9156,7 @@ void TextLayerTest::setColor() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9187,6 +9228,7 @@ void TextLayerTest::setPadding() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9275,6 +9317,7 @@ void TextLayerTest::setPaddingInvalid() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9331,6 +9374,7 @@ void TextLayerTest::setTransformation() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9491,6 +9535,7 @@ void TextLayerTest::setTransformationInvalid() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9719,6 +9764,7 @@ void TextLayerTest::invalidFontHandle() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9772,6 +9818,7 @@ void TextLayerTest::nonEditableText() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9855,6 +9902,7 @@ void TextLayerTest::nonEditableTextTransformation() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -9907,6 +9955,7 @@ void TextLayerTest::noSharedStyleFonts() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -10065,6 +10114,7 @@ void TextLayerTest::layoutEmpty() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -10112,8 +10162,10 @@ void TextLayerTest::layout() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             return {16.0f, 8.0f, -4.0f, 16.0f, 1};
         }
         void doClose() override { _opened = false; }
@@ -10147,7 +10199,7 @@ void TextLayerTest::layout() {
 
         bool _opened = false;
     } font;
-    font.openFile({}, 0.0f);
+    font.openFile({}, {});
 
     /* The advances alone are enough to give us text sizes, no need to fill the
        cache with anything */
@@ -10316,6 +10368,7 @@ void TextLayerTest::updateEmpty() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -10369,9 +10422,11 @@ void TextLayerTest::updateCleanDataOrder() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float size) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
-            return {size, 8.0f, -4.0f, 16.0f, 98};
+        }
+        Properties doProperties() override {
+            return {16.0f, 8.0f, -4.0f, 16.0f, 98};
         }
         void doClose() override { _opened = false; }
 
@@ -10382,14 +10437,16 @@ void TextLayerTest::updateCleanDataOrder() {
 
         bool _opened = false;
     } threeGlyphFont;
-    threeGlyphFont.openFile({}, 16.0f);
+    threeGlyphFont.openFile({}, {});
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float size) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
-            return {size, 1.0f, -0.5f, 2.0f, 67};
+        }
+        Properties doProperties() override {
+            return {2.0f, 1.0f, -0.5f, 2.0f, 67};
         }
         void doClose() override { _opened = false; }
 
@@ -10400,7 +10457,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
         bool _opened = false;
     } oneGlyphFont;
-    oneGlyphFont.openFile({}, 2.0f);
+    oneGlyphFont.openFile({}, {});
 
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
@@ -11574,8 +11631,10 @@ void TextLayerTest::updateAlignment() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             /* Font size and line height shouldn't be used for any alignment,
                ascent / descent should */
             return {100.0f, 3.5f, -2.0f, 200.0f, 1};
@@ -11623,7 +11682,7 @@ void TextLayerTest::updateAlignment() {
 
         bool _opened = false;
     } font;
-    font.openFile({}, 100.0f);
+    font.openFile({}, {});
 
     /* A trivial glyph cache. While font's ascent/descent goes both above and
        below the line, this is just above. */
@@ -11843,8 +11902,10 @@ void TextLayerTest::updatePadding() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             /* Font size and line height shouldn't be used for any alignment,
                ascent / descent should */
             return {100.0f, 3.5f, -2.0f, 200.0f, 1};
@@ -11891,7 +11952,7 @@ void TextLayerTest::updatePadding() {
     /* Direction returned from the shaper, direction passed through from
        TextProperties tested in updateAlignment() above */
     font.direction = data.shapeDirection;
-    font.openFile({}, 100.0f);
+    font.openFile({}, {});
 
     /* A trivial glyph cache. While font's ascent/descent goes both above and
        below the line, this is just above. */
@@ -12109,10 +12170,15 @@ void TextLayerTest::updateTransformation() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float size) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        /* The font is opened at twice the size to then add it back at the
+           original size below, to verify this 0.5x scale gets correctly
+           propagated to the distance field attribute */
+        Properties doProperties() override {
             /* Line height shouldn't be used for anything */
-            return {size, 7.0f*size/100.0f, -4.0f*size/100.0f, 10000.0f, 1};
+            return {200.0f, 7.0f*200.0f/100.0f, -4.0f*200.0f/100.0f, 10000.0f, 1};
         }
         void doClose() override { _opened = false; }
 
@@ -12145,10 +12211,7 @@ void TextLayerTest::updateTransformation() {
 
         bool _opened = false;
     } font;
-    /* Open the font at twice the size to then add it back at the original size
-       below, to verify this 0.5x scale gets correctly propagated to the
-       distance field attribute */
-    font.openFile({}, 200.0f);
+    font.openFile({}, {});
 
     /* A trivial glyph cache. While font's ascent/descent goes both above and
        below the line, this is just above. */
@@ -12529,6 +12592,7 @@ void TextLayerTest::keyTextEvent() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -12820,6 +12884,7 @@ void TextLayerTest::keyTextEventSynthesizedFromPointerPress() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -12955,6 +13020,7 @@ void TextLayerTest::debugIntegration() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -13056,6 +13122,7 @@ void TextLayerTest::debugIntegrationNoCallback() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -13172,6 +13239,7 @@ void TextLayerTest::debugIntegrationLambdaStyleName() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }

@@ -140,9 +140,11 @@ void TextLayerGLBenchmark::fragment() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float size) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
-            return {size, 16.0f, -16.0f, 32.0f, 1};
+        }
+        Properties doProperties() override {
+            return {32.0f, 16.0f, -16.0f, 32.0f, 1};
         }
         void doClose() override { _opened = false; }
 
@@ -153,7 +155,7 @@ void TextLayerGLBenchmark::fragment() {
 
         bool _opened = false;
     } font;
-    font.openFile({}, 32.0f);
+    font.openFile({}, {});
 
     Image2D white{PixelFormat::R8Unorm, {32, 32}, Containers::Array<char>{DirectInit, 32*32, '\xff'}};
 

@@ -500,6 +500,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -686,6 +687,7 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -962,6 +964,7 @@ void TextLayerStyleAnimatorTest::advance() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2121,6 +2124,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2341,6 +2345,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2488,6 +2493,7 @@ void TextLayerStyleAnimatorTest::advanceConflictingAnimations() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2648,6 +2654,7 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -2903,6 +2910,7 @@ void TextLayerStyleAnimatorTest::advanceInvalidCursorSelection() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -3040,6 +3048,7 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -3206,6 +3215,7 @@ void TextLayerStyleAnimatorTest::uiAdvance() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
@@ -3296,6 +3306,7 @@ void TextLayerStyleAnimatorTest::uiAdvanceEventTransition() {
         bool doIsOpened() const override { return true; }
         void doClose() override {}
 
+        Properties doProperties() override { return {}; }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
         Vector2 doGlyphSize(UnsignedInt) override { return {}; }
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }

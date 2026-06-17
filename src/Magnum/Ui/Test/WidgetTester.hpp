@@ -133,8 +133,10 @@ struct TestTextLayerShared: TextLayer::Shared {
     struct TestFont: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             return {16.0f, 8.0f, -4.0f, 16.0f, 1};
         }
         void doClose() override { _opened = false; }

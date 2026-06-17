@@ -80,12 +80,15 @@ class PasswordFont: public Text::AbstractFont {
 
         bool doIsOpened() const override { return _opened; }
 
-        Properties doOpenData(Containers::ArrayView<const char>, Float size) override {
-            CORRADE_INTERNAL_ASSERT(size == _fontProperties.size);
+        void doOpenData(Containers::Array<char>&&, Text::DataFlags, Float size, UnsignedInt fontId) override {
+            CORRADE_INTERNAL_ASSERT(size == _fontProperties.size && fontId == 0);
             #ifdef CORRADE_NO_ASSERT
             static_cast<void>(size);
+            static_cast<void>(fontId);
             #endif
             _opened = true;
+        };
+        Properties doProperties() override {
             return _fontProperties;
         }
 

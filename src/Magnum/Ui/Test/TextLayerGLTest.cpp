@@ -2978,8 +2978,10 @@ void TextLayerGLTest::drawOrder() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             return {8.0f, 8.0f, -8.0f, 16.0f, 1};
         }
         void doClose() override { _opened = false; }
@@ -3162,8 +3164,10 @@ void TextLayerGLTest::drawClipping() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return _opened; }
-        Properties doOpenFile(Containers::StringView, Float) override {
+        void doOpenFile(Containers::StringView, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             return {8.0f, 80.0f, -80.0f, 160.0f, 1};
         }
         void doClose() override { _opened = false; }

@@ -399,8 +399,10 @@ void ThemeTest::passwordFont() {
         Text::FontFeatures doFeatures() const override {
             return Text::FontFeature::OpenData;
         }
-        Properties doOpenData(Containers::ArrayView<const char>, Float) override {
+        void doOpenData(Containers::Array<char>&&, Text::DataFlags, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             return {12.34f, 6.54f, -1.23f, 23.45f, 2024};
         }
         /** @todo gah, can we do without this?! ugh */
@@ -492,8 +494,10 @@ void ThemeTest::passwordFontShape() {
         Text::FontFeatures doFeatures() const override {
             return Text::FontFeature::OpenData;
         }
-        Properties doOpenData(Containers::ArrayView<const char>, Float) override {
+        void doOpenData(Containers::Array<char>&&, Text::DataFlags, Float, UnsignedInt) override {
             _opened = true;
+        }
+        Properties doProperties() override {
             /* The metrics aren't used for anything when shaping, only glyph
                count is important for the cache */
             return {0.0f, 0.0f, 0.0f, 0.0f, 4042};
