@@ -383,10 +383,10 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         Containers::Pointer<Text::AbstractFont> iconFont = fontManager->loadAndInstantiate("TrueTypeFont");
         Containers::Pointer<Text::AbstractFont> iconFontLarge = fontManager->loadAndInstantiate("TrueTypeFont");
         if(!font || !fontLarge || !iconFont || !iconFontLarge ||
-           !font->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 16.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
-           !fontLarge->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 24.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
-           !iconFont->openData(rs.getRaw("icons.ttf"_s), 24.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
-           !iconFontLarge->openData(rs.getRaw("icons.ttf"_s), 32.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max())
+           !font->openMemory(rs.getRaw("SourceSans3-Regular.otf"_s), 16.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
+           !fontLarge->openMemory(rs.getRaw("SourceSans3-Regular.otf"_s), 24.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
+           !iconFont->openMemory(rs.getRaw("icons.ttf"_s), 24.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
+           !iconFontLarge->openMemory(rs.getRaw("icons.ttf"_s), 32.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max())
         ) {
             Error{} << "Ui::DarkTheme::apply(): cannot open a font";
             return {};
