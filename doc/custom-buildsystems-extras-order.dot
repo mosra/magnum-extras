@@ -32,8 +32,6 @@ digraph "Magnum Extras dependency order" {
     MagnumGL [style=solid label="Magnum\nGL" class="m-info"]
     MagnumText [style=solid label="Magnum\nText" class="m-info"]
 
-    {rank=same MagnumGL MagnumTrade}
-
     MagnumUi [label="Magnum\nUi" class="m-info"]
 
     MagnumUi -> MagnumGL
