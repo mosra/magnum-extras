@@ -1746,7 +1746,7 @@ void ScenePlayer::drawEvent() {
 
         /* Draw selected object. This needs a depth buffer test again in order
            to correctly order the tangent space visualizers. */
-        if(!_data->selectedObjectDrawables.isEmpty()) {;
+        if(!_data->selectedObjectDrawables.isEmpty()) {
             GL::Renderer::enable(GL::Renderer::Feature::Blending);
             /* Ugh non-premultiplied alpha */
             GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
