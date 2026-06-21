@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/StaticArray.h>
 #include <Corrade/Containers/StringIterable.h>
 #include <Corrade/Containers/StringStlHash.h>
 #include <Corrade/PluginManager/Manager.h>

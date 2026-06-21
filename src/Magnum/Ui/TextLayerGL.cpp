@@ -28,6 +28,7 @@
 
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Iterable.h>
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Resource.h>
