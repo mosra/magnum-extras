@@ -411,9 +411,11 @@ PrimitiveClipRatio.)")
     _profilerValues = args.value<DebugTools::FrameProfilerGL::Values>("profile");
 
     #ifdef CORRADE_IS_DEBUG_BUILD
-    if(args.isSet("tweakable")) _tweakable.enable();
+    if(args.isSet("tweakable"))
+        _tweakable.enable();
     #endif
-    if(args.isSet("verbose")) _importerFlags |= Trade::ImporterFlag::Verbose;
+    if(args.isSet("verbose"))
+        _importerFlags |= Trade::ImporterFlag::Verbose;
 
     /* Setup renderer defaults */
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
@@ -510,12 +512,14 @@ PrimitiveClipRatio.)")
     _file = args.value("file");
 
     /* Scene / image ID to load. If not specified, -1 is used. */
-    if(!args.value("id").empty()) _id = args.value<Int>("id");
+    if(!args.value("id").empty())
+        _id = args.value<Int>("id");
 
     /* Load a scene importer plugin */
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(args.value("importer"));
-    if(importer) importer->addFlags(_importerFlags);
+    if(importer)
+        importer->addFlags(_importerFlags);
 
     /* Propagate user-defined options from the command line */
     /** @todo publish Implementation/converterUtilities.h from Magnum and use
@@ -582,7 +586,8 @@ PrimitiveClipRatio.)")
     } else if(args.value("importer") == "AnySceneImporter") {
         Debug{} << "Opening as a scene failed, trying as an image...";
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
-        if(imageImporter) imageImporter->addFlags(_importerFlags);
+        if(imageImporter)
+            imageImporter->addFlags(_importerFlags);
         if(imageImporter && imageImporter->openFile(_file)) {
             if(!imageImporter->image2DCount()) {
                 Error{} << "No 2D images found in the file";
@@ -631,7 +636,8 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     Debug{} << "Dropped file" << _droppedFiles.size() << Debug::nospace << "/" << Debug::nospace << totalCount << filename;
 
     /* We don't have all files, don't do anything yet */
-    if(_droppedFiles.size() != totalCount) return;
+    if(_droppedFiles.size() != totalCount)
+        return;
 
     /* We have everything, find the top-level file */
     Containers::StringView topLevelFile;
@@ -660,7 +666,8 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     if(topLevelFile) {
         Containers::Pointer<Trade::AbstractImporter> importer =
             _manager.loadAndInstantiate("AnySceneImporter");
-        if(!importer) std::exit(1);
+        if(!importer)
+            std::exit(1);
 
         /* Make the extra files available to the importer */
         importer->setFileCallback([](const std::string& filename,
@@ -674,7 +681,8 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
                 if(found == player._droppedFiles.end()) {
                     const Containers::StringView relative = Utility::Path::filename(filename);
                     found = player._droppedFiles.find(relative);
-                    if(found == player._droppedFiles.end()) return {};
+                    if(found == player._droppedFiles.end())
+                        return {};
 
                     Warning{} << filename << "was not found, supplying" << relative << "instead";
                 }

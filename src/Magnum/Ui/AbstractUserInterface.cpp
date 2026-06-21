@@ -2939,7 +2939,8 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
             state.state |= UserInterfaceState::NeedsNodeClean;
             /** @todo some way to efficiently iterate set bits */
             for(std::size_t i = 0; i != nodesRemove.size(); ++i)
-                if(nodesRemove[i]) removeNodeInternal(i);
+                if(nodesRemove[i])
+                    removeNodeInternal(i);
         }
 
         /* Then, for each layer ... */

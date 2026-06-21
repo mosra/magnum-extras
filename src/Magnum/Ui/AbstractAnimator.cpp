@@ -1261,7 +1261,8 @@ void AbstractAnimator::clean(const Containers::BitArrayView animationIdsToRemove
 
     /** @todo some way to efficiently iterate set bits */
     for(std::size_t i = 0; i != animationIdsToRemove.size(); ++i) {
-        if(animationIdsToRemove[i]) removeInternal(i);
+        if(animationIdsToRemove[i])
+            removeInternal(i);
     }
 }
 

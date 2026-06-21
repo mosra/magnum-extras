@@ -1343,18 +1343,21 @@ void LineLayerGLTest::eventStyleTransition() {
         .setStyleTransition(
             [](UnsignedInt style) -> UnsignedInt {
                 /* Gets triggered right before disabled transition */
-                if(style == 1) return 1;
+                if(style == 1)
+                    return 1;
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
             [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
             [](UnsignedInt style) -> UnsignedInt {
-                if(style == 0) return 1;
+                if(style == 0)
+                    return 1;
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
             [](UnsignedInt style) -> UnsignedInt {
-                if(style == 1) return 0;
+                if(style == 1)
+                    return 0;
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             });
 

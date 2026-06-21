@@ -168,7 +168,8 @@ void ImagePlayer::pointerMoveEvent(PointerMoveEvent& event) {
 }
 
 void ImagePlayer::scrollEvent(ScrollEvent& event) {
-    if(!event.offset().y()) return;
+    if(!event.offset().y())
+        return;
 
     /* Zoom to selection point -- translate that point to origin, scale,
        translate back */
@@ -184,7 +185,8 @@ void ImagePlayer::scrollEvent(ScrollEvent& event) {
 }
 
 void ImagePlayer::load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) {
-    if(id < 0) id = 0;
+    if(id < 0)
+        id = 0;
     else if(UnsignedInt(id) >= importer.image2DCount()) {
         Fatal{} << "Cannot load an image with ID" << id << "as there's only" << importer.image2DCount() << "images";
     }
@@ -192,7 +194,8 @@ void ImagePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
     Debug{} << "Loading image" << id << importer.image2DName(id);
 
     Containers::Optional<Trade::ImageData2D> image = importer.image2D(id);
-    if(!image) return;
+    if(!image)
+        return;
 
     _texture = GL::Texture2D{};
     _texture

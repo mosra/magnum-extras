@@ -830,7 +830,8 @@ Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t m
 }
 
 void ScenePlayer::playPause() {
-    if(!_data) return;
+    if(!_data)
+        return;
 
     if(_data->player.state() == Animation::State::Playing) {
         _data->player.pause(std::chrono::system_clock::now().time_since_epoch());
@@ -850,7 +851,8 @@ void ScenePlayer::playPause() {
 }
 
 void ScenePlayer::stop() {
-    if(!_data) return;
+    if(!_data)
+        return;
 
     _data->player.stop();
 
@@ -1016,7 +1018,8 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         }
 
         Containers::String meshName = importer.meshName(i);
-        if(!meshName) meshName = Utility::format("#{}", i);
+        if(!meshName)
+            meshName = Utility::format("#{}", i);
 
         /* Disable warnings on custom attributes, as we printed them with
            actual string names below. Generate normals for triangle meshes
@@ -1174,7 +1177,8 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
             const UnsignedInt lightId = lightReference.second();
             Object3D* const object = _data->objects[objectId].object;
             const Containers::Optional<Trade::LightData>& light = _data->lights[lightId].light;
-            if(!object || !light) continue;
+            if(!object || !light)
+                continue;
 
             ++_data->lightCount;
 
@@ -1197,7 +1201,8 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
                great as it's quite misleading, but better than nothing. */
             /** @todo make this runtime-changeable like with TBN visualizers */
             Float range;
-            if(light->range() != Constants::inf()) range = light->range();
+            if(light->range() != Constants::inf())
+                range = light->range();
             else range = 5.0f;
 
             /* Point light has a sphere around */
@@ -1236,7 +1241,8 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
             const UnsignedInt skinId = skinReference.second();
             Object3D* const object = _data->objects[objectId].object;
             const SkinInfo& skin = skins[skinId];
-            if(!object || !skin.skin) continue;
+            if(!object || !skin.skin)
+                continue;
 
             _data->objects[objectId].skinJointMatrices = _data->skinJointMatrices.sliceSize(skin.offset, skin.skin->joints().size());
         }
@@ -1246,13 +1252,15 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         if(scene->hasField(Trade::SceneField::Camera)) for(const Containers::Pair<UnsignedInt, UnsignedInt>& cameraReference: scene->camerasAsArray()) {
             const UnsignedInt objectId = cameraReference.first();
             Object3D* const object = _data->objects[objectId].object;
-            if(!object) continue;
+            if(!object)
+                continue;
 
             /** @todo this doesn't handle objects with multiple
                 camera/mesh/light/... assignments correctly */
             _data->objects[objectId].type = "camera"_s;
 
-            if(cameraReference.second() == 0) _data->cameraObject = object;
+            if(cameraReference.second() == 0)
+                _data->cameraObject = object;
 
             /** @todo visualize the camera, not just for the default but for all */
         }
@@ -1261,9 +1269,11 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
            own */
         for(std::size_t i = 0; i != _data->objects.size(); ++i) {
             Object3D* const object = _data->objects[i].object;
-            if(!object) continue;
+            if(!object)
+                continue;
 
-            if(_data->objects[i].lightId != 0xffffffffu) continue;
+            if(_data->objects[i].lightId != 0xffffffffu)
+                continue;
 
             new FlatDrawable{*object, flatShader(Shaders::FlatGL3D::Flag::VertexColor), _axisMesh, UnsignedInt(i), 0xffffff_rgbf, Vector3{1.0f}, nullptr, 0, 0, _data->objectVisualizationDrawables};
         }
@@ -1277,7 +1287,8 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
             const UnsignedInt meshId = meshMaterial.second().first();
             const Int materialId = meshMaterial.second().second();
             Containers::Optional<GL::Mesh>& mesh = _data->meshes[meshId].mesh;
-            if(!object || !mesh) continue;
+            if(!object || !mesh)
+                continue;
 
             /* Save the mesh pointer as well, so we know what to draw for object
                selection */
@@ -1368,7 +1379,8 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
 
     /* Add joint drawables for all skins to fill the skinJointMatrices array */
     for(std::size_t i = 0; i != skins.size(); ++i) {
-        if(!skins[i].skin) continue;
+        if(!skins[i].skin)
+            continue;
 
         const SkinInfo& skinInfo = skins[i];
 
@@ -1433,7 +1445,8 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
        otherwise just used the hardcoded setup from above */
     if(importer.cameraCount()) {
         Containers::Optional<Trade::CameraData> camera = importer.camera(0);
-        if(camera) _data->camera->setProjectionMatrix(Matrix4::perspectiveProjection(camera->fov(), 1.0f, camera->near(), camera->far()));
+        if(camera)
+            _data->camera->setProjectionMatrix(Matrix4::perspectiveProjection(camera->fov(), 1.0f, camera->near(), camera->far()));
     }
 
     /* Import animations */
@@ -1858,7 +1871,8 @@ Vector3 ScenePlayer::unproject(const Vector2& windowPosition, Float depth) const
 }
 
 void ScenePlayer::keyPressEvent(KeyEvent& event) {
-    if(!_data) return;
+    if(!_data)
+        return;
 
     /* Reset the transformation to the original view */
     if(event.key() == Key::NumZero) {
@@ -2139,7 +2153,8 @@ void ScenePlayer::pointerMoveEvent(PointerMoveEvent& event) {
 }
 
 void ScenePlayer::scrollEvent(ScrollEvent& event) {
-    if(!_data || !event.offset().y()) return;
+    if(!_data || !event.offset().y())
+        return;
 
     #ifndef MAGNUM_TARGET_GLES
     /* Adjust TBN visualization length with Ctrl-scroll if it's currently shown */

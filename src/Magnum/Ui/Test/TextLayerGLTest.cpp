@@ -1431,38 +1431,46 @@ const struct {
 } EventStyleTransitionData[]{
     {"", false, false,
         [](UnsignedInt style) -> UnsignedInt {
-            if(style == 0) return 2;
+            if(style == 0)
+                return 2;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
-            if(style == 2) return 0;
+            if(style == 2)
+                return 0;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }},
     {"editable", true, true,
         [](UnsignedInt style) -> UnsignedInt {
-            if(style == 1) return 3;
+            if(style == 1)
+                return 3;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
-            if(style == 3) return 0;
+            if(style == 3)
+                return 0;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }},
     {"editable, editing style only before", true, false,
         [](UnsignedInt style) -> UnsignedInt {
-            if(style == 1) return 2;
+            if(style == 1)
+                return 2;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
-            if(style == 2) return 0;
+            if(style == 2)
+                return 0;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }},
     {"editable, editing style only after", false, true,
         [](UnsignedInt style) -> UnsignedInt {
-            if(style == 0) return 3;
+            if(style == 0)
+                return 3;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
-            if(style == 3) return 0;
+            if(style == 3)
+                return 0;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }},
 };
