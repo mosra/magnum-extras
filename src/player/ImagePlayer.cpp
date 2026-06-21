@@ -24,11 +24,8 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
 #include <Corrade/Containers/Optional.h>
-#include <Corrade/Containers/StringStl.h> /** @todo drop once Debug is stream-free */
 #include <Corrade/Utility/Format.h>
-#include <Corrade/Utility/FormatStl.h> /** @todo drop once Debug is stream-free */
 #include <Corrade/Utility/Path.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Math/Matrix3.h>
@@ -216,8 +213,7 @@ void ImagePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
     }
 
     /* Populate the model info */
-    /** @todo ugh debug->format converter?! */
-    std::ostringstream out;
+    Containers::String out;
     if(!image->isCompressed())
         Debug{&out, Debug::Flag::NoNewlineAtTheEnd} << image->format();
     else
@@ -227,7 +223,7 @@ void ImagePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         "{}: {}x{}, {}",
         Utility::Path::filename(filename),
         image->size().x(), image->size().y(),
-        out.str()),
+        out),
         /** @todo ugh, having to specify this every time is NASTY, what to do
             besides supplying extra style variants? */
         Text::Alignment::MiddleLeft);
