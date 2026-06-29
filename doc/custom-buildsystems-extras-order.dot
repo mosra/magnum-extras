@@ -29,11 +29,19 @@ digraph "Magnum Extras dependency order" {
     ranksep=0.5
     node [style=filled shape=rect margin="0.03,0.03"]
 
+    Magnum [style=solid class="m-primary"]
     MagnumGL [style=solid label="Magnum\nGL" class="m-info"]
+    MagnumTextureTools [style=solid label="Magnum\nTextureTools" class="m-info"]
     MagnumText [style=solid label="Magnum\nText" class="m-info"]
 
     MagnumUi [label="Magnum\nUi" class="m-info"]
 
-    MagnumUi -> MagnumGL
+    MagnumGL -> Magnum [class="m-info"]
+    MagnumText -> MagnumTextureTools [class="m-info"]
+    MagnumText -> MagnumGL [style=dotted class="m-info"]
+    MagnumTextureTools -> Magnum [class="m-info"]
+    MagnumTextureTools -> MagnumGL [style=dotted class="m-info"]
+
+    MagnumUi -> MagnumGL [style=dotted]
     MagnumUi -> MagnumText
 }
