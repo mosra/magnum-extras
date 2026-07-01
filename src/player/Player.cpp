@@ -37,7 +37,7 @@
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once file callbacks are STL-free */
 #include <Corrade/Utility/Path.h>
 #include <Corrade/Utility/Resource.h>
-#include <Corrade/Utility/String.h>
+#include <Corrade/Utility/String.h> /* lowercase() */
 #include <Magnum/DebugTools/FrameProfiler.h>
 #include <Magnum/Math/TimeStl.h>
 #include <Magnum/GL/Context.h>
