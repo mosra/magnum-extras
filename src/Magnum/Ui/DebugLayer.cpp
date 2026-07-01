@@ -285,7 +285,7 @@ DebugLayer& DebugLayer::setNodeName(const NodeHandle handle, Containers::StringV
         CORRADE_INTERNAL_ASSERT(state.currentHighlightedNodes.size() == state.nodes.size());
         arrayResize(state.nodes, ValueInit, nodeId + 1);
         arrayResize(state.nodesToHighlightStorage, ValueInit, (nodeId + 8)/8);
-        state.currentHighlightedNodes = Containers::MutableBitArrayView{state.nodesToHighlightStorage, 0, nodeId + 1};
+        state.currentHighlightedNodes = Containers::MutableBitArrayView{state.nodesToHighlightStorage.data(), 0, nodeId + 1};
     }
 
     Implementation::DebugLayerNode& node = state.nodes[nodeId];
@@ -1415,7 +1415,7 @@ void DebugLayer::doPreUpdate(LayerStates) {
             CORRADE_INTERNAL_ASSERT(state.currentHighlightedNodes.size() == state.nodes.size());
             arrayResize(state.nodes, ValueInit, nodeCapacity);
             arrayResize(state.nodesToHighlightStorage, ValueInit, (nodeCapacity + 7)/8);
-            state.currentHighlightedNodes = Containers::MutableBitArrayView{state.nodesToHighlightStorage, 0, nodeCapacity};
+            state.currentHighlightedNodes = Containers::MutableBitArrayView{state.nodesToHighlightStorage.data(), 0, nodeCapacity};
         }
 
         for(std::size_t i = 0; i != state.nodes.size(); ++i) {

@@ -1094,7 +1094,7 @@ LayerHandle AbstractUserInterface::createLayer(const LayerHandle behind) {
     /* In both above cases the generation is already set appropriately, either
        initialized to 1, or incremented when it got remove()d (to mark existing
        handles as invalid) */
-    const LayerHandle handle = layerHandle((layer - state.layers), layer->used.generation);
+    const LayerHandle handle = layerHandle(layer - state.layers.data(), layer->used.generation);
 
     /* This is the first ever layer, no need to connect with anything else */
     if(state.firstLayer == LayerHandle::Null) {
@@ -1386,7 +1386,7 @@ LayouterHandle AbstractUserInterface::createLayouter(const LayouterHandle before
     /* In both above cases the generation is already set appropriately, either
        initialized to 1, or incremented when it got remove()d (to mark existing
        handles as invalid) */
-    const LayouterHandle handle = layouterHandle((layouter - state.layouters), layouter->used.generation);
+    const LayouterHandle handle = layouterHandle(layouter - state.layouters.data(), layouter->used.generation);
 
     /* This is the first ever layouter, no need to connect with anything else */
     if(state.firstLayouter == LayouterHandle::Null) {
@@ -1637,7 +1637,7 @@ AnimatorHandle AbstractUserInterface::createAnimator() {
        remove()d (to mark existing handles as invalid) */
     animator->used.used = true;
 
-    return animatorHandle((animator - state.animators), animator->used.generation);
+    return animatorHandle(animator - state.animators.data(), animator->used.generation);
 }
 
 bool AbstractUserInterface::hasAnimatorInstance(const AnimatorHandle handle) const {
@@ -1874,7 +1874,7 @@ NodeHandle AbstractUserInterface::createNode(const NodeHandle parent, const Vect
     node->used.size = size;
     node->used.opacity = 1.0f;
     node->used.firstUniqueLayout = ~UnsignedInt{};
-    const NodeHandle handle = nodeHandle(node - state.nodes, node->used.generation);
+    const NodeHandle handle = nodeHandle(node - state.nodes.data(), node->used.generation);
 
     /* If a root node, implicitly mark it as last in the node order, so
        it's drawn at the front. The setNodeOrder() internally reconnects, so

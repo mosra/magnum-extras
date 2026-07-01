@@ -904,7 +904,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
 
     /* Load all textures. Textures that fail to load will be NullOpt. */
     Debug{} << "Loading" << importer.textureCount() << "textures";
-    _data->textures = Containers::Array<Containers::Optional<GL::Texture2D>>{importer.textureCount()};
+    _data->textures = Containers::Array<Containers::Optional<GL::Texture2D>>{ValueInit, importer.textureCount()};
     for(UnsignedInt i = 0; i != importer.textureCount(); ++i) {
         Containers::Optional<Trade::TextureData> textureData = importer.texture(i);
         if(!textureData || textureData->type() != Trade::TextureType::Texture2D) {
@@ -933,7 +933,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
     /* Load all lights. Lights that fail to load will be NullOpt, saving the
        whole imported data so we can populate the selection info later. */
     Debug{} << "Loading" << importer.lightCount() << "lights";
-    _data->lights = Containers::Array<LightInfo>{importer.lightCount()};
+    _data->lights = Containers::Array<LightInfo>{ValueInit, importer.lightCount()};
     for(UnsignedInt i = 0; i != importer.lightCount(); ++i) {
         _data->lights[i].name = importer.lightName(i);
         if(!_data->lights[i].name)
@@ -969,7 +969,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         std::size_t offset;
         Containers::Optional<Trade::SkinData3D> skin;
     };
-    Containers::Array<SkinInfo> skins{importer.skin3DCount()};
+    Containers::Array<SkinInfo> skins{ValueInit, importer.skin3DCount()};
     std::size_t totalJointCount = 0;
     for(UnsignedInt i = 0; i != importer.skin3DCount(); ++i) {
         Containers::Optional<Trade::SkinData3D> skinData = importer.skin3D(i);
@@ -993,7 +993,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
        data will be stored directly in objects later, so save them only
        temporarily. */
     Debug{} << "Loading" << importer.materialCount() << "materials";
-    Containers::Array<Containers::Optional<Trade::PhongMaterialData>> materials{importer.materialCount()};
+    Containers::Array<Containers::Optional<Trade::PhongMaterialData>> materials{ValueInit, importer.materialCount()};
     for(UnsignedInt i = 0; i != importer.materialCount(); ++i) {
         Containers::Optional<Trade::MaterialData> materialData = importer.material(i);
         if(!materialData || !(materialData->types() & Trade::MaterialType::Phong) || (materialData->as<Trade::PhongMaterialData>().hasTextureTransformation() && !materialData->as<Trade::PhongMaterialData>().hasCommonTextureTransformation()) || materialData->as<Trade::PhongMaterialData>().hasTextureCoordinates()) {
@@ -1008,7 +1008,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
        which have vertex colors, so in case there's no material we can use that
        instead. */
     Debug{} << "Loading" << importer.meshCount() << "meshes";
-    _data->meshes = Containers::Array<MeshInfo>{importer.meshCount()};
+    _data->meshes = Containers::Array<MeshInfo>{ValueInit, importer.meshCount()};
     Containers::BitArray hasVertexColors{ValueInit, importer.meshCount()};
     for(UnsignedInt i = 0; i != importer.meshCount(); ++i) {
         Containers::Optional<Trade::MeshData> meshData = importer.mesh(i);

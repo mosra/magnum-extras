@@ -437,7 +437,7 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseco
         }
     }
 
-    const UnsignedInt id = animation - state.animations;
+    const UnsignedInt id = animation - state.animations.data();
 
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got

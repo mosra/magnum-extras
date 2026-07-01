@@ -1303,7 +1303,7 @@ void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<Abstract
     std::size_t found = ~std::size_t{};
     for(const Containers::Reference<AbstractAnimator>& i: slice) {
         if(&*i == &instance) {
-            found = &i - instances;
+            found = &i - instances.data();
             break;
         }
     }

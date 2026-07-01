@@ -441,7 +441,7 @@ DataLayerStorageHandle DataLayer::createStorage(const Containers::Size3D& size, 
     if(flags >= StorageFlag::ReferenceCounted)
         setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
 
-    return dataLayerStorageHandle(storage - state.storages, storage->used.generation);
+    return dataLayerStorageHandle(storage - state.storages.data(), storage->used.generation);
 }
 
 void* DataLayer::createStorageAllocated(const DataLayerStorageHandle handle, void* const data, const std::size_t dataSize, void(*const deleter)(void*, std::size_t)) {

@@ -306,7 +306,7 @@ DataHandle AbstractLayer::create(const NodeHandle node) {
             state.state |= LayerState::NeedsLayoutUpdate;
     }
 
-    return dataHandle(state.handle, data - state.data, data->used.generation);
+    return dataHandle(state.handle, data - state.data.data(), data->used.generation);
 }
 
 void AbstractLayer::remove(const DataHandle handle) {
