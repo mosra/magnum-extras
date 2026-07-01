@@ -211,7 +211,8 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         ui.addNodeFlags(showControls, Ui::NodeFlag::Hidden);
     });
 
-    CORRADE_INTERNAL_ASSERT(ui.textLayer().shared().font(Ui::fontHandle(1, 1)).fillGlyphCache(ui.textLayer().shared().glyphCache(), "«»"));
+    /** @todo ffs, make this NOT a hardcoded font handle */
+    CORRADE_INTERNAL_ASSERT(ui.textLayer().shared().font(Ui::fontHandle(0, 1)).fillGlyphCache(ui.textLayer().shared().glyphCache(), "«»"));
 
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     fullSize = Ui::Button{
