@@ -24,6 +24,7 @@ cmake .. ^
     -DCORRADE_WITH_INTERCONNECT=OFF ^
     -DCORRADE_UTILITY_USE_ANSI_COLORS=ON ^
     -DCORRADE_BUILD_STATIC=%BUILD_STATIC% ^
+    -DCORRADE_BUILD_DEPRECATED=OFF ^
     %COMPILER_EXTRA% -G Ninja || exit /b
 cmake --build . || exit /b
 cmake --build . --target install || exit /b

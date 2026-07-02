@@ -29,6 +29,7 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCORRADE_WITH_INTERCONNECT=OFF \
+    -DCORRADE_BUILD_DEPRECATED=OFF \
     -G Ninja
 ninja install
 cd ../..

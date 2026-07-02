@@ -31,6 +31,7 @@ cmake .. ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
     -DCORRADE_WITH_INTERCONNECT=OFF ^
     -DCORRADE_BUILD_STATIC=ON ^
+    -DCORRADE_BUILD_DEPRECATED=OFF ^
     -G "%GENERATOR%" -A x64 || exit /b
 cmake --build . --config Release --target install -- /m /v:m || exit /b
 cd .. && cd ..

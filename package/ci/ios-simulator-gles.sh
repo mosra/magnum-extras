@@ -31,6 +31,7 @@ cmake .. \
     -DCORRADE_BUILD_STATIC=ON \
     -DCORRADE_TESTSUITE_TARGET_XCTEST=ON \
     -DCORRADE_WITH_INTERCONNECT=OFF \
+    -DCORRADE_BUILD_DEPRECATED=OFF \
     -G Xcode
 set -o pipefail && cmake --build . --config Release --target install -j$XCODE_JOBS | xcbeautify
 cd ../..

@@ -12,6 +12,7 @@ cmake .. ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
     -DCORRADE_WITH_INTERCONNECT=OFF ^
     -DCORRADE_UTILITY_USE_ANSI_COLORS=ON ^
+    -DCORRADE_BUILD_DEPRECATED=OFF ^
     -G Ninja || exit /b
 cmake --build . || exit /b
 cmake --build . --target install || exit /b

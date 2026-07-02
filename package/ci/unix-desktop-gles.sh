@@ -11,6 +11,7 @@ cmake .. \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Debug \
     -DCORRADE_WITH_INTERCONNECT=OFF \
+    -DCORRADE_BUILD_DEPRECATED=OFF \
     -G Ninja
 ninja install
 cd ../..
