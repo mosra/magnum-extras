@@ -1,4 +1,4 @@
-Here you find extra functionality for the Magnum C++11/C++14 graphics engine —
+Here you find extra functionality for the Magnum C++11 graphics engine —
 playground for testing new APIs, specialized stuff that doesn't necessarily
 need to be a part of main Magnum repository or mutually exclusive
 functionality.
