@@ -1,0 +1,37 @@
+# Author: mosra <mosra@centrum.cz>
+
+_realname=magnum-extras
+pkgbase=mingw-w64-${_realname}
+pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
+pkgver=dev
+pkgrel=1
+pkgdesc="Extras for the Magnum C++11 graphics engine"
+arch=('any')
+url="https://magnum.graphics/"
+license=('MIT')
+depends=("${MINGW_PACKAGE_PREFIX}-magnum>=$pkgver"
+         "${MINGW_PACKAGE_PREFIX}-magnum-plugins>=$pkgver")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cmake" "${MINGW_PACKAGE_PREFIX}-ninja")
+options=('!strip')
+
+_rootdir=$startdir/../../
+
+build() {
+    mkdir -p "$_rootdir/build-${CARCH}"
+    cd "$_rootdir/build-${CARCH}"
+
+    MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
+        ${MINGW_PREFIX}/bin/cmake .. \
+            -G'Ninja' \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_INSTALL_PREFIX=${MINGW_PREFIX} \
+            -DMAGNUM_WITH_UI=ON \
+            -DMAGNUM_WITH_UI_GALLERY=ON \
+            -DMAGNUM_WITH_PLAYER=ON
+    ninja
+}
+
+package() {
+    cd "$_rootdir/build-${CARCH}"
+    DESTDIR="${pkgdir}" ninja install
+}
