@@ -214,7 +214,8 @@ else()
     set(SHARED_OR_STATIC STATIC)
 endif()
 
-set(MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR share/cmake/MagnumExtras)
+# Assumes GNUInstallDirs was included by FindMagnum above
+set(MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR ${CMAKE_INSTALL_DATADIR}/cmake/MagnumExtras)
 
 # Library version. MAGNUMEXTRAS_VERSION_YEAR/MONTH is used in
 # src/Magnum/CMakeLists.txt to generate the versionExtras.h header.
