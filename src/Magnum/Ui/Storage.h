@@ -53,47 +53,29 @@ template<class T> class Storage: public AbstractStorage {
         /**
          * @brief Construct a single-item storage
          *
-         * Equivalent to calling @ref Storage(DataLayer&, const Containers::StridedArrayView3D<const T>&, StorageFlags)
+         * Equivalent to calling @ref Storage(Owner&, const Containers::StridedArrayView3D<const T>&, StorageFlags)
          * with @p value turned into a view of size @cpp {1, 1, 1} @ce.
          */
-        explicit Storage(DataLayer& layer, const T& value, StorageFlags flags = {}): Storage{layer, Containers::stridedArrayView(&value, 1), flags} {}
+        template<class Owner> explicit Storage(Owner& owner, const T& value, StorageFlags flags = {}): Storage{owner, Containers::stridedArrayView(&value, 1), flags} {}
 
         /**
          * @brief Construct a storage
-         * @param layer     Data layer to create the storage in
+         * @param owner     @ref DataLayer to create the storage in or a
+         *      @ref UserInterface instance to take a
+         *      @ref UserInterface::dataLayer() from
          * @param values    Value view. Passing a 1D or 2D view will implicitly
          *      expand it to a 3D view, adding extra dimensions at the front.
          * @param flags     Storage flags
          *
          * The @p values view is expected to be non-empty with its contents
-         * staying in scope for the whole storage lifetime. Delegates to
-         * @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags),
-         * see its documentation for detailed description of all constraints.
+         * staying in scope for the whole storage lifetime. If @p owner is a
+         * user interface reference, expects that it contains a @ref DataLayer
+         * instance. Delegates to either
+         * @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags)
+         * or @ref AbstractStorage::AbstractStorage(UserInterface&, const Containers::Size3D&, StorageFlags),
+         * see their documentation for detailed description of all constraints.
          */
-        explicit Storage(DataLayer& layer, const Containers::StridedArrayView3D<const T>& values, StorageFlags flags = {}):  AbstractStorage{layer, values.size(), flags} {
-            *createInPlace<Data>() = {
-                values.data(),
-                values.stride()
-            };
-        }
-
-        /**
-         * @brief Construct a single-item storage using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref Storage(DataLayer&, const Containers::StridedArrayView3D<const T>&, StorageFlags)
-         * with @p value turned into a view of size @cpp {1, 1, 1} @ce.
-         */
-        template<class UserInterface> explicit Storage(UserInterface& ui, const T& value, StorageFlags flags = {}): Storage{ui, Containers::stridedArrayView(&value, 1), flags} {}
-
-        /**
-         * @brief Construct a storage using the default @ref DataLayer in given user interface
-         *
-         * Like @ref Storage(DataLayer&, const Containers::StridedArrayView3D<const T>&, StorageFlags)
-         * but using the default @ref DataLayer available through
-         * @ref UserInterface::dataLayer(). Expects that the @p ui contains a
-         * @ref DataLayer instance.
-         */
-        template<class UserInterface> explicit Storage(UserInterface& ui, const Containers::StridedArrayView3D<const T>& values, StorageFlags flags = {}): AbstractStorage{ui, values.size(), flags} {
+        template<class Owner> explicit Storage(Owner& owner, const Containers::StridedArrayView3D<const T>& values, StorageFlags flags = {}):  AbstractStorage{owner, values.size(), flags} {
             *createInPlace<Data>() = {
                 values.data(),
                 values.stride()

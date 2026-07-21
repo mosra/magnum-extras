@@ -117,284 +117,184 @@ template<class T> class NumericStorage: public AbstractStorage {
         /**
          * @brief Construct a value-initialized single-item storage
          *
-         * Equivalent to calling @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags)
+         * Equivalent to calling @ref NumericStorage(Owner&, ValueInitT, const Containers::Size3D&, StorageFlags)
          * with @p size being @cpp {1, 1, 1} @ce.
-         * @see @ref ValueInit, @ref NumericStorage(DataLayer&, NoInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, T&, StorageFlags)
+         * @see @ref ValueInit, @ref NumericStorage(Owner&, NoInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, T&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, ValueInitT, StorageFlags flags = {}): NumericStorage{layer, ValueInit, {1, 1, 1}, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, ValueInitT, StorageFlags flags = {}): NumericStorage{owner, ValueInit, {1, 1, 1}, flags} {}
 
         /**
          * @brief Construct a value-initialized 1D storage
          *
-         * Equivalent to calling @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags)
+         * Equivalent to calling @ref NumericStorage(Owner&, ValueInitT, const Containers::Size3D&, StorageFlags)
          * with @p size being @cpp {1, 1, size} @ce.
-         * @see @ref ValueInit, @ref NumericStorage(DataLayer&, NoInitT, std::size_t, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, std::size_t, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView1D<T>&, StorageFlags)
+         * @see @ref ValueInit, @ref NumericStorage(Owner&, NoInitT, std::size_t, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, std::size_t, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView1D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, ValueInitT, std::size_t size, StorageFlags flags = {}): NumericStorage{layer, ValueInit, {1, 1, size}, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, ValueInitT, std::size_t size, StorageFlags flags = {}): NumericStorage{owner, ValueInit, {1, 1, size}, flags} {}
 
         /**
          * @brief Construct a value-initialized 2D storage
          *
-         * Equivalent to calling @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags)
+         * Equivalent to calling @ref NumericStorage(Owner&, ValueInitT, const Containers::Size3D&, StorageFlags)
          * with @p size being @cpp {1, size[0], size[1]} @ce.
          * @see @ref ValueInit,
-         *      @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size2D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
+         *      @ref NumericStorage(Owner&, NoInitT, const Containers::Size2D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, ValueInitT, const Containers::Size2D& size, StorageFlags flags = {}): NumericStorage{layer, ValueInit, {1, size[0], size[1]}, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, ValueInitT, const Containers::Size2D& size, StorageFlags flags = {}): NumericStorage{owner, ValueInit, {1, size[0], size[1]}, flags} {}
 
         /**
          * @brief Construct a value-initialized 3D storage
-         * @param layer     Data layer to create the storage in
+         * @param owner     @ref DataLayer to create the storage in or a
+         *      @ref UserInterface instance to take a
+         *      @ref UserInterface::dataLayer() from
          * @param size      Storage size
          * @param flags     Storage flags
          *
-         * Delegates to @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags)
+         * Delegates to @ref NumericStorage(Owner&, NoInitT, const Containers::Size3D&, StorageFlags)
          * and then initializes the storage, trivial types set to zero and
          * default constructor called otherwise. See the documentation of
-         * @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags)
+         * @ref NumericStorage(Owner&, NoInitT, const Containers::Size3D&, StorageFlags)
          * for more information.
-         * @see @ref ValueInit, @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
+         * @see @ref ValueInit, @ref NumericStorage(Owner&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, ValueInitT, const Containers::Size3D& size, StorageFlags flags = {}): AbstractStorage{layer, size, flags} {
-            create(ValueInit);
-        }
-
-        /**
-         * @brief Construct a value-initialized single-item storage using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref NumericStorage(UserInterface&, ValueInitT, const Containers::Size3D&, StorageFlags)
-         * with @p size being @cpp {1, 1, 1} @ce.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, ValueInitT, StorageFlags flags = {}): NumericStorage{ui, ValueInit, {1, 1, 1}, flags} {}
-
-        /**
-         * @brief Construct a value-initialized 1D storage using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref NumericStorage(UserInterface&, ValueInitT, const Containers::Size3D&, StorageFlags)
-         * with @p size being @cpp {1, 1, size} @ce.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, ValueInitT, std::size_t size, StorageFlags flags = {}): NumericStorage{ui, ValueInit, {1, 1, size}, flags} {}
-
-        /**
-         * @brief Construct a value-initialized 2D storage using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref NumericStorage(UserInterface&, ValueInitT, const Containers::Size3D&, StorageFlags)
-         * with @p size being @cpp {1, size[0], size[1]} @ce.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, ValueInitT, const Containers::Size2D& size, StorageFlags flags = {}): NumericStorage{ui, ValueInit, {1, size[0], size[1]}, flags} {}
-
-        /**
-         * @brief Construct a value-initialized 3D storage using the default @ref DataLayer in given user interface
-         *
-         * Like @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags)
-         * but using the default @ref DataLayer available through
-         * @ref UserInterface::dataLayer(). Expects that the @p ui contains a
-         * @ref DataLayer instance.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, ValueInitT, const Containers::Size3D& size, StorageFlags flags = {}): AbstractStorage{ui, size, flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, ValueInitT, const Containers::Size3D& size, StorageFlags flags = {}): AbstractStorage{owner, size, flags} {
             create(ValueInit);
         }
 
         /**
          * @brief Construct a single-item storage without initializing its contents
          *
-         * Equivalent to calling @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags)
+         * Equivalent to calling @ref NumericStorage(Owner&, NoInitT, const Containers::Size3D&, StorageFlags)
          * with @p size being @cpp {1, 1, 1} @ce.
-         * @see @ref NoInit, @ref NumericStorage(DataLayer&, ValueInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, T&, StorageFlags)
+         * @see @ref NoInit, @ref NumericStorage(Owner&, ValueInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, T&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, NoInitT, StorageFlags flags = {}): NumericStorage{layer, NoInit, {1, 1, 1}, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, NoInitT, StorageFlags flags = {}): NumericStorage{owner, NoInit, {1, 1, 1}, flags} {}
 
         /**
          * @brief Construct a 1D storage without initializing its contents
          *
-         * Equivalent to calling @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags)
+         * Equivalent to calling @ref NumericStorage(Owner&, ValueInitT, const Containers::Size3D&, StorageFlags)
          * with @p size being @cpp {1, 1, size} @ce.
-         * @see @ref NoInit, @ref NumericStorage(DataLayer&, ValueInitT, std::size_t, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, std::size_t, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView1D<T>&, StorageFlags)
+         * @see @ref NoInit, @ref NumericStorage(Owner&, ValueInitT, std::size_t, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, std::size_t, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView1D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, NoInitT, std::size_t size, StorageFlags flags = {}): NumericStorage{layer, NoInit, {1, 1, size}, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, NoInitT, std::size_t size, StorageFlags flags = {}): NumericStorage{owner, NoInit, {1, 1, size}, flags} {}
 
         /**
          * @brief Construct a 2D storage without initializing its contents
          *
-         * Equivalent to calling @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags)
+         * Equivalent to calling @ref NumericStorage(Owner&, ValueInitT, const Containers::Size3D&, StorageFlags)
          * with @p size being @cpp {1, size[0], size[1]} @ce.
-         * @see @ref NoInit, @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size2D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
+         * @see @ref NoInit, @ref NumericStorage(Owner&, ValueInitT, const Containers::Size2D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, NoInitT, const Containers::Size2D& size, StorageFlags flags = {}): NumericStorage{layer, NoInit, {1, size[0], size[1]}, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, NoInitT, const Containers::Size2D& size, StorageFlags flags = {}): NumericStorage{owner, NoInit, {1, size[0], size[1]}, flags} {}
 
         /**
          * @brief Construct a 3D storage without initializing its contents
-         * @param layer     Data layer to create the storage in
+         * @param owner     @ref DataLayer to create the storage in or a
+         *      @ref UserInterface instance to take a
+         *      @ref UserInterface::dataLayer() from
          * @param size      Storage size
          * @param flags     Storage flags
          *
-         * Expects that the @p size is non-empty. While the stored value is
-         * *not* initialized in any way, the @ref range() is set to min and max
-         * representable values of given type, and @ref step() is set to
-         * @cpp T(1) @ce.
+         * Expects that the @p size is non-empty. If @p owner is a user
+         * interface reference, expects that it contains a @ref DataLayer
+         * instance. While the stored value is *not* initialized in any way,
+         * the @ref range() is set to min and max representable values of given
+         * type, and @ref step() is set to @cpp T(1) @ce.
          *
-         * Delegates to @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags),
-         * see its documentation for detailed description of all constraints.
-         * @see @ref NoInit, @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
+         * Delegates to either @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags)
+         * or @ref AbstractStorage::AbstractStorage(UserInterface&, const Containers::Size3D&, StorageFlags),
+         * see their documentation for detailed description of all constraints.
+         * @see @ref NoInit, @ref NumericStorage(Owner&, ValueInitT, const Containers::Size3D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, NoInitT, const Containers::Size3D& size, StorageFlags flags = {}): AbstractStorage{layer, size, flags} {
-            create(NoInit);
-        }
-
-        /**
-         * @brief Construct a single-item storage without initializing its contents using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref NumericStorage(UserInterface&, NoInitT, const Containers::Size3D&, StorageFlags)
-         * with @p size being @cpp {1, 1, 1} @ce.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NoInitT, StorageFlags flags = {}): NumericStorage{ui, NoInit, {1, 1, 1}, flags} {}
-
-        /**
-         * @brief Construct a 1D storage without initializing its contents using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref NumericStorage(UserInterface&, NoInitT, const Containers::Size3D&, StorageFlags)
-         * with @p size being @cpp {1, 1, size} @ce.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NoInitT, std::size_t size, StorageFlags flags = {}): NumericStorage{ui, NoInit, {1, 1, size}, flags} {}
-
-        /**
-         * @brief Construct a 2D storage without initializing its contents using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref NumericStorage(UserInterface&, NoInitT, const Containers::Size3D&, StorageFlags)
-         * with @p size being @cpp {1, size[0], size[1]} @ce.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NoInitT, const Containers::Size2D& size, StorageFlags flags = {}): NumericStorage{ui, NoInit, {1, size[0], size[1]}, flags} {}
-
-        /**
-         * @brief Construct a 3D storage without initializing its contents using the default @ref DataLayer in given user interface
-         *
-         * Like @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags)
-         * but using the default @ref DataLayer available through
-         * @ref UserInterface::dataLayer(). Expects that the @p ui contains a
-         * @ref DataLayer instance.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NoInitT, const Containers::Size3D& size, StorageFlags flags = {}): AbstractStorage{ui, size, flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, NoInitT, const Containers::Size3D& size, StorageFlags flags = {}): AbstractStorage{owner, size, flags} {
             create(NoInit);
         }
 
         /**
          * @brief Construct a direct-initialized single-item storage
          *
-         * Equivalent to calling @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
+         * Equivalent to calling @ref NumericStorage(Owner&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
          * with @p size being @cpp {1, 1, 1} @ce.
-         * @see @ref DirectInit, @ref NumericStorage(DataLayer&, ValueInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NoInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, T&, StorageFlags)
+         * @see @ref DirectInit, @ref NumericStorage(Owner&, ValueInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, NoInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, T&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, DirectInitT, const T& value, StorageFlags flags = {}): NumericStorage{layer, DirectInit, {1, 1, 1}, value, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, DirectInitT, const T& value, StorageFlags flags = {}): NumericStorage{owner, DirectInit, {1, 1, 1}, value, flags} {}
 
         /**
          * @brief Construct a direct-initialized 1D storage
          *
-         * Equivalent to calling @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
+         * Equivalent to calling @ref NumericStorage(Owner&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
          * with @p size being @cpp {1, 1, size} @ce.
-         * @see @ref DirectInit, @ref NumericStorage(DataLayer&, ValueInitT, std::size_t, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NoInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView1D<T>&, StorageFlags)
+         * @see @ref DirectInit, @ref NumericStorage(Owner&, ValueInitT, std::size_t, StorageFlags),
+         *      @ref NumericStorage(Owner&, NoInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView1D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, DirectInitT, std::size_t size, const T& value, StorageFlags flags = {}): NumericStorage{layer, DirectInit, {1, 1, size}, value, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, DirectInitT, std::size_t size, const T& value, StorageFlags flags = {}): NumericStorage{owner, DirectInit, {1, 1, size}, value, flags} {}
 
         /**
          * @brief Construct a direct-initialized 2D storage
          *
-         * Equivalent to calling @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
+         * Equivalent to calling @ref NumericStorage(Owner&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
          * with @p size being @cpp {1, size[0], size[1]} @ce.
-         * @see @ref DirectInitT, @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size2D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size2D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
+         * @see @ref DirectInitT, @ref NumericStorage(Owner&, ValueInitT, const Containers::Size2D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NoInitT, const Containers::Size2D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, DirectInitT, const Containers::Size2D& size, const T& value, StorageFlags flags = {}): NumericStorage{layer, DirectInit, {1, size[0], size[1]}, value, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, DirectInitT, const Containers::Size2D& size, const T& value, StorageFlags flags = {}): NumericStorage{owner, DirectInit, {1, size[0], size[1]}, value, flags} {}
 
         /**
          * @brief Construct a direct-initialized 3D storage
-         * @param layer     Data layer to create the storage in
+         * @param owner     @ref DataLayer to create the storage in or a
+         *      @ref UserInterface instance to take a
+         *      @ref UserInterface::dataLayer() from
          * @param size      Storage size
          * @param value     Value to initialize the storage with
          * @param flags     Storage flags
          *
-         * Delegates to @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags)
+         * Delegates to @ref NumericStorage(Owner&, NoInitT, const Containers::Size3D&, StorageFlags)
          * and then initializes the storage using @p value. The @p value is
          * subsequently also used as the default value instead of @cpp 0 @ce.
-         * See the documentation of @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags)
+         * See the documentation of @ref NumericStorage(Owner&, NoInitT, const Containers::Size3D&, StorageFlags)
          * for more information.
-         * @see @ref DirectInit, @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
+         * @see @ref DirectInit, @ref NumericStorage(Owner&, ValueInitT, const Containers::Size3D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, DirectInitT, const Containers::Size3D& size, const T& value, StorageFlags flags = {}): AbstractStorage{layer, size, flags} {
-            create(DirectInit, value);
-        }
-
-        /**
-         * @brief Construct a direct-initialized single-item storage using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref NumericStorage(UserInterface&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
-         * with @p size being @cpp {1, 1, 1} @ce.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, DirectInitT, const T& value, StorageFlags flags = {}): NumericStorage{ui, DirectInit, {1, 1, 1}, value, flags} {}
-
-        /**
-         * @brief Construct a direct-initialized 1D storage using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref NumericStorage(UserInterface&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
-         * with @p size being @cpp {1, 1, size} @ce.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, DirectInitT, std::size_t size, const T& value, StorageFlags flags = {}): NumericStorage{ui, DirectInit, {1, 1, size}, value, flags} {}
-
-        /**
-         * @brief Construct a direct-initialized 2D storage using the default @ref DataLayer in given user interface
-         *
-         * Equivalent to calling @ref NumericStorage(UserInterface&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
-         * with @p size being @cpp {1, size[0], size[1]} @ce.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, DirectInitT, const Containers::Size2D& size, const T& value, StorageFlags flags = {}): NumericStorage{ui, DirectInit, {1, size[0], size[1]}, value, flags} {}
-
-        /**
-         * @brief Construct a direct-initialized 3D storage using the default @ref DataLayer in given user interface
-         *
-         * Like @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
-         * but using the default @ref DataLayer available through
-         * @ref UserInterface::dataLayer(). Expects that the @p ui contains a
-         * @ref DataLayer instance.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, DirectInitT, const Containers::Size3D& size, const T& value, StorageFlags flags = {}): AbstractStorage{ui, size, flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, DirectInitT, const Containers::Size3D& size, const T& value, StorageFlags flags = {}): AbstractStorage{owner, size, flags} {
             create(DirectInit, value);
         }
 
         /**
          * @brief Construct a non-owned single-item storage
          *
-         * Behaves like calling @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
+         * Behaves like calling @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
          * with @p value turned into a view of size @cpp {1, 1, 1} @ce but
          * results in a more compact internal representation.
-         * @see @ref ValueInit, @ref NumericStorage(DataLayer&, ValueInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NoInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const T&, StorageFlags)
+         * @see @ref ValueInit, @ref NumericStorage(Owner&, ValueInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, NoInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const T&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, T& value, StorageFlags flags = {}): AbstractStorage{layer, {1, 1, 1}, flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, T& value, StorageFlags flags = {}): AbstractStorage{owner, {1, 1, 1}, flags} {
             create(NonOwned, value);
         }
         /** @overload */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, const T& value, StorageFlags flags = {}): AbstractStorage{layer, {1, 1, 1}, flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, const T& value, StorageFlags flags = {}): AbstractStorage{owner, {1, 1, 1}, flags} {
             create(NonOwned, value);
         }
 
@@ -404,30 +304,30 @@ template<class T> class NumericStorage: public AbstractStorage {
          * This prevents the storage to be accidentally constructed from a
          * temporary value instead.
          */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, T&& value, StorageFlags flags = {}) = delete;
-        /** @copydoc NumericStorage(DataLayer&, NonOwnedT, T&&, StorageFlags) */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, const T&& value, StorageFlags flags = {}) = delete;
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, T&& value, StorageFlags flags = {}) = delete;
+        /** @copydoc NumericStorage(Owner&, NonOwnedT, T&&, StorageFlags) */
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, const T&& value, StorageFlags flags = {}) = delete;
 
         /**
          * @brief Construct a non-owned 1D storage
          *
-         * Behaves like calling @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
+         * Behaves like calling @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
          * with @p values turned into a view of size
          * @cpp {1, 1, values.size()} @ce but results in a more compact
          * internal representation.
-         * @see @ref NonOwned, @ref NumericStorage(DataLayer&, ValueInitT, std::size_t, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NoInitT, std::size_t, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, std::size_t, const T&, StorageFlags)
+         * @see @ref NonOwned, @ref NumericStorage(Owner&, ValueInitT, std::size_t, StorageFlags),
+         *      @ref NumericStorage(Owner&, NoInitT, std::size_t, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, std::size_t, const T&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, const Containers::StridedArrayView1D<T>& values, StorageFlags flags = {}): AbstractStorage{layer, Implementation::numericStorageViewSize(values), flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, const Containers::StridedArrayView1D<T>& values, StorageFlags flags = {}): AbstractStorage{owner, Implementation::numericStorageViewSize(values), flags} {
             /* Contrary to what the docs say, cannot just delegate to the 3D
                overload as that'd mean needing a StridedArrayView3D definition
                (and the internal data layout is different for 1D, 2D, 3D also).
-               Instead we delegate to one of the createNonOwned() variants. */
+               Instead we delegate to one of the create(NonOwnedT) variants. */
             create(NonOwned, values);
         }
         /** @overload */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, const Containers::StridedArrayView1D<const T>& values, StorageFlags flags = {}): AbstractStorage{layer, Implementation::numericStorageViewSize(values), flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, const Containers::StridedArrayView1D<const T>& values, StorageFlags flags = {}): AbstractStorage{owner, Implementation::numericStorageViewSize(values), flags} {
             /* See above for why we're not delegating to the 3D overload */
             create(NonOwned, values);
         }
@@ -435,49 +335,54 @@ template<class T> class NumericStorage: public AbstractStorage {
         /**
          * @brief Construct a non-owned 2D storage
          *
-         * Behaves like calling @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
+         * Behaves like calling @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
          * with @p values turned into a view of size
          * @cpp {1, values.size()[0], values.size()[1]} @ce but results in a
          * more compact internal representation.
-         * @see @ref NonOwned, @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size2D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size2D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags)
+         * @see @ref NonOwned, @ref NumericStorage(Owner&, ValueInitT, const Containers::Size2D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NoInitT, const Containers::Size2D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, const Containers::StridedArrayView2D<T>& values, StorageFlags flags = {}): AbstractStorage{layer, Implementation::numericStorageViewSize(values), flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, const Containers::StridedArrayView2D<T>& values, StorageFlags flags = {}): AbstractStorage{owner, Implementation::numericStorageViewSize(values), flags} {
             /* See above for why we're not delegating to the 3D overload */
             create(NonOwned, values);
         }
         /** @overload */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, const Containers::StridedArrayView2D<const T>& values, StorageFlags flags = {}): AbstractStorage{layer, Implementation::numericStorageViewSize(values), flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, const Containers::StridedArrayView2D<const T>& values, StorageFlags flags = {}): AbstractStorage{owner, Implementation::numericStorageViewSize(values), flags} {
             /* See above for why we're not delegating to the 3D overload */
             create(NonOwned, values);
         }
 
         /**
          * @brief Construct a non-owned 3D storage
-         * @param layer     Data layer to create the storage in
+         * @param owner     @ref DataLayer to create the storage in or a
+         *      @ref UserInterface instance to take a
+         *      @ref UserInterface::dataLayer() from
          * @param values    Value view
          * @param flags     Storage flags
          *
-         * Uses the @p values view as the storage instead of allocating it. The
-         * @p values view is expected to be non-empty with its contents staying
-         * in scope for the whole storage lifetime. If the @p values are a
-         * @cpp const @ce view, data updates through the storage are not
-         * possible. The @ref range() is set to min and max representable
-         * values of given type, and @ref step() is set to @cpp T(1) @ce.
+         * Uses the @p values view as the storage instead of allocating it. If
+         * @p owner is a user interface reference, expects that it contains a
+         * @ref DataLayer instance. The @p values view is expected to be
+         * non-empty with its contents staying in scope for the whole storage
+         * lifetime. If the @p values are a @cpp const @ce view, data updates
+         * through the storage are not possible. The @ref range() is set to min
+         * and max representable values of given type, and @ref step() is set
+         * to @cpp T(1) @ce.
          *
          * It's expected that @ref setDirty() is called whenever the value is
          * modified externally. Also note that external modifications don't get
          * clamped against the @ref range() and as such the query values may
          * fall outside of it.
          *
-         * Delegates to @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags),
-         * see its documentation for detailed description of all constraints.
+         * Delegates to either @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags)
+         * or @ref AbstractStorage::AbstractStorage(UserInterface&, const Containers::Size3D&, StorageFlags),
+         * see their documentation for detailed description of all constraints.
          *
-         * Delegates to @ref NumericStorage(DataLayer&, NoInitT, StorageFlags)
-         * and then uses the pointed-to @p value as the storage, along with
+         * Delegates to @ref NumericStorage(Owner&, NoInitT, StorageFlags) and
+         * then uses the pointed-to @p value as the storage, along with
          * remembering whether it's mutable. See the documentation of
-         * @ref NumericStorage(DataLayer&, NoInitT, StorageFlags) for more
+         * @ref NumericStorage(Owner&, NoInitT, StorageFlags) for more
          * information.
          *
          * The @p value is expected to stay in scope for the whole storage
@@ -487,172 +392,59 @@ template<class T> class NumericStorage: public AbstractStorage {
          * Also note that there's no way to clamp external modifications
          * against the @ref range() and as such the query values may fall
          * outside of it.
-         * @see @ref NonOwned, @ref NumericStorage(DataLayer&, ValueInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NoInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const T&, StorageFlags)
+         * @see @ref NonOwned, @ref NumericStorage(Owner&, ValueInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, NoInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const T&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, const Containers::StridedArrayView3D<T>& values, StorageFlags flags = {}): AbstractStorage{layer, Implementation::numericStorageViewSize(values), flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, const Containers::StridedArrayView3D<T>& values, StorageFlags flags = {}): AbstractStorage{owner, Implementation::numericStorageViewSize(values), flags} {
             create(NonOwned, values);
         }
         /** @overload */
-        explicit NumericStorage(DataLayer& layer, NonOwnedT, const Containers::StridedArrayView3D<const T>& values, StorageFlags flags = {}): AbstractStorage{layer, Implementation::numericStorageViewSize(values), flags} {
-            create(NonOwned, values);
-        }
-
-        /**
-         * @brief Construct a non-owned single-item storage using the default @ref DataLayer in given user interface
-         *
-         * Behaves like calling @ref NumericStorage(UserInterface&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
-         * with @p values turned into a view of size @cpp {1, 1, 1} @ce but
-         * results in a more compact internal representation.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, T& value, StorageFlags flags = {}): AbstractStorage{ui, {1, 1, 1}, flags} {
-            /* See above for why we're not delegating to the 3D overload */
-            create(NonOwned, value);
-        }
-        /** @overload */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, const T& value, StorageFlags flags = {}): AbstractStorage{ui, {1, 1, 1}, flags} {
-            /* See above for why we're not delegating to the 3D overload */
-            create(NonOwned, value);
-        }
-
-        /** @copydoc NumericStorage(DataLayer&, NonOwnedT, T&&, StorageFlags) */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, T&& value, StorageFlags flags = {}) = delete;
-        /** @copydoc NumericStorage(DataLayer&, NonOwnedT, T&&, StorageFlags) */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, const T&& value, StorageFlags flags = {}) = delete;
-
-        /**
-         * @brief Construct a non-owned 1D storage using the default @ref DataLayer in given user interface
-         *
-         * Behaves like calling @ref NumericStorage(UserInterface&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
-         * with @p values turned into a view of size
-         * @cpp {1, 1, values.size()} @ce but results in a more compact
-         * internal representation.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, const Containers::StridedArrayView1D<T>& values, StorageFlags flags = {}): AbstractStorage{ui, Implementation::numericStorageViewSize(values), flags} {
-            /* See above for why we're not delegating to the 3D overload */
-            create(NonOwned, values);
-        }
-        /** @overload */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, const Containers::StridedArrayView1D<const T>& values, StorageFlags flags = {}): AbstractStorage{ui, Implementation::numericStorageViewSize(values), flags} {
-            /* See above for why we're not delegating to the 3D overload */
-            create(NonOwned, values);
-        }
-
-        /**
-         * @brief Construct a non-owned 2D storage using the default @ref DataLayer in given user interface
-         *
-         * Behaves like calling @ref NumericStorage(UserInterface&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
-         * with @p values turned into a view of size
-         * @cpp {1, values.size()[0], values.size()[1]} @ce but results in a
-         * more compact internal representation.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, const Containers::StridedArrayView2D<T>& values, StorageFlags flags = {}): AbstractStorage{ui, Implementation::numericStorageViewSize(values), flags} {
-            /* See above for why we're not delegating to the 3D overload */
-            create(NonOwned, values);
-        }
-        /** @overload */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, const Containers::StridedArrayView2D<const T>& values, StorageFlags flags = {}): AbstractStorage{ui, Implementation::numericStorageViewSize(values), flags} {
-            /* See above for why we're not delegating to the 3D overload */
-            create(NonOwned, values);
-        }
-
-        /**
-         * @brief Construct a non-owned 3D storage using the default @ref DataLayer in given user interface
-         *
-         * Like @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
-         * but using the default @ref DataLayer available through @ref UserInterface::dataLayer().
-         * Expects that the @p ui contains a @ref DataLayer instance.
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, const Containers::StridedArrayView3D<T>& values, StorageFlags flags = {}): AbstractStorage{ui, Implementation::numericStorageViewSize(values), flags} {
-            create(NonOwned, values);
-        }
-        /** @overload */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, NonOwnedT, const Containers::StridedArrayView3D<const T>& values, StorageFlags flags = {}): AbstractStorage{ui, Implementation::numericStorageViewSize(values), flags} {
+        template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, const Containers::StridedArrayView3D<const T>& values, StorageFlags flags = {}): AbstractStorage{owner, Implementation::numericStorageViewSize(values), flags} {
             create(NonOwned, values);
         }
 
         /**
          * @brief Construct a value-initialized single-item storage
          *
-         * Alias to @ref NumericStorage(DataLayer&, ValueInitT, StorageFlags).
-         * @see @ref NumericStorage(DataLayer&, NoInitT, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, T&, StorageFlags)
+         * Alias to @ref NumericStorage(Owner&, ValueInitT, StorageFlags).
+         * @see @ref NumericStorage(Owner&, NoInitT, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, T&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, StorageFlags flags = {}): NumericStorage{layer, ValueInit, flags} {}
+        /* The enable_if is to make this constructor not picked over the
+           implicitly-generated copy */
+        template<class Owner, typename std::enable_if<std::is_convertible<Owner&, DataLayer&>::value || std::is_convertible<Owner&, AbstractUserInterface&>::value, int>::type = 0> explicit NumericStorage(Owner& owner, StorageFlags flags = {}): NumericStorage{owner, ValueInit, flags} {}
 
         /**
          * @brief Construct a value-initialized 1D storage
          *
-         * Alias to @ref NumericStorage(DataLayer&, ValueInitT, std::size_t, StorageFlags).
-         * @see @ref NumericStorage(DataLayer&, NoInitT, std::size_t, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, std::size_t, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView1D<T>&, StorageFlags)
+         * Alias to @ref NumericStorage(Owner&, ValueInitT, std::size_t, StorageFlags).
+         * @see @ref NumericStorage(Owner&, NoInitT, std::size_t, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, std::size_t, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView1D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, std::size_t size, StorageFlags flags = {}): NumericStorage{layer, ValueInit, size, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, std::size_t size, StorageFlags flags = {}): NumericStorage{owner, ValueInit, size, flags} {}
 
         /**
          * @brief Construct a value-initialized 2D storage
          *
-         * Alias to @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size2D&, StorageFlags).
-         * @see @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size2D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
+         * Alias to @ref NumericStorage(Owner&, ValueInitT, const Containers::Size2D&, StorageFlags).
+         * @see @ref NumericStorage(Owner&, NoInitT, const Containers::Size2D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, const Containers::Size2D& size, StorageFlags flags = {}): NumericStorage{layer, ValueInit, size, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, const Containers::Size2D& size, StorageFlags flags = {}): NumericStorage{owner, ValueInit, size, flags} {}
 
         /**
          * @brief Construct a value-initialized 3D storage
          *
-         * Alias to @ref NumericStorage(DataLayer&, ValueInitT, const Containers::Size3D&, StorageFlags).
-         * @see @ref NumericStorage(DataLayer&, NoInitT, const Containers::Size3D&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags),
-         *      @ref NumericStorage(DataLayer&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
+         * Alias to @ref NumericStorage(Owner&, ValueInitT, const Containers::Size3D&, StorageFlags).
+         * @see @ref NumericStorage(Owner&, NoInitT, const Containers::Size3D&, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags),
+         *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
          */
-        explicit NumericStorage(DataLayer& layer, const Containers::Size3D& size, StorageFlags flags = {}): NumericStorage{layer, ValueInit, size, flags} {}
-
-        /**
-         * @brief Construct a value-initialized single-item storage using the default @ref DataLayer in given user interface
-         *
-         * Alias to @ref NumericStorage(UserInterface&, ValueInitT, StorageFlags).
-         * @see @ref NumericStorage(UserInterface&, NoInitT, StorageFlags),
-         *      @ref NumericStorage(UserInterface&, DirectInitT, const T&, StorageFlags),
-         *      @ref NumericStorage(UserInterface&, NonOwnedT, T&, StorageFlags)
-         */
-        /* The enable_if is to make this constructor not picked over the
-           implicitly-generated copy */
-        template<class UserInterface, typename std::enable_if<std::is_convertible<UserInterface&, AbstractUserInterface&>::value, int>::type = 0> explicit NumericStorage(UserInterface& ui, StorageFlags flags = {}): NumericStorage{ui, ValueInit, flags} {}
-
-        /**
-         * @brief Construct a value-initialized 1D storage using the default @ref DataLayer in given user interface
-         *
-         * Alias to @ref NumericStorage(UserInterface&, ValueInitT, std::size_t, StorageFlags).
-         * @see @ref NumericStorage(UserInterface&, NoInitT, std::size_t, StorageFlags),
-         *      @ref NumericStorage(UserInterface&, DirectInitT, std::size_t, const T&, StorageFlags),
-         *      @ref NumericStorage(UserInterface&, NonOwnedT, const Containers::StridedArrayView1D<T>&, StorageFlags)
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, std::size_t size, StorageFlags flags = {}): NumericStorage{ui, ValueInit, size, flags} {}
-
-        /**
-         * @brief Construct a value-initialized 2D storage using the default @ref DataLayer in given user interface
-         *
-         * Alias to @ref NumericStorage(UserInterface&, ValueInitT, const Containers::Size2D&, StorageFlags).
-         * @see @ref NumericStorage(UserInterface&, NoInitT, const Containers::Size2D&, StorageFlags),
-         *      @ref NumericStorage(UserInterface&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags),
-         *      @ref NumericStorage(UserInterface&, NonOwnedT, const Containers::StridedArrayView2D<T>&, StorageFlags)
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, const Containers::Size2D& size, StorageFlags flags = {}): NumericStorage{ui, ValueInit, size, flags} {}
-
-        /**
-         * @brief Construct a value-initialized 3D storage using the default @ref DataLayer in given user interface
-         *
-         * Alias to @ref NumericStorage(UserInterface&, ValueInitT, const Containers::Size3D&, StorageFlags).
-         * @see @ref NumericStorage(UserInterface&, NoInitT, const Containers::Size3D&, StorageFlags),
-         *      @ref NumericStorage(UserInterface&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags),
-         *      @ref NumericStorage(UserInterface&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
-         */
-        template<class UserInterface> explicit NumericStorage(UserInterface& ui, const Containers::Size3D& size, StorageFlags flags = {}): NumericStorage{ui, ValueInit, size, flags} {}
+        template<class Owner> explicit NumericStorage(Owner& owner, const Containers::Size3D& size, StorageFlags flags = {}): NumericStorage{owner, ValueInit, size, flags} {}
 
         /**
          * @brief Storage stride
@@ -724,7 +516,7 @@ template<class T> class NumericStorage: public AbstractStorage {
          *
          * The default value is used when calling @ref StorageQuery::reset().
          * Initially is set to either @cpp 0 @ce or the value that was passed
-         * to the @ref NumericStorage(DataLayer&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
+         * to the @ref NumericStorage(Owner&, DirectInitT, const Containers::Size3D&, const T&, StorageFlags)
          * constructor. Note that the default value *isn't* restricted in
          * regards to the range or step specified by @ref setRange() and
          * @ref setStep() in any way.
@@ -829,11 +621,11 @@ template<class T> class NumericStorage: public AbstractStorage {
         static Type query(const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation);
         static StorageUpdateState updater(const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation, const Type* value);
 
-        /* All create() functions are called from either the DataLayer& or the
-           UserInterface& constructors. The UserInterface& constructors
-           delegate to the AbstractStorage UserInterface& constructor which
-           performs various assertions, so these have to be member functions
-           and not constructors. */
+        /* All create() functions are called from the constructors. If a
+           UserInterface is passed they delegate to the (templated)
+           AbstractStorage(UserInterface&) constructor which performs various
+           assertions, so to not need to have these templated as well, they
+           have to be member functions and not constructors. */
         void create(ValueInitT);
         void create(NoInitT);
         void create(DirectInitT, const T& value);

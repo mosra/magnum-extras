@@ -569,11 +569,21 @@ _c(Double)
    and such (as unfortunately also expected). I tried searching for related
    bugs but found only https://github.com/llvm/llvm-project/issues/62134, which
    seems unrelated, as it's claimed to work with Clang 14 (which isn't the case
-   here), and it affects builtin types (which also isn't the case here). */
+   here), and it affects builtin types (which also isn't the case here).
+
+   Finally, the create<n>() functions now have to be explicitly instantiated as
+   well because the constructors are all templated on the Owner and so there's
+   otherwise no other code that would trigger their instantiation. */
 /** @todo revisit this with other ideas in the future */
 #if defined(CORRADE_TARGET_CLANG) && !defined(CORRADE_TARGET_WINDOWS) && !defined(MAGNUM_UI_BUILD_STATIC)
 #undef _c
-#define _c(type) template class MAGNUM_UI_EXPORT NumericStorage<type>;
+#define _c(type) template class MAGNUM_UI_EXPORT NumericStorage<type>; \
+template MAGNUM_UI_EXPORT void NumericStorage<type>::create<1>(NonOwnedT, const Containers::StridedArrayView1D<type>&); \
+template MAGNUM_UI_EXPORT void NumericStorage<type>::create<1>(NonOwnedT, const Containers::StridedArrayView1D<const type>&); \
+template MAGNUM_UI_EXPORT void NumericStorage<type>::create<2>(NonOwnedT, const Containers::StridedArrayView2D<type>&); \
+template MAGNUM_UI_EXPORT void NumericStorage<type>::create<2>(NonOwnedT, const Containers::StridedArrayView2D<const type>&); \
+template MAGNUM_UI_EXPORT void NumericStorage<type>::create<3>(NonOwnedT, const Containers::StridedArrayView3D<type>&); \
+template MAGNUM_UI_EXPORT void NumericStorage<type>::create<3>(NonOwnedT, const Containers::StridedArrayView3D<const type>&);
 #endif
 _c(Half)
 _c(Deg)
