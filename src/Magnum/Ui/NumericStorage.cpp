@@ -295,13 +295,6 @@ template<class T> template<UnsignedInt dimensions> void NumericStorage<T>::creat
     createNonOwnedInternal(values.data(), true, Containers::Stride<dimensions>{values.stride()}.begin(), dimensions);
 }
 
-template<class T> Containers::Stride3D NumericStorage<T>::stride() const {
-    const Data<T>& data = *AbstractStorage::data<Data<T>>();
-    if(data.flags >= Flag::NonOwned)
-        return static_cast<const DataNonOwned<T>&>(data).stride(size());
-    return data.stride(size());
-}
-
 template<class T> Containers::Pair<T, T> NumericStorage<T>::range() const {
     const Data<T>& data = *AbstractStorage::data<Data<T>>();
     return {data.min, data.max};
@@ -512,7 +505,6 @@ template MAGNUM_UI_EXPORT void NumericStorage<type>::create<2>(NonOwnedT, const 
 template MAGNUM_UI_EXPORT void NumericStorage<type>::create<2>(NonOwnedT, const Containers::StridedArrayView2D<const type>&); \
 template MAGNUM_UI_EXPORT void NumericStorage<type>::create<3>(NonOwnedT, const Containers::StridedArrayView3D<type>&); \
 template MAGNUM_UI_EXPORT void NumericStorage<type>::create<3>(NonOwnedT, const Containers::StridedArrayView3D<const type>&); \
-template MAGNUM_UI_EXPORT Containers::Stride3D NumericStorage<type>::stride() const; \
 template MAGNUM_UI_EXPORT Containers::Pair<type, type> NumericStorage<type>::range() const; \
 template MAGNUM_UI_EXPORT const NumericStorage<type>& NumericStorage<type>::setRange(type, type) const; \
 template MAGNUM_UI_EXPORT type NumericStorage<type>::step() const;          \

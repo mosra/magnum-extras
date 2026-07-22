@@ -446,16 +446,6 @@ template<class T> class NumericStorage: public AbstractStorage {
          */
         template<class Owner> explicit NumericStorage(Owner& owner, const Containers::Size3D& size, StorageFlags flags = {}): NumericStorage{owner, ValueInit, size, flags} {}
 
-        /**
-         * @brief Storage stride
-         *
-         * In case of an owned storage (created using the @ref ValueInit,
-         * @ref NoInit or @ref DirectInit constructor variants) the elements
-         * are stored tightly packed. In case of a non-owned storage (created
-         * using the @ref NonOwned constructor) the stride can be arbitrary.
-         */
-        Containers::Stride3D stride() const;
-
         /** @brief Accepted value range */
         Containers::Pair<T, T> range() const;
 

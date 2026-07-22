@@ -620,8 +620,6 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE(first2.flags(), StorageFlags{0x18});
     CORRADE_COMPARE(first1.size(), (Containers::Size3D{3, sizeFirstY, 1}));
     CORRADE_COMPARE(first2.size(), (Containers::Size3D{3, sizeFirstY, 1}));
-    CORRADE_COMPARE(first1.stride(), (Containers::Stride3D{sizeFirstY *1*sizeof(T), 1*sizeof(T), sizeof(T)}));
-    CORRADE_COMPARE(first2.stride(), (Containers::Stride3D{sizeFirstY *1*sizeof(T), 1*sizeof(T), sizeof(T)}));
 
     /* See comment at defaultRangeFor() for details */
     CORRADE_COMPARE(first1.range(), defaultRangeFor<T>());
@@ -642,20 +640,20 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE((first2[{1, 3, 0}]),
         static_cast<typename decltype(first2)::Type>(T{}));
 
-    /* The data should have the same shape as reported above and be a
-       contiguous sequence of zeros */
-    Containers::StridedArrayView3D<const T> view1 = first1.data();
-    Containers::StridedArrayView3D<const T> view2 = first2.data();
-    CORRADE_COMPARE(view1.size(), first1.size());
-    CORRADE_COMPARE(view2.size(), first2.size());
-    CORRADE_COMPARE(view1.stride(), first1.stride());
-    CORRADE_COMPARE(view2.stride(), first2.stride());
-    CORRADE_VERIFY(view1.isContiguous());
-    CORRADE_VERIFY(view2.isContiguous());
-    CORRADE_COMPARE_AS(view1.asContiguous(),
+    /* The data should have the expected shape and be a contiguous sequence of
+       zeros */
+    Containers::StridedArrayView3D<const T> viewFirst1 = first1.data();
+    Containers::StridedArrayView3D<const T> viewFirst2 = first2.data();
+    CORRADE_COMPARE(viewFirst1.size(), first1.size());
+    CORRADE_COMPARE(viewFirst2.size(), first2.size());
+    CORRADE_COMPARE(viewFirst1.stride(), (Containers::Stride3D{sizeFirstY *1*sizeof(T), 1*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(viewFirst2.stride(), (Containers::Stride3D{sizeFirstY *1*sizeof(T), 1*sizeof(T), sizeof(T)}));
+    CORRADE_VERIFY(viewFirst1.isContiguous());
+    CORRADE_VERIFY(viewFirst2.isContiguous());
+    CORRADE_COMPARE_AS(viewFirst1.asContiguous(),
         Containers::stridedArrayView({T{}}).template broadcasted<0>(3*sizeFirstY *1),
         TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(view2.asContiguous(),
+    CORRADE_COMPARE_AS(viewFirst2.asContiguous(),
         Containers::stridedArrayView({T{}}).template broadcasted<0>(3*sizeFirstY *1),
         TestSuite::Compare::Container);
 
@@ -684,14 +682,20 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE(second2.flags(), StorageFlags{0x20});
     CORRADE_COMPARE(second1.size(), (Containers::Size3D{1, sizeSecondX, 2}));
     CORRADE_COMPARE(second2.size(), (Containers::Size3D{1, sizeSecondX, 2}));
-    CORRADE_COMPARE(second1.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
-    CORRADE_COMPARE(second2.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
     CORRADE_COMPARE((second1[{1, 1}]), static_cast<typename decltype(second1)::Type>(T{}));
     CORRADE_COMPARE((second2[{1, 1}]), static_cast<typename decltype(second2)::Type>(T{}));
-    CORRADE_COMPARE_AS(second1.data().asContiguous(),
+    Containers::StridedArrayView3D<const T> viewSecond1 = second1.data();
+    Containers::StridedArrayView3D<const T> viewSecond2 = second2.data();
+    CORRADE_COMPARE(viewSecond1.size(), second1.size());
+    CORRADE_COMPARE(viewSecond2.size(), second2.size());
+    CORRADE_COMPARE(viewSecond1.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(viewSecond2.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_VERIFY(viewSecond1.isContiguous());
+    CORRADE_VERIFY(viewSecond2.isContiguous());
+    CORRADE_COMPARE_AS(viewSecond1.asContiguous(),
         Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeSecondX*2),
         TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(second2.data().asContiguous(),
+    CORRADE_COMPARE_AS(viewSecond2.asContiguous(),
         Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeSecondX*2),
         TestSuite::Compare::Container);
 
@@ -723,14 +727,20 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE(third2.flags(), StorageFlags{0x10});
     CORRADE_COMPARE(third1.size(), (Containers::Size3D{1, 1, sizeThird}));
     CORRADE_COMPARE(third2.size(), (Containers::Size3D{1, 1, sizeThird}));
-    CORRADE_COMPARE(third1.stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
-    CORRADE_COMPARE(third2.stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
     CORRADE_COMPARE(third1[1], static_cast<typename decltype(third1)::Type>(T{}));
     CORRADE_COMPARE(third2[1], static_cast<typename decltype(third2)::Type>(T{}));
-    CORRADE_COMPARE_AS(third1.data().asContiguous(),
+    Containers::StridedArrayView3D<const T> viewThird1 = third1.data();
+    Containers::StridedArrayView3D<const T> viewThird2 = third2.data();
+    CORRADE_COMPARE(viewThird1.size(), third1.size());
+    CORRADE_COMPARE(viewThird2.size(), third2.size());
+    CORRADE_COMPARE(viewThird1.stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(viewThird2.stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
+    CORRADE_VERIFY(viewThird1.isContiguous());
+    CORRADE_VERIFY(viewThird2.isContiguous());
+    CORRADE_COMPARE_AS(viewThird1.asContiguous(),
         Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeThird),
         TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(third2.data().asContiguous(),
+    CORRADE_COMPARE_AS(viewThird2.asContiguous(),
         Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeThird),
         TestSuite::Compare::Container);
 
@@ -757,16 +767,22 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE(fourth2.flags(), StorageFlags{0x08});
     CORRADE_COMPARE(fourth1.size(), (Containers::Size3D{1, 1, 1}));
     CORRADE_COMPARE(fourth2.size(), (Containers::Size3D{1, 1, 1}));
-    CORRADE_COMPARE(fourth1.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
-    CORRADE_COMPARE(fourth2.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
     CORRADE_COMPARE(fourth1.value(), static_cast<typename decltype(fourth1)::Type>(T{}));
     CORRADE_COMPARE(fourth2.value(), static_cast<typename decltype(fourth2)::Type>(T{}));
     CORRADE_COMPARE(StorageQuery<typename decltype(fourth1)::Type>{fourth1}, static_cast<typename decltype(fourth1)::Type>(T{}));
     CORRADE_COMPARE(StorageQuery<typename decltype(fourth1)::Type>{fourth2}, static_cast<typename decltype(first2)::Type>(T{}));
-    CORRADE_COMPARE_AS(fourth1.data().asContiguous(),
+    Containers::StridedArrayView3D<const T> viewFourth1 = fourth1.data();
+    Containers::StridedArrayView3D<const T> viewFourth2 = fourth2.data();
+    CORRADE_COMPARE(viewFourth1.size(), fourth1.size());
+    CORRADE_COMPARE(viewFourth2.size(), fourth2.size());
+    CORRADE_COMPARE(viewFourth1.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(viewFourth2.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
+    CORRADE_VERIFY(viewFourth1.isContiguous());
+    CORRADE_VERIFY(viewFourth2.isContiguous());
+    CORRADE_COMPARE_AS(viewFourth1.asContiguous(),
         Containers::arrayView({T{}}),
         TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(fourth2.data().asContiguous(),
+    CORRADE_COMPARE_AS(viewFourth2.asContiguous(),
         Containers::arrayView({T{}}),
         TestSuite::Compare::Container);
 }
@@ -799,7 +815,6 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_VERIFY(!first.isDirty());
     CORRADE_COMPARE(first.flags(), StorageFlags{0x18});
     CORRADE_COMPARE(first.size(), (Containers::Size3D{3, sizeFirstY, 1}));
-    CORRADE_COMPARE(first.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
     CORRADE_COMPARE(first.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(first.step(), T(1.0));
     CORRADE_COMPARE(first.defaultValue(), T(0.0));
@@ -808,11 +823,11 @@ template<class T> void NumericStorageTest::constructNoInit() {
        as they return an uninitalized value. Thorough indexing tests are in
        access1D() etc. */
 
-    /* The data should have the same shape as reported above. Can't verify the
-       contents as the allocation can have just anything. */
+    /* The data should have the expected shape. Can't verify the contents as
+       the allocation can have just anything. */
     Containers::StridedArrayView3D<const T> view = first.data();
     CORRADE_COMPARE(view.size(), first.size());
-    CORRADE_COMPARE(view.stride(), first.stride());
+    CORRADE_COMPARE(view.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
     CORRADE_VERIFY(view.isContiguous());
 
     /* 2D and 1D variants delegate to the 3D constructor, so verify just that
@@ -830,7 +845,8 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_VERIFY(!second.isDirty());
     CORRADE_COMPARE(second.flags(), StorageFlags{0x20});
     CORRADE_COMPARE(second.size(), (Containers::Size3D{1, sizeSecondX, 2}));
-    CORRADE_COMPARE(second.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(second.data().size(), second.size());
+    CORRADE_COMPARE(second.data().stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
 
     #ifndef CORRADE_TARGET_32BIT
     constexpr std::size_t sizeThird = 3;
@@ -849,7 +865,8 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_VERIFY(!third.isDirty());
     CORRADE_COMPARE(third.flags(), StorageFlags{0x10});
     CORRADE_COMPARE(third.size(), (Containers::Size3D{1, 1, sizeThird}));
-    CORRADE_COMPARE(third.stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(third.data().size(), third.size());
+    CORRADE_COMPARE(third.data().stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
 
     /* For single-item storages, types below 8 / 4 bytes fit in-place, in which
        case we can create, fill & remove a storage and then recycling the slot
@@ -891,7 +908,8 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_VERIFY(!fourth.isDirty());
     CORRADE_COMPARE(fourth.flags(), StorageFlags{0x08});
     CORRADE_COMPARE(fourth.size(), (Containers::Size3D{1, 1, 1}));
-    CORRADE_COMPARE(fourth.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(fourth.data().size(), fourth.size());
+    CORRADE_COMPARE(fourth.data().stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
     #ifndef CORRADE_TARGET_32BIT
     if(sizeof(T) < 8)
     #else
@@ -934,7 +952,6 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_VERIFY(!first.isDirty());
     CORRADE_COMPARE(first.flags(), StorageFlags{0x18});
     CORRADE_COMPARE(first.size(), (Containers::Size3D{3, sizeFirstY, 1}));
-    CORRADE_COMPARE(first.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
     CORRADE_COMPARE(first.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(first.step(), T(1.0));
     CORRADE_COMPARE(first.defaultValue(), StorageTraits<T>::value());
@@ -943,11 +960,11 @@ template<class T> void NumericStorageTest::constructDirectInit() {
        constructValueInit() already, no need to do that again here, verify only
        the raw data views. Thorough indexing tests are in access1D() etc. */
 
-    /* The data should have the same shape as reported above and be a
-       contiguous sequence repeating the value supplied in the constructor */
+    /* The data should have the expected same shape and be a contiguous
+       sequence repeating the value supplied in the constructor */
     Containers::StridedArrayView3D<const T> view = first.data();
     CORRADE_COMPARE(view.size(), first.size());
-    CORRADE_COMPARE(view.stride(), first.stride());
+    CORRADE_COMPARE(view.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
     CORRADE_VERIFY(view.isContiguous());
     CORRADE_COMPARE_AS(view.asContiguous(),
         Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(3*sizeFirstY*1),
@@ -968,7 +985,8 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_VERIFY(!second.isDirty());
     CORRADE_COMPARE(second.flags(), StorageFlags{0x20});
     CORRADE_COMPARE(second.size(), (Containers::Size3D{1, sizeSecondX, 2}));
-    CORRADE_COMPARE(second.stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(second.data().size(), second.size());
+    CORRADE_COMPARE(second.data().stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
     CORRADE_COMPARE_AS(second.data().asContiguous(),
         Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(sizeSecondX*2),
         TestSuite::Compare::Container);
@@ -990,7 +1008,8 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_VERIFY(!third.isDirty());
     CORRADE_COMPARE(third.flags(), StorageFlags{0x10});
     CORRADE_COMPARE(third.size(), (Containers::Size3D{1, 1, sizeThird}));
-    CORRADE_COMPARE(third.stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(third.data().size(), third.size());
+    CORRADE_COMPARE(third.data().stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
     CORRADE_COMPARE_AS(third.data().asContiguous(),
         Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(sizeThird),
         TestSuite::Compare::Container);
@@ -1007,7 +1026,8 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_VERIFY(!fourth.isDirty());
     CORRADE_COMPARE(fourth.flags(), StorageFlags{0x08});
     CORRADE_COMPARE(fourth.size(), (Containers::Size3D{1, 1, 1}));
-    CORRADE_COMPARE(fourth.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(fourth.data().size(), fourth.size());
+    CORRADE_COMPARE(fourth.data().stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
     CORRADE_COMPARE_AS(fourth.data().asContiguous(),
         Containers::arrayView({StorageTraits<T>::value()}),
         TestSuite::Compare::Container);
@@ -1039,6 +1059,8 @@ template<class T> void NumericStorageTest::constructNonOwned3D() {
             .template expanded<0, 3>({2, 3, 5})
             .template transposed<1, 2>();
     Containers::StridedArrayView3D<const T> constStorageView = storageView;
+    /* The view is transposed so the stride should be too */
+    CORRADE_COMPARE(storageView.stride(), (Containers::Stride3D{5*3*sizeof(T), sizeof(T), 5*sizeof(T)}));
 
     NumericStorage<T> storage1 = data.implicitLayer ?
         NumericStorage<T>{ui, NonOwned, storageView, StorageFlags{0x18}} :
@@ -1059,9 +1081,6 @@ template<class T> void NumericStorageTest::constructNonOwned3D() {
     CORRADE_COMPARE(storage2.flags(), StorageFlags{0x18});
     CORRADE_COMPARE(storage1.size(), (Containers::Size3D{2, 5, 3}));
     CORRADE_COMPARE(storage2.size(), (Containers::Size3D{2, 5, 3}));
-    /* The view is transposed so the stride should be too */
-    CORRADE_COMPARE(storage1.stride(), (Containers::Stride3D{5*3*sizeof(T), sizeof(T), 5*sizeof(T)}));
-    CORRADE_COMPARE(storage2.stride(), (Containers::Stride3D{5*3*sizeof(T), sizeof(T), 5*sizeof(T)}));
     CORRADE_COMPARE(storage1.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
@@ -1118,6 +1137,8 @@ template<class T> void NumericStorageTest::constructNonOwned2D() {
             .template expanded<0, 2>({3, 2})
             .template transposed<0, 1>();
     Containers::StridedArrayView2D<const T> constStorageView = storageView;
+    /* The view is transposed so the stride should be too */
+    CORRADE_COMPARE(storageView.stride(), (Containers::Stride2D{sizeof(T), 2*sizeof(T)}));
 
     NumericStorage<T> storage1 = data.implicitLayer ?
         NumericStorage<T>{ui, NonOwned, storageView, StorageFlags{0x20}} :
@@ -1138,9 +1159,6 @@ template<class T> void NumericStorageTest::constructNonOwned2D() {
     CORRADE_COMPARE(storage2.flags(), StorageFlags{0x20});
     CORRADE_COMPARE(storage1.size(), (Containers::Size3D{1, 2, 3}));
     CORRADE_COMPARE(storage2.size(), (Containers::Size3D{1, 2, 3}));
-    /* The view is transposed so the stride should be too */
-    CORRADE_COMPARE(storage1.stride(), (Containers::Stride3D{2*sizeof(T), sizeof(T), 2*sizeof(T)}));
-    CORRADE_COMPARE(storage2.stride(), (Containers::Stride3D{2*sizeof(T), sizeof(T), 2*sizeof(T)}));
     CORRADE_COMPARE(storage1.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
@@ -1187,6 +1205,8 @@ template<class T> void NumericStorageTest::constructNonOwned1D() {
     Containers::StridedArrayView1D<T> storageView =
         Containers::stridedArrayView(storageData).template flipped<0>();
     Containers::StridedArrayView1D<const T> constStorageView = storageView;
+    /* The view is flipped so the stride should be too */
+    CORRADE_COMPARE(storageView.stride(), -std::ptrdiff_t{sizeof(T)});
 
     NumericStorage<T> storage1 = data.implicitLayer ?
         NumericStorage<T>{ui, NonOwned, storageView, StorageFlags{0x10}} :
@@ -1208,10 +1228,6 @@ template<class T> void NumericStorageTest::constructNonOwned1D() {
     CORRADE_COMPARE(storage2.flags(), StorageFlags{0x10});
     CORRADE_COMPARE(storage1.size(), (Containers::Size3D{1, 1, 3}));
     CORRADE_COMPARE(storage2.size(), (Containers::Size3D{1, 1, 3}));
-    /* The view is flipped so the first and second dimension becomes flipped
-       too, times the original view size */
-    CORRADE_COMPARE(storage1.stride(), (Containers::Stride3D{-3*std::ptrdiff_t{sizeof(T)}, -3*std::ptrdiff_t(sizeof(T)), -std::ptrdiff_t{sizeof(T)}}));
-    CORRADE_COMPARE(storage2.stride(), (Containers::Stride3D{-3*std::ptrdiff_t{sizeof(T)}, -3*std::ptrdiff_t(sizeof(T)), -std::ptrdiff_t{sizeof(T)}}));
     CORRADE_COMPARE(storage1.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
@@ -1280,8 +1296,6 @@ template<class T> void NumericStorageTest::constructNonOwned() {
     CORRADE_COMPARE(storage2.flags(), StorageFlags{0x08});
     CORRADE_COMPARE(storage1.size(), (Containers::Size3D{1, 1, 1}));
     CORRADE_COMPARE(storage2.size(), (Containers::Size3D{1, 1, 1}));
-    CORRADE_COMPARE(storage1.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
-    CORRADE_COMPARE(storage2.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
     CORRADE_COMPARE(storage1.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));

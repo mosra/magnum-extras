@@ -82,11 +82,6 @@ template<class T> class Storage: public AbstractStorage {
             };
         }
 
-        /** @brief Storage stride */
-        Containers::Stride3D stride() const {
-            return AbstractStorage::data<Data>()->stride;
-        }
-
         /**
          * @brief Single-item storage value
          *
