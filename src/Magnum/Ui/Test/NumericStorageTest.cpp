@@ -74,13 +74,13 @@ struct NumericStorageTest: TestSuite::Tester {
     void accessInvalid();
     void nonOwnedMutableDataInvalid();
 
-    /* Verifies that updates to a value at an arbitrary 3D index all do the
-       right thing including setting a dirty bit, both in owned and non-owned
-       storages */
+    /* Verifies that updates to a value all do the right thing including
+       setting a dirty bit, both in owned and non-owned storages */
     void update();
 
-    /* Verifies behavior of setRange(), setStep() and their effect on value
-       updates including clamping and other edge cases */
+    /* Verifies behavior of setRange(), setStep(), setDefault() and their
+       effect on value updates including clamping and other edge cases, at an
+       arbitrary index */
     void rangeStepDefault();
     template<class T> void rangeStepTypeOverflowSigned();
     template<class T> void rangeStepTypeOverflowUnsigned();
@@ -615,7 +615,7 @@ template<class T> void NumericStorageTest::constructValueInit() {
     /* 1-byte storage fits exactly in-place (27 / 15 + 5*1 bytes), larger not
        anymore */
     CORRADE_COMPARE(first1.isAllocated(), sizeof(T) > 1);
-    CORRADE_COMPARE(first1.isAllocated(), sizeof(T) > 1);
+    CORRADE_COMPARE(first2.isAllocated(), sizeof(T) > 1);
     CORRADE_VERIFY(!first1.isDirty());
     CORRADE_VERIFY(!first2.isDirty());
     CORRADE_COMPARE(first1.flags(), StorageFlags{0x18});
@@ -648,15 +648,15 @@ template<class T> void NumericStorageTest::constructValueInit() {
     Containers::StridedArrayView3D<const T> viewFirst2 = first2.data();
     CORRADE_COMPARE(viewFirst1.size(), first1.size());
     CORRADE_COMPARE(viewFirst2.size(), first2.size());
-    CORRADE_COMPARE(viewFirst1.stride(), (Containers::Stride3D{sizeFirstY *1*sizeof(T), 1*sizeof(T), sizeof(T)}));
-    CORRADE_COMPARE(viewFirst2.stride(), (Containers::Stride3D{sizeFirstY *1*sizeof(T), 1*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(viewFirst1.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(viewFirst2.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
     CORRADE_VERIFY(viewFirst1.isContiguous());
     CORRADE_VERIFY(viewFirst2.isContiguous());
     CORRADE_COMPARE_AS(viewFirst1.asContiguous(),
-        Containers::stridedArrayView({T{}}).template broadcasted<0>(3*sizeFirstY *1),
+        Containers::stridedArrayView({T{}}).template broadcasted<0>(3*sizeFirstY*1),
         TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(viewFirst2.asContiguous(),
-        Containers::stridedArrayView({T{}}).template broadcasted<0>(3*sizeFirstY *1),
+        Containers::stridedArrayView({T{}}).template broadcasted<0>(3*sizeFirstY*1),
         TestSuite::Compare::Container);
     /* Mutable data should be the same */
     CORRADE_COMPARE(first1.mutableData().data(), viewFirst1.data());
@@ -780,7 +780,7 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE(fourth2.isAllocated(), sizeof(T) > 4);
     #else
     CORRADE_COMPARE(fourth1.isAllocated(), sizeof(T) > 2);
-    CORRADE_COMPARE(fourth1.isAllocated(), sizeof(T) > 2);
+    CORRADE_COMPARE(fourth2.isAllocated(), sizeof(T) > 2);
     #endif
     CORRADE_VERIFY(!fourth1.isDirty());
     CORRADE_VERIFY(!fourth2.isDirty());
@@ -1256,6 +1256,11 @@ template<class T> void NumericStorageTest::constructNonOwned1D() {
     setTestCaseDescription(data.name);
     setTestCaseTemplateName(StorageTraits<T>::name());
 
+    /* Variant of constructNonOwned3D() testing the 1D case. Compared to owned
+       constructors the non-owned don't all delegate to 3D, and result in
+       different internal layout, so each case needs to be tested
+       separately. */
+
     /* Either this instance or the implicit one below gets used */
     DataLayer layer{layerHandle(0, 1)};
 
@@ -1330,6 +1335,11 @@ template<class T> void NumericStorageTest::constructNonOwned() {
     auto&& data = ConstructData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
     setTestCaseTemplateName(StorageTraits<T>::name());
+
+    /* Variant of constructNonOwned3D() testing the single-item case. Compared
+       to owned constructors the non-owned don't all delegate to 3D, and result
+       in different internal layout, so each case needs to be tested
+       separately. */
 
     /* Either this instance or the implicit one below gets used */
     DataLayer layer{layerHandle(0, 1)};
@@ -1431,7 +1441,7 @@ void NumericStorageTest::constructCopy() {
 void NumericStorageTest::constructHandleRecycle() {
     DataLayer layer{layerHandle(0, 1)};
 
-    /* Create one more layer to verify the recycling isn't handling just the
+    /* Create one more storage to verify the recycling isn't handling just the
        first item correctly */
     NumericStorage<Long>{layer};
 
@@ -1978,9 +1988,8 @@ void NumericStorageTest::update() {
     setTestCaseDescription(data.name);
 
     /* This verifies that all update operations properly touch the stored or
-       referenced value at given index along with setting dirty bits. Behavior
-       with a custom range, step, clamping etc. is tested in rangeStepDefault()
-       below. */
+       referenced value along with setting dirty bits. Behavior with a custom
+       range, step, clamping etc. is tested in rangeStepDefault() below. */
 
     AbstractUserInterface ui{{100, 100}};
     DataLayer& layer = ui.setLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
@@ -2113,9 +2122,10 @@ void NumericStorageTest::rangeStepDefault() {
     setTestCaseDescription(data.name);
 
     /* Compared to update(), which verified that the right value was updated
-       depending on whether the storage is owned or not, this verifies various
-       clamping behavior, assuming the implementation isn't differing in the
-       non-owned variant. */
+       depending on whether the storage is owned or not, this verifies that all
+       operations correctly affect given memory location with various clamping
+       behavior, assuming the implementation isn't differing in the non-owned
+       variant. */
 
     AbstractUserInterface ui{{100, 100}};
     DataLayer& layer = ui.setLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));

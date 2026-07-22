@@ -130,7 +130,7 @@ template<class T> struct Data {
     T defaultValue;
     /* For owned data, T[] is then right after, tightly packed, with array
        length matching the (3D) storage size. For non-owned data the derived
-       DataNonOwned<dimensions> struct is used instead. */
+       DataNonOwned struct is used instead. */
 
     /* For non-owned data DataNonOwned::pointer should be used instead */
     T* pointer() {
@@ -166,9 +166,9 @@ template<class T> struct Data {
 };
 
 template<class T> struct DataNonOwned: Data<T> {
-    explicit DataNonOwned(const T& default_): Data<T>{default_} {}
+    explicit DataNonOwned(const T& defaultValue): Data<T>{defaultValue} {}
 
-    void* pointer;
+    const void* pointer;
     /* The stride is stored only for the actual data dimensions (so 0, 1, 2 or
        3 components) in order to fit in-place in as many cases as possible.
        The count of stored components is denoted by presence of NonOwned1D and
@@ -205,16 +205,16 @@ template<class T> struct DataNonOwned: Data<T> {
         return out;
     }
 
-    T& data(const Containers::Size3D& size, const Containers::Size3D& index) {
+    const T& data(const Containers::Size3D& size, const Containers::Size3D& index) const {
         const Containers::Stride3D stride = this->stride(size);
-        char* pointer = static_cast<char*>(this->pointer);
+        const char* pointer = static_cast<const char*>(this->pointer);
         for(UnsignedInt i = 0; i != 3; ++i)
             /* Casting to std::ptrdiff_t to avoid cursed issues like in
                StridedArrayView itself, where it sometimes led to overflows due
                to a wrong result type picked. See StridedElement::get() there
                for details. */
             pointer += std::ptrdiff_t(index[i])*stride[i];
-        return *reinterpret_cast<T*>(pointer);
+        return *reinterpret_cast<const T*>(pointer);
     }
 };
 
@@ -278,7 +278,7 @@ template<class T> void NumericStorage<T>::createNonOwnedInternal(const void* con
         data->flags |= Flag::NonOwned1D;
     if(immutable)
         data->flags |= Flag::NonOwnedImmutable;
-    data->pointer = const_cast<T*>(static_cast<const T*>(pointer));
+    data->pointer = pointer;
 
     /* Stride is only expected to be nullptr with a single-item storage */
     CORRADE_INTERNAL_ASSERT(!dimensions || stride);
@@ -338,10 +338,10 @@ template<class T> T NumericStorage<T>::defaultValue() const {
     return AbstractStorage::data<Data<T>>()->defaultValue;
 }
 
-template<class T> const NumericStorage<T>& NumericStorage<T>::setDefaultValue(const T defaultValue) const {
-    /* Not calling setDirty() in this case as the step doesn't affect the
-       stored value or its range */
-    AbstractStorage::data<Data<T>>()->defaultValue = defaultValue;
+template<class T> const NumericStorage<T>& NumericStorage<T>::setDefaultValue(const T value) const {
+    /* Not calling setDirty() in this case as this doesn't affect the stored
+       values in any way */
+    AbstractStorage::data<Data<T>>()->defaultValue = value;
 
     return *this;
 }
@@ -434,12 +434,13 @@ template<class T> T updaterImplementation(const T min, const T max, const T step
 }
 
 template<class T> StorageUpdateState NumericStorage<T>::updater(const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation, const Type* const value) {
+    /* Almost a Rust-level code with the **.::<>() */
     Data<T>& data = *storage.AbstractStorage::data<Data<T>>();
     StorageUpdateState state;
 
     /* Get a reference to the current value */
     T& currentValueReference = data.flags >= Flag::NonOwned ?
-        static_cast<DataNonOwned<T>&>(data).data(storage.size(), index) :
+        const_cast<T&>(static_cast<DataNonOwned<T>&>(data).data(storage.size(), index)) :
         data.data(storage.size(), index);
 
     /* Call the update implementation with all data cast to the corresponding
@@ -477,7 +478,7 @@ template<class T> Containers::StridedArrayView3D<const T> NumericStorage<T>::dat
     /* We're sure the memory is correctly sized so fake the ArrayView size */
     if(data.flags >= Flag::NonOwned) {
         DataNonOwned<T>& dataNonOwned = static_cast<DataNonOwned<T>&>(data);
-        return {{static_cast<T*>(dataNonOwned.pointer), ~std::size_t{}}, size(), dataNonOwned.stride(size())};
+        return {{static_cast<const T*>(dataNonOwned.pointer), ~std::size_t{}}, size(), dataNonOwned.stride(size())};
     }
     return {{data.pointer(), ~std::size_t{}}, size(), data.stride(size())};
 }
@@ -486,6 +487,7 @@ template<class T> Containers::StridedArrayView3D<T> NumericStorage<T>::mutableDa
     CORRADE_ASSERT(!(AbstractStorage::data<Data<T>>()->flags >= Flag::NonOwnedImmutable),
         "Ui::NumericStorage::mutableData(): data not mutable", {});
     Containers::StridedArrayView3D<const T> out = data();
+    /* We're sure the memory is correctly sized so fake the ArrayView size */
     return {{const_cast<T*>(static_cast<const T*>(out.data())), ~std::size_t{}}, out.size(), out.stride()};
 }
 
