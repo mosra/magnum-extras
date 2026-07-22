@@ -213,7 +213,8 @@ template<class T> class NumericStorage: public AbstractStorage {
          * interface reference, expects that it contains a @ref DataLayer
          * instance. While the stored value is *not* initialized in any way,
          * the @ref range() is set to min and max representable values of given
-         * type, and @ref step() is set to @cpp T(1) @ce.
+         * type, and @ref step() is set to @cpp T(1) @ce. You can use
+         * @ref mutableData() to fill the storage upon creation.
          *
          * Delegates to either @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags)
          * or @ref AbstractStorage::AbstractStorage(UserInterface&, const Containers::Size3D&, StorageFlags),
@@ -594,8 +595,8 @@ template<class T> class NumericStorage: public AbstractStorage {
          * @brief Raw storage data
          *
          * Meant to be used mainly for diagnostic purposes. For mutable access
-         * use the @ref StorageQuery instances returned by @ref value() and
-         * @ref operator[]().
+         * use either @ref mutableData() or the @ref StorageQuery instances
+         * returned by @ref value() and @ref operator[]().
          *
          * In case of an owned storage (created using the @ref ValueInit,
          * @ref NoInit or @ref DirectInit constructor variants) the returned
@@ -603,8 +604,21 @@ template<class T> class NumericStorage: public AbstractStorage {
          * non-owned storage (created using the @ref NonOwned constructor) the
          * returned view matches the one passed to the constructor, possibly
          * with extra dimensions added at the front.
+         * @see @ref mutableData()
          */
         Containers::StridedArrayView3D<const T> data() const;
+
+        /**
+         * @brief Raw mutable storage data
+         *
+         * Like @ref data() const, but returns a mutable view. Expects that the
+         * storage is either owned or non-owned and mutable. Meant to be used
+         * mainly for filling a storage created using the @ref NoInit
+         * constructor variant, or for batch updates. Note that the user is
+         * responsible for calling @ref setDirty() upon a modification in order
+         * to correctly trigger updates on associated data bindings.
+         */
+        Containers::StridedArrayView3D<T> mutableData() const;
 
     private:
         /* Common internals used by operator[]() */

@@ -72,6 +72,7 @@ struct NumericStorageTest: TestSuite::Tester {
     void accessNonOwned();
 
     void accessInvalid();
+    void nonOwnedMutableDataInvalid();
 
     /* Verifies that updates to a value at an arbitrary 3D index all do the
        right thing including setting a dirty bit, both in owned and non-owned
@@ -488,7 +489,8 @@ NumericStorageTest::NumericStorageTest() {
     addInstancedTests({&NumericStorageTest::accessNonOwned},
         Containers::arraySize(AccessNonOwnedData));
 
-    addTests({&NumericStorageTest::accessInvalid});
+    addTests({&NumericStorageTest::accessInvalid,
+              &NumericStorageTest::nonOwnedMutableDataInvalid});
 
     addInstancedTests({&NumericStorageTest::update},
         Containers::arraySize(UpdateData));
@@ -656,6 +658,13 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE_AS(viewFirst2.asContiguous(),
         Containers::stridedArrayView({T{}}).template broadcasted<0>(3*sizeFirstY *1),
         TestSuite::Compare::Container);
+    /* Mutable data should be the same */
+    CORRADE_COMPARE(first1.mutableData().data(), viewFirst1.data());
+    CORRADE_COMPARE(first2.mutableData().data(), viewFirst2.data());
+    CORRADE_COMPARE(first1.mutableData().size(), viewFirst1.size());
+    CORRADE_COMPARE(first2.mutableData().size(), viewFirst2.size());
+    CORRADE_COMPARE(first1.mutableData().stride(), viewFirst1.stride());
+    CORRADE_COMPARE(first2.mutableData().stride(), viewFirst2.stride());
 
     /* 2D, 1D and single-item variants delegate to the 3D constructor, so
        verify just that they propagate all arguments correctly */
@@ -698,6 +707,12 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE_AS(viewSecond2.asContiguous(),
         Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeSecondX*2),
         TestSuite::Compare::Container);
+    CORRADE_COMPARE(second1.mutableData().data(), viewSecond1.data());
+    CORRADE_COMPARE(second2.mutableData().data(), viewSecond2.data());
+    CORRADE_COMPARE(second1.mutableData().size(), viewSecond1.size());
+    CORRADE_COMPARE(second2.mutableData().size(), viewSecond2.size());
+    CORRADE_COMPARE(second1.mutableData().stride(), viewSecond1.stride());
+    CORRADE_COMPARE(second2.mutableData().stride(), viewSecond2.stride());
 
     #ifndef CORRADE_TARGET_32BIT
     constexpr std::size_t sizeThird = 3;
@@ -743,6 +758,12 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE_AS(viewThird2.asContiguous(),
         Containers::stridedArrayView({T{}}).template broadcasted<0>(sizeThird),
         TestSuite::Compare::Container);
+    CORRADE_COMPARE(third1.mutableData().data(), viewThird1.data());
+    CORRADE_COMPARE(third2.mutableData().data(), viewThird2.data());
+    CORRADE_COMPARE(third1.mutableData().size(), viewThird1.size());
+    CORRADE_COMPARE(third2.mutableData().size(), viewThird2.size());
+    CORRADE_COMPARE(third1.mutableData().stride(), viewThird1.stride());
+    CORRADE_COMPARE(third2.mutableData().stride(), viewThird2.stride());
 
     NumericStorage<T> fourth1 = data.implicitLayer ?
         NumericStorage<T>{ui, ValueInit, StorageFlags{0x08}} :
@@ -785,6 +806,12 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE_AS(viewFourth2.asContiguous(),
         Containers::arrayView({T{}}),
         TestSuite::Compare::Container);
+    CORRADE_COMPARE(fourth1.mutableData().data(), viewFourth1.data());
+    CORRADE_COMPARE(fourth2.mutableData().data(), viewFourth2.data());
+    CORRADE_COMPARE(fourth1.mutableData().size(), viewFourth1.size());
+    CORRADE_COMPARE(fourth2.mutableData().size(), viewFourth2.size());
+    CORRADE_COMPARE(fourth1.mutableData().stride(), viewFourth1.stride());
+    CORRADE_COMPARE(fourth2.mutableData().stride(), viewFourth2.stride());
 }
 
 template<class T> void NumericStorageTest::constructNoInit() {
@@ -829,6 +856,10 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_COMPARE(view.size(), first.size());
     CORRADE_COMPARE(view.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
     CORRADE_VERIFY(view.isContiguous());
+    /* Mutable data should be the same */
+    CORRADE_COMPARE(first.mutableData().data(), view.data());
+    CORRADE_COMPARE(first.mutableData().size(), view.size());
+    CORRADE_COMPARE(first.mutableData().stride(), view.stride());
 
     /* 2D and 1D variants delegate to the 3D constructor, so verify just that
        they propagate all arguments correctly */
@@ -847,6 +878,9 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_COMPARE(second.size(), (Containers::Size3D{1, sizeSecondX, 2}));
     CORRADE_COMPARE(second.data().size(), second.size());
     CORRADE_COMPARE(second.data().stride(), (Containers::Stride3D{sizeSecondX*2*sizeof(T), 2*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(second.mutableData().data(), second.data().data());
+    CORRADE_COMPARE(second.mutableData().size(), second.data().size());
+    CORRADE_COMPARE(second.mutableData().stride(), second.data().stride());
 
     #ifndef CORRADE_TARGET_32BIT
     constexpr std::size_t sizeThird = 3;
@@ -867,6 +901,9 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_COMPARE(third.size(), (Containers::Size3D{1, 1, sizeThird}));
     CORRADE_COMPARE(third.data().size(), third.size());
     CORRADE_COMPARE(third.data().stride(), (Containers::Stride3D{sizeThird*sizeof(T), sizeThird*sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(third.mutableData().data(), third.data().data());
+    CORRADE_COMPARE(third.mutableData().size(), third.data().size());
+    CORRADE_COMPARE(third.mutableData().stride(), third.data().stride());
 
     /* For single-item storages, types below 8 / 4 bytes fit in-place, in which
        case we can create, fill & remove a storage and then recycling the slot
@@ -910,6 +947,9 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_COMPARE(fourth.size(), (Containers::Size3D{1, 1, 1}));
     CORRADE_COMPARE(fourth.data().size(), fourth.size());
     CORRADE_COMPARE(fourth.data().stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
+    CORRADE_COMPARE(fourth.mutableData().data(), fourth.data().data());
+    CORRADE_COMPARE(fourth.mutableData().size(), fourth.data().size());
+    CORRADE_COMPARE(fourth.mutableData().stride(), fourth.data().stride());
     #ifndef CORRADE_TARGET_32BIT
     if(sizeof(T) < 8)
     #else
@@ -969,6 +1009,10 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_COMPARE_AS(view.asContiguous(),
         Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(3*sizeFirstY*1),
         TestSuite::Compare::Container);
+    /* Mutable data should be the same */
+    CORRADE_COMPARE(first.mutableData().data(), view.data());
+    CORRADE_COMPARE(first.mutableData().size(), view.size());
+    CORRADE_COMPARE(first.mutableData().stride(), view.stride());
 
     /* 2D, 1D and single-item variants delegate to the 3D constructor, so
        verify just that they propagate all arguments correctly */
@@ -990,6 +1034,9 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_COMPARE_AS(second.data().asContiguous(),
         Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(sizeSecondX*2),
         TestSuite::Compare::Container);
+    CORRADE_COMPARE(second.mutableData().data(), second.data().data());
+    CORRADE_COMPARE(second.mutableData().size(), second.data().size());
+    CORRADE_COMPARE(second.mutableData().stride(), second.data().stride());
 
     #ifndef CORRADE_TARGET_32BIT
     constexpr std::size_t sizeThird = 3;
@@ -1013,6 +1060,9 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_COMPARE_AS(third.data().asContiguous(),
         Containers::stridedArrayView({StorageTraits<T>::value()}).template broadcasted<0>(sizeThird),
         TestSuite::Compare::Container);
+    CORRADE_COMPARE(third.mutableData().data(), third.data().data());
+    CORRADE_COMPARE(third.mutableData().size(), third.data().size());
+    CORRADE_COMPARE(third.mutableData().stride(), third.data().stride());
 
     NumericStorage<T> fourth = data.implicitLayer ?
         NumericStorage<T>{ui, DirectInit, StorageTraits<T>::value(), StorageFlags{0x08}} :
@@ -1031,6 +1081,9 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_COMPARE_AS(fourth.data().asContiguous(),
         Containers::arrayView({StorageTraits<T>::value()}),
         TestSuite::Compare::Container);
+    CORRADE_COMPARE(fourth.mutableData().data(), fourth.data().data());
+    CORRADE_COMPARE(fourth.mutableData().size(), fourth.data().size());
+    CORRADE_COMPARE(fourth.mutableData().stride(), fourth.data().stride());
 }
 
 template<class T> void NumericStorageTest::constructNonOwned3D() {
@@ -1109,6 +1162,12 @@ template<class T> void NumericStorageTest::constructNonOwned3D() {
     CORRADE_COMPARE(view2.size(), constStorageView.size());
     CORRADE_COMPARE(view1.stride(), storageView.stride());
     CORRADE_COMPARE(view2.stride(), constStorageView.stride());
+
+    /* Mutable data should be the same. Assertion for the other tested in
+       nonOwnedMutableDataInvalid(). */
+    CORRADE_COMPARE(storage1.mutableData().data(), view1.data());
+    CORRADE_COMPARE(storage1.mutableData().size(), view1.size());
+    CORRADE_COMPARE(storage1.mutableData().stride(), view1.stride());
 }
 
 template<class T> void NumericStorageTest::constructNonOwned2D() {
@@ -1184,6 +1243,12 @@ template<class T> void NumericStorageTest::constructNonOwned2D() {
     CORRADE_COMPARE(view2.size(), Containers::StridedArrayView3D<const T>{constStorageView}.size());
     CORRADE_COMPARE(view1.stride(), Containers::StridedArrayView3D<T>{storageView}.stride());
     CORRADE_COMPARE(view2.stride(), Containers::StridedArrayView3D<const T>{constStorageView}.stride());
+
+    /* Mutable data should be the same. Assertion for the other tested in
+       nonOwnedMutableDataInvalid(). */
+    CORRADE_COMPARE(storage1.mutableData().data(), view1.data());
+    CORRADE_COMPARE(storage1.mutableData().size(), view1.size());
+    CORRADE_COMPARE(storage1.mutableData().stride(), view1.stride());
 }
 
 template<class T> void NumericStorageTest::constructNonOwned1D() {
@@ -1253,6 +1318,12 @@ template<class T> void NumericStorageTest::constructNonOwned1D() {
     CORRADE_COMPARE(view2.size(), Containers::StridedArrayView3D<const T>{constStorageView}.size());
     CORRADE_COMPARE(view1.stride(), Containers::StridedArrayView3D<T>{storageView}.stride());
     CORRADE_COMPARE(view2.stride(), Containers::StridedArrayView3D<const T>{constStorageView}.stride());
+
+    /* Mutable data should be the same. Assertion for the other tested in
+       nonOwnedMutableDataInvalid(). */
+    CORRADE_COMPARE(storage1.mutableData().data(), view1.data());
+    CORRADE_COMPARE(storage1.mutableData().size(), view1.size());
+    CORRADE_COMPARE(storage1.mutableData().stride(), view1.stride());
 }
 
 template<class T> void NumericStorageTest::constructNonOwned() {
@@ -1321,6 +1392,12 @@ template<class T> void NumericStorageTest::constructNonOwned() {
     CORRADE_COMPARE(view2.size(), (Containers::Size3D{1, 1, 1}));
     CORRADE_COMPARE(view1.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
     CORRADE_COMPARE(view2.stride(), (Containers::Stride3D{sizeof(T), sizeof(T), sizeof(T)}));
+
+    /* Mutable data should be the same. Assertion for the other tested in
+       nonOwnedMutableDataInvalid(). */
+    CORRADE_COMPARE(storage1.mutableData().data(), view1.data());
+    CORRADE_COMPARE(storage1.mutableData().size(), view1.size());
+    CORRADE_COMPARE(storage1.mutableData().stride(), view1.stride());
 }
 
 void NumericStorageTest::constructCopy() {
@@ -1880,6 +1957,20 @@ void NumericStorageTest::accessInvalid() {
 
         "Ui::StorageQuery: expected a 2D storage but got a size of {4, 2, 5}\n",
         TestSuite::Compare::String);
+}
+
+void NumericStorageTest::nonOwnedMutableDataInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    DataLayer layer{layerHandle(0, 1)};
+
+    const Int storageData[7]{};
+    NumericStorage<Int> storage{layer, NonOwned, storageData};
+
+    Containers::String out;
+    Error redirectError{&out};
+    storage.mutableData();
+    CORRADE_COMPARE(out, "Ui::NumericStorage::mutableData(): data not mutable\n");
 }
 
 void NumericStorageTest::update() {

@@ -482,6 +482,13 @@ template<class T> Containers::StridedArrayView3D<const T> NumericStorage<T>::dat
     return {{data.pointer(), ~std::size_t{}}, size(), data.stride(size())};
 }
 
+template<class T> Containers::StridedArrayView3D<T> NumericStorage<T>::mutableData() const {
+    CORRADE_ASSERT(!(AbstractStorage::data<Data<T>>()->flags >= Flag::NonOwnedImmutable),
+        "Ui::NumericStorage::mutableData(): data not mutable", {});
+    Containers::StridedArrayView3D<const T> out = data();
+    return {{const_cast<T*>(static_cast<const T*>(out.data())), ~std::size_t{}}, out.size(), out.stride()};
+}
+
 /* Explicitly instantiating just the functions that actually have to be
    deinlined in this file to avoid inflating the binary with the full
    combinatorial explosion of constructor and operator[]() variants of which
@@ -514,7 +521,8 @@ template MAGNUM_UI_EXPORT const NumericStorage<type>& NumericStorage<type>::setD
 template MAGNUM_UI_EXPORT typename NumericStorage<type>::Type NumericStorage<type>::query(const NumericStorage<type>&, const Containers::Size3D&, StorageOperation); \
 template MAGNUM_UI_EXPORT StorageUpdateState NumericStorage<type>::updater(const NumericStorage<type>&, const Containers::Size3D&, StorageOperation, const Type*); \
 template MAGNUM_UI_EXPORT StorageOperations NumericStorage<type>::operations() const; \
-template MAGNUM_UI_EXPORT Containers::StridedArrayView3D<const type> NumericStorage<type>::data() const;
+template MAGNUM_UI_EXPORT Containers::StridedArrayView3D<const type> NumericStorage<type>::data() const; \
+template MAGNUM_UI_EXPORT Containers::StridedArrayView3D<type> NumericStorage<type>::mutableData() const;
 _c(UnsignedByte)
 _c(Byte)
 _c(UnsignedShort)
