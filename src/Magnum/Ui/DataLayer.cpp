@@ -964,146 +964,150 @@ StorageOperations DataLayer::operations(const LayerDataHandle handle) const {
     return _state->data[layerDataHandleId(handle)].operations;
 }
 
-StorageUpdateState DataLayer::setInternal(const DataHandle handle, const void* const value) {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::DataLayer::set(): invalid handle" << handle, {});
-    return updateInternal(
-        #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::set():",
-        #endif
-        dataHandleId(handle), StorageOperation::Set, value);
-}
-
-StorageUpdateState DataLayer::setInternal(const LayerDataHandle handle, const void* const value) {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::DataLayer::set(): invalid handle" << handle, {});
-    return updateInternal(
-        #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::set():",
-        #endif
-        layerDataHandleId(handle), StorageOperation::Set, value);
-}
-
 void DataLayer::reset(const DataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::reset():",
+        "Ui::DataLayer::reset():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Reset);
+        , handle, StorageOperation::Reset, nullptr);
 }
 
 void DataLayer::reset(const LayerDataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::reset():",
+        "Ui::DataLayer::reset():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Reset);
+        , handle, StorageOperation::Reset, nullptr);
 }
 
 void DataLayer::toggle(const DataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::toggle():",
+        "Ui::DataLayer::toggle():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Toggle);
+        , handle, StorageOperation::Toggle, nullptr);
 }
 
 void DataLayer::toggle(const LayerDataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::toggle():",
+        "Ui::DataLayer::toggle():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Toggle);
+        , handle, StorageOperation::Toggle, nullptr);
 }
 
 void DataLayer::increment(const DataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::increment():",
+        "Ui::DataLayer::increment():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Increment);
+        , handle, StorageOperation::Increment, nullptr);
 }
 
 void DataLayer::increment(const LayerDataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::increment():",
+        "Ui::DataLayer::increment():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Increment);
+        , handle, StorageOperation::Increment, nullptr);
 }
 
 void DataLayer::decrement(const DataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::decrement():",
+        "Ui::DataLayer::decrement():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Decrement);
+        , handle, StorageOperation::Decrement, nullptr);
 }
 
 void DataLayer::decrement(const LayerDataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::decrement():",
+        "Ui::DataLayer::decrement():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Decrement);
+        , handle, StorageOperation::Decrement, nullptr);
 }
 
 void DataLayer::setToMin(const DataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::setToMin():",
+        "Ui::DataLayer::setToMin():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Min);
+        , handle, StorageOperation::Min, nullptr);
 }
 
 void DataLayer::setToMin(const LayerDataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::setToMin():",
+        "Ui::DataLayer::setToMin():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Min);
+        , handle, StorageOperation::Min, nullptr);
 }
 
 void DataLayer::setToMax(const DataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::setToMax():",
+        "Ui::DataLayer::setToMax():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Max);
+        , handle, StorageOperation::Max, nullptr);
 }
 
 void DataLayer::setToMax(const LayerDataHandle handle) {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::DataLayer::setToMax():",
+        "Ui::DataLayer::setToMax():"
+        #else
+        {}
         #endif
-        handle, StorageOperation::Max);
+        , handle, StorageOperation::Max, nullptr);
 }
 
-void DataLayer::updateInternal(
+StorageUpdateState DataLayer::updateInternal(const char*
     #ifndef CORRADE_NO_ASSERT
-    const char* const messagePrefix,
+    const messagePrefix
     #endif
-    const DataHandle handle, const StorageOperation operation)
+    , const DataHandle handle, const StorageOperation operation, const void* const value)
 {
     CORRADE_ASSERT(isHandleValid(handle),
-        messagePrefix << "invalid handle" << handle, );
-    updateInternal(
+        messagePrefix << "invalid handle" << handle, {});
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         messagePrefix,
         #endif
-        dataHandleId(handle), operation, nullptr);
+        dataHandleId(handle), operation, value);
 }
 
-void DataLayer::updateInternal(
+StorageUpdateState DataLayer::updateInternal(const char*
     #ifndef CORRADE_NO_ASSERT
-    const char* const messagePrefix,
+    const messagePrefix
     #endif
-    const LayerDataHandle handle, const StorageOperation operation)
+    , const LayerDataHandle handle, const StorageOperation operation, const void* const value)
 {
     CORRADE_ASSERT(isHandleValid(handle),
-        messagePrefix << "invalid handle" << handle, );
-    updateInternal(
+        messagePrefix << "invalid handle" << handle, {});
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         messagePrefix,
         #endif
@@ -1243,56 +1247,68 @@ AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const
 void AbstractStorageQuery::reset() const {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::StorageQuery::reset():",
+        "Ui::StorageQuery::reset():"
+        #else
+        {}
         #endif
-        StorageOperation::Reset, nullptr);
+        , StorageOperation::Reset, nullptr);
 }
 
 void AbstractStorageQuery::toggle() const {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::StorageQuery::toggle():",
+        "Ui::StorageQuery::toggle():"
+        #else
+        {}
         #endif
-        StorageOperation::Toggle, nullptr);
+        , StorageOperation::Toggle, nullptr);
 }
 
 void AbstractStorageQuery::increment() const {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::StorageQuery::increment():",
+        "Ui::StorageQuery::increment():"
+        #else
+        {}
         #endif
-        StorageOperation::Increment, nullptr);
+        , StorageOperation::Increment, nullptr);
 }
 
 void AbstractStorageQuery::decrement() const {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::StorageQuery::decrement():",
+        "Ui::StorageQuery::decrement():"
+        #else
+        {}
         #endif
-        StorageOperation::Decrement, nullptr);
+        , StorageOperation::Decrement, nullptr);
 }
 
 void AbstractStorageQuery::setToMin() const {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::StorageQuery::setToMin():",
+        "Ui::StorageQuery::setToMin():"
+        #else
+        {}
         #endif
-        StorageOperation::Min, nullptr);
+        , StorageOperation::Min, nullptr);
 }
 
 void AbstractStorageQuery::setToMax() const {
     updateInternal(
         #ifndef CORRADE_NO_ASSERT
-        "Ui::StorageQuery::setToMax():",
+        "Ui::StorageQuery::setToMax():"
+        #else
+        {}
         #endif
-        StorageOperation::Max, nullptr);
+        , StorageOperation::Max, nullptr);
 }
 
-StorageUpdateState AbstractStorageQuery::updateInternal(
+StorageUpdateState AbstractStorageQuery::updateInternal(const char*
     #ifndef CORRADE_NO_ASSERT
-    const char* const messagePrefix,
+    const messagePrefix
     #endif
-    const StorageOperation operation, const void* const value) const
+    , const StorageOperation operation, const void* const value) const
 {
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
         messagePrefix << "invalid handle" << storageHandle(_layer->handle(), _storage), {});
@@ -1308,14 +1324,6 @@ StorageUpdateState AbstractStorageQuery::updateInternal(
     CORRADE_ASSERT(operation == StorageOperation::Set || state == StorageUpdateState::Success,
         messagePrefix << "updater implementation expected to return" << StorageUpdateState::Success << "for" << operation << "but got" << state, {});
     return state;
-}
-
-StorageUpdateState AbstractStorageQuery::setInternal(const void* const value) const {
-    return updateInternal(
-        #ifndef CORRADE_NO_ASSERT
-        "Ui::StorageQuery::set():",
-        #endif
-        StorageOperation::Set, value);
 }
 
 }}

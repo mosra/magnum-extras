@@ -1139,7 +1139,13 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *      @ref isStorageDirty(), @ref StorageQuery::set()
          */
         template<class T> StorageUpdateState set(DataHandle handle, const T& value) {
-            return setInternal(handle, &value);
+            return updateInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::DataLayer::set():"
+                #else
+                {}
+                #endif
+                , handle, StorageOperation::Set, &value);
         }
 
         /**
@@ -1152,7 +1158,13 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *      @ref dataHandleData()
          */
         template<class T> StorageUpdateState set(LayerDataHandle handle, const T& value) {
-            return setInternal(handle, &value);
+            return updateInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::DataLayer::set():"
+                #else
+                {}
+                #endif
+                , handle, StorageOperation::Set, &value);
         }
 
         /**
@@ -1346,19 +1358,12 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, std::size_t index);
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, const Containers::Size2D& index);
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, const Containers::Size3D& index);
-        StorageUpdateState setInternal(DataHandle handle, const void* value);
-        StorageUpdateState setInternal(LayerDataHandle handle, const void* value);
-        MAGNUM_UI_LOCAL void updateInternal(
-            #ifndef CORRADE_NO_ASSERT
-            const char* messagePrefix,
-            #endif
-            DataHandle handle, StorageOperation operation);
-        MAGNUM_UI_LOCAL void updateInternal(
-            #ifndef CORRADE_NO_ASSERT
-            const char* messagePrefix,
-            #endif
-            LayerDataHandle handle, StorageOperation operation);
-        /* Called from both setInternal() and updateInternal() above */
+        StorageUpdateState updateInternal(const char* messagePrefix, DataHandle handle, StorageOperation operation, const void* value);
+        StorageUpdateState updateInternal(const char* messagePrefix, LayerDataHandle handle, StorageOperation operation, const void* value);
+        /* Called from updateInternal() above, compared to those it's a
+           MAGNUM_UI_LOCAL symbol so it can have assertion-dependent signature
+           without causing linker errors if a library is built with assertions
+           but user code isn't and vice versa. */
         MAGNUM_UI_LOCAL StorageUpdateState updateInternal(
             #ifndef CORRADE_NO_ASSERT
             const char* messagePrefix,
@@ -1834,16 +1839,7 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
 
         explicit AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, StorageOperations operations, void(*(*call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&), StorageUpdateState(*updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*));
 
-        MAGNUM_UI_LOCAL StorageUpdateState updateInternal(
-            #ifndef CORRADE_NO_ASSERT
-            const char* messagePrefix,
-            #endif
-            StorageOperation operation, const void* value) const;
-        /* Called from StorageQuery::set(), calls into updateInternal() but
-           that one has to be MAGNUM_UI_LOCAL as it has assertion-dependent
-           signature and would cause linker errors if a library is built with
-           assertions but user code isn't and vice versa. */
-        StorageUpdateState setInternal(const void* value) const;
+        StorageUpdateState updateInternal(const char* messagePrefix, StorageOperation operation, const void* value) const;
 
         DataLayer* _layer;
         DataLayerStorageHandle _storage;
@@ -2204,7 +2200,13 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          *      @ref DataLayer::set(DataHandle, const T&)
          */
         StorageUpdateState set(const T& value) const {
-            return setInternal(&value);
+            return updateInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery::set():"
+                #else
+                {}
+                #endif
+                , StorageOperation::Set, &value);
         }
 
         /**
