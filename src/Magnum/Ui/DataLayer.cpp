@@ -971,7 +971,7 @@ StorageUpdateState DataLayer::setInternal(const DataHandle handle, const void* c
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::set():",
         #endif
-        dataHandleData(handle), StorageOperation::Set, value);
+        dataHandleId(handle), StorageOperation::Set, value);
 }
 
 StorageUpdateState DataLayer::setInternal(const LayerDataHandle handle, const void* const value) {
@@ -981,7 +981,7 @@ StorageUpdateState DataLayer::setInternal(const LayerDataHandle handle, const vo
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::set():",
         #endif
-        handle, StorageOperation::Set, value);
+        layerDataHandleId(handle), StorageOperation::Set, value);
 }
 
 void DataLayer::reset(const DataHandle handle) {
@@ -1092,7 +1092,7 @@ void DataLayer::updateInternal(
         #ifndef CORRADE_NO_ASSERT
         messagePrefix,
         #endif
-        dataHandleData(handle), operation, nullptr);
+        dataHandleId(handle), operation, nullptr);
 }
 
 void DataLayer::updateInternal(
@@ -1107,17 +1107,17 @@ void DataLayer::updateInternal(
         #ifndef CORRADE_NO_ASSERT
         messagePrefix,
         #endif
-        handle, operation, nullptr);
+        layerDataHandleId(handle), operation, value);
 }
 
 StorageUpdateState DataLayer::updateInternal(
     #ifndef CORRADE_NO_ASSERT
     const char* const messagePrefix,
     #endif
-    const LayerDataHandle handle, StorageOperation operation, const void* const value)
+    const UnsignedInt id, StorageOperation operation, const void* const value)
 {
     const State& state = *_state;
-    const Data& data = state.data[layerDataHandleId(handle)];
+    const Data& data = state.data[id];
     /* In case of StorageOperation::Min / Max, only the queries could be
        supported, so check also for mutability. All other operations are not
        allowed to be specified if the StorageQuery is constructed without an

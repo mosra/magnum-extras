@@ -1363,7 +1363,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             #ifndef CORRADE_NO_ASSERT
             const char* messagePrefix,
             #endif
-            LayerDataHandle handle, StorageOperation operation, const void* value);
+            UnsignedInt id, StorageOperation operation, const void* value);
 
         MAGNUM_UI_LOCAL LayerFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL void doClean(Containers::BitArrayView dataIdsToRemove) override;
