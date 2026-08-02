@@ -2184,7 +2184,13 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * mainly for diagnostic purposes, for regular access prefer to access
          * the storage data directly.
          */
-        /*implicit*/ operator T() const;
+        /*implicit*/ operator T() const {
+            return queryInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery:",
+                #endif
+                StorageOperation{});
+        }
 
         /**
          * @brief Update the storage value
@@ -2216,7 +2222,13 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @ref operations() list @ref StorageOperation::Min.
          * @see @ref setToMin(), @ref max()
          */
-        T min() const;
+        T min() const {
+            return queryInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery::min():",
+                #endif
+                StorageOperation::Min);
+        }
 
         /**
          * @brief Maximum allowed storage value
@@ -2225,7 +2237,13 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @ref operations() list @ref StorageOperation::Max.
          * @see @ref setToMax(), @ref min()
          */
-        T max() const;
+        T max() const {
+            return queryInternal(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::StorageQuery::max():",
+                #endif
+                StorageOperation::Max);
+        }
 
         #ifndef DOXYGEN_GENERATING_OUTPUT
         /* This has to be here in order to allow storage implementations to
@@ -2243,6 +2261,12 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
            used only because it's not possible to explicitly specify template
            arguments when calling a constructor. */
         template<UnsignedInt dimensions, class Storage, class F, class G> explicit StorageQuery(const Storage& storage, const Containers::Size3D& index, StorageOperations operations, Implementation::StorageArgs<dimensions, F, G>);
+
+        T queryInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* const messagePrefix,
+            #endif
+            const StorageOperation operation) const;
 
         T(*_query)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation);
 };
@@ -2444,37 +2468,21 @@ template<class T> template<UnsignedInt dimensions, class Storage, class F, class
         "expected updater to be a nullptr or a non-capturing lambda");
 }
 
-template<class T> StorageQuery<T>::operator T() const {
+template<class T> T StorageQuery<T>::queryInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const StorageOperation operation) const
+{
     /* Calling into _query even from asserts to have this compile even with a
        non-default-constructible T */
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
-        "Ui::StorageQuery: invalid handle" << storageHandle(_layer->handle(), _storage),
-        _query(*_layer, _storage, _index, StorageOperation{}));
-    return _query(*_layer, _storage, _index, StorageOperation{});
-}
-
-template<class T> T StorageQuery<T>::min() const {
-    /* Calling into _query even from asserts to have this compile even with a
-       non-default-constructible T */
-    CORRADE_ASSERT(_layer->isHandleValid(_storage),
-        "Ui::StorageQuery::min(): invalid handle" << storageHandle(_layer->handle(), _storage),
-        _query(*_layer, _storage, _index, StorageOperation::Min));
-    CORRADE_ASSERT(_operations >= StorageOperation::Min,
-        "Ui::StorageQuery::min():" << StorageOperation::Min << "not supported",
-        _query(*_layer, _storage, _index, StorageOperation::Min));
-    return _query(*_layer, _storage, _index, StorageOperation::Min);
-}
-
-template<class T> T StorageQuery<T>::max() const {
-    /* Calling into _query even from asserts to have this compile even with a
-       non-default-constructible T */
-    CORRADE_ASSERT(_layer->isHandleValid(_storage),
-        "Ui::StorageQuery::max(): invalid handle" << storageHandle(_layer->handle(), _storage),
-        _query(*_layer, _storage, _index, StorageOperation::Max));
-    CORRADE_ASSERT(_operations >= StorageOperation::Max,
-        "Ui::StorageQuery::max():" << StorageOperation::Max << "not supported",
-        _query(*_layer, _storage, _index, StorageOperation::Max));
-    return _query(*_layer, _storage, _index, StorageOperation::Max);
+        messagePrefix << "invalid handle" << storageHandle(_layer->handle(), _storage),
+        _query(*_layer, _storage, _index, operation));
+    CORRADE_ASSERT(_operations >= operation,
+        messagePrefix << operation << "not supported",
+        _query(*_layer, _storage, _index, operation));
+    return _query(*_layer, _storage, _index, operation);
 }
 #endif
 
