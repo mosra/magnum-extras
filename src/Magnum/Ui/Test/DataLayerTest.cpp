@@ -91,7 +91,7 @@ struct DataLayerTest: TestSuite::Tester {
     void queryConstruct();
     void queryConstructCopy();
     void queryConstructInvalid();
-    void queryValueNoDefaultConstructor();
+    void queryValueNonTrivial();
     void queryValueUpdateInvalid();
     void queryInvalidHandle();
 
@@ -255,7 +255,7 @@ DataLayerTest::DataLayerTest() {
         &DataLayerTest::queryConstructSetupTeardown);
 
     addTests({&DataLayerTest::queryConstructInvalid,
-              &DataLayerTest::queryValueNoDefaultConstructor,
+              &DataLayerTest::queryValueNonTrivial,
               &DataLayerTest::queryValueUpdateInvalid,
               &DataLayerTest::queryInvalidHandle});
 
@@ -2161,9 +2161,43 @@ void DataLayerTest::queryConstructInvalid() {
         TestSuite::Compare::String);
 }
 
-void DataLayerTest::queryValueNoDefaultConstructor() {
+struct NonTrivial {
+    static int constructed;
+    static int moved;
+    static int destructed;
+
+    explicit NonTrivial(int a): a{a} {
+        ++constructed;
+    }
+    NonTrivial(const NonTrivial&) = delete;
+    NonTrivial(NonTrivial&& other) noexcept: a(other.a) {
+        ++constructed;
+        ++moved;
+    }
+    ~NonTrivial() {
+        ++destructed;
+    }
+    NonTrivial& operator=(const NonTrivial&) = delete;
+    /* Only move construction happens in queryValueNonTrivial() below, no move
+       assignment */
+    NonTrivial& operator=(NonTrivial&& other) = delete;
+
+    int a;
+};
+
+int NonTrivial::constructed = 0;
+int NonTrivial::moved = 0;
+int NonTrivial::destructed = 0;
+
+void DataLayerTest::queryValueNonTrivial() {
     /* "Simple" StorageQuery value retrieval tested in queryConstruct()
-       already, this verifies that it works for non-trivial types as well */
+       already, this verifies that it works for types without a default
+       constructor and move-only types and that destructors are called exactly
+       once in all cases */
+
+    NonTrivial::constructed =
+        NonTrivial::moved =
+        NonTrivial::destructed = 0;
 
     DataLayer layer{layerHandle(0, 1)};
 
@@ -2171,23 +2205,39 @@ void DataLayerTest::queryValueNoDefaultConstructor() {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
     } storage{layer};
 
-    struct NoDefaultConstructor {
-        explicit NoDefaultConstructor(Int a): a{a} {}
-
-        Int a;
-    };
-
-    StorageQuery<NoDefaultConstructor> query{storage, StorageOperation::Min|StorageOperation::Max, [](const DummyStorage&, StorageOperation operation) {
+    StorageQuery<NonTrivial> query{storage, StorageOperation::Min|StorageOperation::Max, [](const DummyStorage&, StorageOperation operation) {
         if(operation == StorageOperation::Min)
-            return NoDefaultConstructor{0x1111};
+            return NonTrivial{0x1111};
         if(operation == StorageOperation::Max)
-            return NoDefaultConstructor{0x7777};
-        return NoDefaultConstructor{0x4444};
+            return NonTrivial{0x7777};
+        return NonTrivial{0x4444};
     }};
+    CORRADE_COMPARE(NonTrivial::constructed, 0);
+    CORRADE_COMPARE(NonTrivial::destructed, 0);
+    CORRADE_COMPARE(NonTrivial::moved, 0);
 
-    CORRADE_COMPARE(NoDefaultConstructor{query}.a, 0x4444);
+    /* Each query constructs the instance in-place for the return location,
+       with no moves happening. Except for Clang, somehow, which uses one extra
+       move in the conversion operator but not the others. */
+    #ifndef CORRADE_TARGET_CLANG
+    constexpr int moveCount = 0;
+    #else
+    constexpr int moveCount = 1;
+    #endif
+    CORRADE_COMPARE(NonTrivial{query}.a, 0x4444);
+    CORRADE_COMPARE(NonTrivial::constructed, 1 + moveCount);
+    CORRADE_COMPARE(NonTrivial::moved, moveCount);
+    CORRADE_COMPARE(NonTrivial::destructed, 1 + moveCount);
+
     CORRADE_COMPARE(query.min().a, 0x1111);
+    CORRADE_COMPARE(NonTrivial::constructed, 2 + moveCount);
+    CORRADE_COMPARE(NonTrivial::moved, moveCount);
+    CORRADE_COMPARE(NonTrivial::destructed, 2 + moveCount);
+
     CORRADE_COMPARE(query.max().a, 0x7777);
+    CORRADE_COMPARE(NonTrivial::constructed, 3 + moveCount);
+    CORRADE_COMPARE(NonTrivial::moved, moveCount);
+    CORRADE_COMPARE(NonTrivial::destructed, 3 + moveCount);
 }
 
 void DataLayerTest::queryValueUpdateInvalid() {
