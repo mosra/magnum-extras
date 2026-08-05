@@ -416,8 +416,6 @@ CORRADE_ENUMSET_OPERATORS(StorageOperations)
 enum class StorageUpdateState: UnsignedByte {
     /**
      * The update succeeded, setting the desired value.
-     *
-     * This value can be returned by the updater for any @ref StorageOperation.
      */
     Success,
 
@@ -426,9 +424,9 @@ enum class StorageUpdateState: UnsignedByte {
      * numeric storage is quantized. This is commonly considered to not be an
      * issue and shouldn't result in a warning feedback to the user.
      *
-     * This value can be returned by the updater *only* for
-     * @ref StorageOperation::Set, all other operations are expected to return
-     * @ref StorageUpdateState::Success.
+     * This value can be returned by the updater also for operations other than
+     * @ref StorageOperation::Set, concrete meaning is described in
+     * documentation of a particular storage implementation.
      */
     Approximated,
 
@@ -443,9 +441,12 @@ enum class StorageUpdateState: UnsignedByte {
      * query implementation, for numbers in particular it can be either a
      * min/max operation or a wraparound.
      *
-     * This value can only be returned by the updater *only* for
-     * @ref StorageOperation::Set, all other operations are expected to return
-     * @ref StorageUpdateState::Success.
+     * This value can be returned by the updater for example aslo for
+     * @ref StorageOperation::Increment or
+     * @relativeref{StorageOperation,Decrement}, which can be used for example
+     * to provide a different visual feedback than when it'd succeed. Concrete
+     * meaning is described in documentation of a particular storage
+     * implementation.
      */
     Clamped,
 
@@ -454,9 +455,12 @@ enum class StorageUpdateState: UnsignedByte {
      * interpretation of the failure is specific to a particular storage and
      * query implementation.
      *
-     * This value can only be returned by the updater *only* for
-     * @ref StorageOperation::Set, all other operations are expected to return
-     * @ref StorageUpdateState::Success.
+     * This value can be returned by the updater for example also for
+     * @ref StorageOperation::Toggle and @relativeref{StorageOperation,Reset},
+     * which may imply that such update would break certain invariants, such as
+     * allowing only one item in a list to be selected at a time. Concrete
+     * meaning is described in documentation of a particular storage
+     * implementation.
      */
     Failed
 };
@@ -1231,7 +1235,10 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * Expects that @p handle is valid, mutable and @ref operations() list
          * @ref StorageOperation::Set. It's the user responsibility to ensure
          * that @p T matches the @ref StorageQuery type the @p handle is coming
-         * from.
+         * from. The return value describes whether the update succeeded, see
+         * the @ref StorageUpdateState enum values for an overview of possible
+         * conditions and documentation of a concrete storage implementation
+         * for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
@@ -1273,7 +1280,10 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @brief Reset the storage value for given data binding
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
-         * @ref StorageOperation::Reset.
+         * @ref StorageOperation::Reset. The return value describes whether the
+         * update succeeded, see the @ref StorageUpdateState enum values for an
+         * overview of possible conditions and documentation of a concrete
+         * storage implementation for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
@@ -1282,7 +1292,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *      @ref get(), @ref set(), @ref toggle(), @ref isStorageDirty(),
          *      @ref StorageQuery::reset()
          */
-        void reset(DataHandle handle);
+        StorageUpdateState reset(DataHandle handle);
 
         /**
          * @brief Reset the storage value for given data binding assuming it belongs to this layer
@@ -1293,13 +1303,16 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @see @ref isHandleValid(LayerDataHandle) const,
          *      @ref dataHandleData()
          */
-        void reset(LayerDataHandle handle);
+        StorageUpdateState reset(LayerDataHandle handle);
 
         /**
          * @brief Toggle the storage value for given data binding
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
-         * @ref StorageOperation::Toggle.
+         * @ref StorageOperation::Toggle. The return value describes whether
+         * the update succeeded, see the @ref StorageUpdateState enum values
+         * for an overview of possible conditions and documentation of a
+         * concrete storage implementation for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
@@ -1308,7 +1321,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *      @ref get(), @ref set(), @ref reset(), @ref isStorageDirty(),
          *      @ref StorageQuery::toggle()
          */
-        void toggle(DataHandle handle);
+        StorageUpdateState toggle(DataHandle handle);
 
         /**
          * @brief Toggle the storage value for given data binding assuming it belongs to this layer
@@ -1319,13 +1332,16 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @see @ref isHandleValid(LayerDataHandle) const,
          *      @ref dataHandleData()
          */
-        void toggle(LayerDataHandle handle);
+        StorageUpdateState toggle(LayerDataHandle handle);
 
         /**
          * @brief Increment the storage value for given data binding
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
-         * @ref StorageOperation::Increment.
+         * @ref StorageOperation::Increment. The return value describes whether
+         * the update succeeded, see the @ref StorageUpdateState enum values
+         * for an overview of possible conditions and documentation of a
+         * concrete storage implementation for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
@@ -1334,7 +1350,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *      @ref get(), @ref decrement(), @ref isStorageDirty(),
          *      @ref StorageQuery::increment()
          */
-        void increment(DataHandle handle);
+        StorageUpdateState increment(DataHandle handle);
 
         /**
          * @brief Increment the storage value for given data binding assuming it belongs to this layer
@@ -1345,13 +1361,16 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @see @ref isHandleValid(LayerDataHandle) const,
          *      @ref dataHandleData()
          */
-        void increment(LayerDataHandle handle);
+        StorageUpdateState increment(LayerDataHandle handle);
 
         /**
          * @brief Decrement the storage value for given data binding
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
-         * @ref StorageOperation::Decrement.
+         * @ref StorageOperation::Decrement. The return value describes whether
+         * the update succeeded, see the @ref StorageUpdateState enum values
+         * for an overview of possible conditions and documentation of a
+         * concrete storage implementation for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
@@ -1360,7 +1379,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *      @ref get(), @ref increment(), @ref isStorageDirty(),
          *      @ref StorageQuery::decrement()
          */
-        void decrement(DataHandle handle);
+        StorageUpdateState decrement(DataHandle handle);
 
         /**
          * @brief Decrement the storage value for given data binding assuming it belongs to this layer
@@ -1371,13 +1390,16 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @see @ref isHandleValid(LayerDataHandle) const,
          *      @ref dataHandleData()
          */
-        void decrement(LayerDataHandle handle);
+        StorageUpdateState decrement(LayerDataHandle handle);
 
         /**
          * @brief Set the storage value to a minimum for given data binding
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
-         * @ref StorageOperation::Min.
+         * @ref StorageOperation::Min. The return value describes whether the
+         * update succeeded, see the @ref StorageUpdateState enum values for an
+         * overview of possible conditions and documentation of a concrete
+         * storage implementation for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if
@@ -1386,7 +1408,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *      @ref min(), @ref setToMax(), @ref isStorageDirty(),
          *      @ref StorageQuery::setToMin()
          */
-        void setToMin(DataHandle handle);
+        StorageUpdateState setToMin(DataHandle handle);
 
         /**
          * @brief Set the storage value to a minimum for given data binding assuming it belongs to this layer
@@ -1397,13 +1419,16 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @see @ref isHandleValid(LayerDataHandle) const,
          *      @ref dataHandleData()
          */
-        void setToMin(LayerDataHandle handle);
+        StorageUpdateState setToMin(LayerDataHandle handle);
 
         /**
          * @brief Set the storage value to a maximum for given data binding
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
-         * @ref StorageOperation::Max.
+         * @ref StorageOperation::Max. The return value describes whether the
+         * update succeeded, see the @ref StorageUpdateState enum values for an
+         * overview of possible conditions and documentation of a concrete
+         * storage implementation for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if
@@ -1412,7 +1437,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          *      @ref max(), @ref setToMin(), @ref isStorageDirty(),
          *      @ref StorageQuery::setToMax()
          */
-        void setToMax(DataHandle handle);
+        StorageUpdateState setToMax(DataHandle handle);
 
         /**
          * @brief Set the storage value to a maximum for given data binding assuming it belongs to this layer
@@ -1423,7 +1448,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @see @ref isHandleValid(LayerDataHandle) const,
          *      @ref dataHandleData()
          */
-        void setToMax(LayerDataHandle handle);
+        StorageUpdateState setToMax(LayerDataHandle handle);
 
     private:
         friend AbstractStorage;
@@ -1859,7 +1884,11 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * @brief Reset the storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Reset.
+         * @ref operations() list @ref StorageOperation::Reset. The return
+         * value describes whether the update succeeded, see the
+         * @ref StorageUpdateState enum values for an overview of possible
+         * conditions and documentation of a concrete storage implementation
+         * for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
@@ -1868,13 +1897,17 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          *      @ref toggle(), @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::reset(DataHandle)
          */
-        void reset() const;
+        StorageUpdateState reset() const;
 
         /**
          * @brief Toggle the storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Toggle.
+         * @ref operations() list @ref StorageOperation::Toggle. The return
+         * value describes whether the update succeeded, see the
+         * @ref StorageUpdateState enum values for an overview of possible
+         * conditions and documentation of a concrete storage implementation
+         * for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
@@ -1883,13 +1916,17 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          *      @ref reset(), @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::toggle(DataHandle)
          */
-        void toggle() const;
+        StorageUpdateState toggle() const;
 
         /**
          * @brief Increment the storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Increment.
+         * @ref operations() list @ref StorageOperation::Increment. The return
+         * value describes whether the update succeeded, see the
+         * @ref StorageUpdateState enum values for an overview of possible
+         * conditions and documentation of a concrete storage implementation
+         * for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
@@ -1898,13 +1935,17 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          *      @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::increment(DataHandle)
          */
-        void increment() const;
+        StorageUpdateState increment() const;
 
         /**
          * @brief Decrement the storage value
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Decrement.
+         * @ref operations() list @ref StorageOperation::Decrement. The return
+         * value describes whether the update succeeded, see the
+         * @ref StorageUpdateState enum values for an overview of possible
+         * conditions and documentation of a concrete storage implementation
+         * for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
@@ -1913,13 +1954,17 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          *      @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::decrement(DataHandle)
          */
-        void decrement() const;
+        StorageUpdateState decrement() const;
 
         /**
          * @brief Set the storage value to a minimum
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Min.
+         * @ref operations() list @ref StorageOperation::Min. The return value
+         * describes whether the update succeeded, see the
+         * @ref StorageUpdateState enum values for an overview of possible
+         * conditions and documentation of a concrete storage implementation
+         * for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
@@ -1928,13 +1973,17 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          *      @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::setToMin(DataHandle)
          */
-        void setToMin() const;
+        StorageUpdateState setToMin() const;
 
         /**
          * @brief Set the storage value to a maximum
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
-         * @ref operations() list @ref StorageOperation::Max.
+         * @ref operations() list @ref StorageOperation::Max. The return value
+         * describes whether the update succeeded, see the
+         * @ref StorageUpdateState enum values for an overview of possible
+         * conditions and documentation of a concrete storage implementation
+         * for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
@@ -1943,7 +1992,7 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          *      @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::setToMax(DataHandle)
          */
-        void setToMax() const;
+        StorageUpdateState setToMax() const;
 
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
@@ -2316,7 +2365,10 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
          * @ref operations() list @ref StorageOperation::Set. The return value
-         * describes whether the update succeeded.
+         * describes whether the update succeeded, see the
+         * @ref StorageUpdateState enum values for an overview of possible
+         * conditions and documentation of a concrete storage implementation
+         * for detailed update behavior.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if

@@ -965,8 +965,8 @@ StorageOperations DataLayer::operations(const LayerDataHandle handle) const {
     return _state->data[layerDataHandleId(handle)].operations;
 }
 
-void DataLayer::reset(const DataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::reset(const DataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::reset():"
         #else
@@ -975,8 +975,8 @@ void DataLayer::reset(const DataHandle handle) {
         , handle, StorageOperation::Reset, nullptr);
 }
 
-void DataLayer::reset(const LayerDataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::reset(const LayerDataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::reset():"
         #else
@@ -985,8 +985,8 @@ void DataLayer::reset(const LayerDataHandle handle) {
         , handle, StorageOperation::Reset, nullptr);
 }
 
-void DataLayer::toggle(const DataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::toggle(const DataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::toggle():"
         #else
@@ -995,8 +995,8 @@ void DataLayer::toggle(const DataHandle handle) {
         , handle, StorageOperation::Toggle, nullptr);
 }
 
-void DataLayer::toggle(const LayerDataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::toggle(const LayerDataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::toggle():"
         #else
@@ -1005,8 +1005,8 @@ void DataLayer::toggle(const LayerDataHandle handle) {
         , handle, StorageOperation::Toggle, nullptr);
 }
 
-void DataLayer::increment(const DataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::increment(const DataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::increment():"
         #else
@@ -1015,8 +1015,8 @@ void DataLayer::increment(const DataHandle handle) {
         , handle, StorageOperation::Increment, nullptr);
 }
 
-void DataLayer::increment(const LayerDataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::increment(const LayerDataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::increment():"
         #else
@@ -1025,8 +1025,8 @@ void DataLayer::increment(const LayerDataHandle handle) {
         , handle, StorageOperation::Increment, nullptr);
 }
 
-void DataLayer::decrement(const DataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::decrement(const DataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::decrement():"
         #else
@@ -1035,8 +1035,8 @@ void DataLayer::decrement(const DataHandle handle) {
         , handle, StorageOperation::Decrement, nullptr);
 }
 
-void DataLayer::decrement(const LayerDataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::decrement(const LayerDataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::decrement():"
         #else
@@ -1045,8 +1045,8 @@ void DataLayer::decrement(const LayerDataHandle handle) {
         , handle, StorageOperation::Decrement, nullptr);
 }
 
-void DataLayer::setToMin(const DataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::setToMin(const DataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::setToMin():"
         #else
@@ -1055,8 +1055,8 @@ void DataLayer::setToMin(const DataHandle handle) {
         , handle, StorageOperation::Min, nullptr);
 }
 
-void DataLayer::setToMin(const LayerDataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::setToMin(const LayerDataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::setToMin():"
         #else
@@ -1065,8 +1065,8 @@ void DataLayer::setToMin(const LayerDataHandle handle) {
         , handle, StorageOperation::Min, nullptr);
 }
 
-void DataLayer::setToMax(const DataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::setToMax(const DataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::setToMax():"
         #else
@@ -1075,8 +1075,8 @@ void DataLayer::setToMax(const DataHandle handle) {
         , handle, StorageOperation::Max, nullptr);
 }
 
-void DataLayer::setToMax(const LayerDataHandle handle) {
-    updateInternal(
+StorageUpdateState DataLayer::setToMax(const LayerDataHandle handle) {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::DataLayer::setToMax():"
         #else
@@ -1134,9 +1134,6 @@ StorageUpdateState DataLayer::updateInternal(
     const UnsignedInt storageId = extractStorageId(data.storageIdDirty);
     const StorageData& storage = state.storages[storageId];
     const StorageUpdateState updateState = data.queryOrUpdater(*this, dataLayerStorageHandle(storageId, state.storages[storageId].used.generation), delinearizeIndex(storage.used.size, data.linearizedIndex), operation, value);
-    /* All operations except Set are expected to return only Success */
-    CORRADE_ASSERT(operation == StorageOperation::Set || updateState == StorageUpdateState::Success,
-        messagePrefix << "updater implementation expected to return" << StorageUpdateState::Success << "for" << operation << "but got" << updateState, {});
     return updateState;
 }
 
@@ -1292,8 +1289,8 @@ AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const
         "Ui::StorageQuery:" << (operations & ~(StorageOperation::Min|StorageOperation::Max)) << "requires a non-null updater", );
 }
 
-void AbstractStorageQuery::reset() const {
-    updateInternal(
+StorageUpdateState AbstractStorageQuery::reset() const {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::StorageQuery::reset():"
         #else
@@ -1302,8 +1299,8 @@ void AbstractStorageQuery::reset() const {
         , StorageOperation::Reset, nullptr);
 }
 
-void AbstractStorageQuery::toggle() const {
-    updateInternal(
+StorageUpdateState AbstractStorageQuery::toggle() const {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::StorageQuery::toggle():"
         #else
@@ -1312,8 +1309,8 @@ void AbstractStorageQuery::toggle() const {
         , StorageOperation::Toggle, nullptr);
 }
 
-void AbstractStorageQuery::increment() const {
-    updateInternal(
+StorageUpdateState AbstractStorageQuery::increment() const {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::StorageQuery::increment():"
         #else
@@ -1322,8 +1319,8 @@ void AbstractStorageQuery::increment() const {
         , StorageOperation::Increment, nullptr);
 }
 
-void AbstractStorageQuery::decrement() const {
-    updateInternal(
+StorageUpdateState AbstractStorageQuery::decrement() const {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::StorageQuery::decrement():"
         #else
@@ -1332,8 +1329,8 @@ void AbstractStorageQuery::decrement() const {
         , StorageOperation::Decrement, nullptr);
 }
 
-void AbstractStorageQuery::setToMin() const {
-    updateInternal(
+StorageUpdateState AbstractStorageQuery::setToMin() const {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::StorageQuery::setToMin():"
         #else
@@ -1342,8 +1339,8 @@ void AbstractStorageQuery::setToMin() const {
         , StorageOperation::Min, nullptr);
 }
 
-void AbstractStorageQuery::setToMax() const {
-    updateInternal(
+StorageUpdateState AbstractStorageQuery::setToMax() const {
+    return updateInternal(
         #ifndef CORRADE_NO_ASSERT
         "Ui::StorageQuery::setToMax():"
         #else
@@ -1369,8 +1366,6 @@ StorageUpdateState AbstractStorageQuery::updateInternal(const char*
     CORRADE_ASSERT(_operations >= operation,
         messagePrefix << operation << "not supported", {});
     const StorageUpdateState state = _queryOrUpdater(*_layer, _storage, _index, operation, value);
-    CORRADE_ASSERT(operation == StorageOperation::Set || state == StorageUpdateState::Success,
-        messagePrefix << "updater implementation expected to return" << StorageUpdateState::Success << "for" << operation << "but got" << state, {});
     return state;
 }
 

@@ -3209,20 +3209,32 @@ void DataLayerTest::queryOrUpdateValue() {
                     return StorageUpdateState::Approximated;
                 }
                 CORRADE_VERIFY(!value);
-                if(operation == StorageOperation::Reset)
+                if(operation == StorageOperation::Reset) {
                     storage.called() *= 3;
-                else if(operation == StorageOperation::Toggle)
+                    return StorageUpdateState::Success;
+                }
+                if(operation == StorageOperation::Toggle) {
                     storage.called() *= 5;
-                else if(operation == StorageOperation::Increment)
+                    return StorageUpdateState::Failed;
+                }
+                if(operation == StorageOperation::Increment) {
                     storage.called() *= 7;
-                else if(operation == StorageOperation::Decrement)
+                    return StorageUpdateState::Clamped;
+                }
+                if(operation == StorageOperation::Decrement) {
                     storage.called() *= 11;
-                else if(operation == StorageOperation::Min)
+                    return StorageUpdateState::Approximated;
+                }
+                if(operation == StorageOperation::Min) {
                     storage.called() *= 13;
-                else if(operation == StorageOperation::Max)
+                    return StorageUpdateState::Failed;
+                }
+                if(operation == StorageOperation::Max) {
                     storage.called() *= 17;
-                else CORRADE_FAIL("Unknown operation" << operation);
-                return StorageUpdateState::Success;
+                    return StorageUpdateState::Approximated;
+                }
+                CORRADE_FAIL("Unknown operation" << operation);
+                return StorageUpdateState{};
             }};
         }
     };
@@ -3257,23 +3269,23 @@ void DataLayerTest::queryOrUpdateValue() {
             CORRADE_COMPARE(layer.min<Int>(dataHandleData(layerData)), 2);
             CORRADE_COMPARE(layer.max<Int>(dataHandleData(layerData)), 3);
             CORRADE_COMPARE(layer.set(dataHandleData(layerData), 1337), StorageUpdateState::Approximated);
-            layer.reset(dataHandleData(layerData));
-            layer.toggle(dataHandleData(layerData));
-            layer.increment(dataHandleData(layerData));
-            layer.decrement(dataHandleData(layerData));
-            layer.setToMin(dataHandleData(layerData));
-            layer.setToMax(dataHandleData(layerData));
+            CORRADE_COMPARE(layer.reset(dataHandleData(layerData)), StorageUpdateState::Success);
+            CORRADE_COMPARE(layer.toggle(dataHandleData(layerData)), StorageUpdateState::Failed);
+            CORRADE_COMPARE(layer.increment(dataHandleData(layerData)), StorageUpdateState::Clamped);
+            CORRADE_COMPARE(layer.decrement(dataHandleData(layerData)), StorageUpdateState::Approximated);
+            CORRADE_COMPARE(layer.setToMin(dataHandleData(layerData)), StorageUpdateState::Failed);
+            CORRADE_COMPARE(layer.setToMax(dataHandleData(layerData)), StorageUpdateState::Approximated);
         } else {
             CORRADE_COMPARE(layer.get<Int>(layerData), 1);
             CORRADE_COMPARE(layer.min<Int>(layerData), 2);
             CORRADE_COMPARE(layer.max<Int>(layerData), 3);
             CORRADE_COMPARE(layer.set(layerData, 1337), StorageUpdateState::Approximated);
-            layer.reset(layerData);
-            layer.toggle(layerData);
-            layer.increment(layerData);
-            layer.decrement(layerData);
-            layer.setToMin(layerData);
-            layer.setToMax(layerData);
+            CORRADE_COMPARE(layer.reset(layerData), StorageUpdateState::Success);
+            CORRADE_COMPARE(layer.toggle(layerData), StorageUpdateState::Failed);
+            CORRADE_COMPARE(layer.increment(layerData), StorageUpdateState::Clamped);
+            CORRADE_COMPARE(layer.decrement(layerData), StorageUpdateState::Approximated);
+            CORRADE_COMPARE(layer.setToMin(layerData), StorageUpdateState::Failed);
+            CORRADE_COMPARE(layer.setToMax(layerData), StorageUpdateState::Approximated);
         }
     } else {
         StorageQuery<Int> query = storage[{1, 3, 2}];
@@ -3282,12 +3294,12 @@ void DataLayerTest::queryOrUpdateValue() {
         CORRADE_COMPARE(query.min(), 2);
         CORRADE_COMPARE(query.max(), 3);
         CORRADE_COMPARE(query.set(1337), StorageUpdateState::Approximated);
-        query.reset();
-        query.toggle();
-        query.increment();
-        query.decrement();
-        query.setToMin();
-        query.setToMax();
+        CORRADE_COMPARE(query.reset(), StorageUpdateState::Success);
+        CORRADE_COMPARE(query.toggle(), StorageUpdateState::Failed);
+        CORRADE_COMPARE(query.increment(), StorageUpdateState::Clamped);
+        CORRADE_COMPARE(query.decrement(), StorageUpdateState::Approximated);
+        CORRADE_COMPARE(query.setToMin(), StorageUpdateState::Failed);
+        CORRADE_COMPARE(query.setToMax(), StorageUpdateState::Approximated);
     }
 
     /* All of the branches above should result in the same amount of updater
@@ -3465,19 +3477,12 @@ void DataLayerTest::queryOrUpdateValueInvalid() {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }};
 
-    StorageQuery<Int> queryWrongState{storage, ~StorageOperations{}, [](const DummyStorage&, StorageOperation) -> Int {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }, [](const DummyStorage&, StorageOperation, const Int*) {
-        return StorageUpdateState::Clamped;
-    }};
-
     DataHandle noSet = queryNoSet.onUpdate([](Int){});
     DataHandle noReset = queryNoReset.onUpdate([](Int){});
     DataHandle noToggle = queryNoToggle.onUpdate([](Int){});
     DataHandle noIncrementDecrement = queryNoIncrementDecrement.onUpdate([](Int){});
     DataHandle noMinMax = queryNoMinMax.onUpdate([](Int){});
     DataHandle minMaxImmutable = queryMinMaxImmutable.onUpdate([](Int){});
-    DataHandle wrongState = queryWrongState.onUpdate([](Int){});
 
     /* Querying min / max on an immutable query is fine as long as the
        operation is supported */
@@ -3524,30 +3529,6 @@ void DataLayerTest::queryOrUpdateValueInvalid() {
     queryMinMaxImmutable.setToMax();
     layer.setToMax(minMaxImmutable);
     layer.setToMax(dataHandleData(minMaxImmutable));
-
-    queryWrongState.reset();
-    layer.reset(wrongState);
-    layer.reset(dataHandleData(wrongState));
-
-    queryWrongState.toggle();
-    layer.toggle(wrongState);
-    layer.toggle(dataHandleData(wrongState));
-
-    queryWrongState.increment();
-    layer.increment(wrongState);
-    layer.increment(dataHandleData(wrongState));
-
-    queryWrongState.decrement();
-    layer.decrement(wrongState);
-    layer.decrement(dataHandleData(wrongState));
-
-    queryWrongState.setToMin();
-    layer.setToMin(wrongState);
-    layer.setToMin(dataHandleData(wrongState));
-
-    queryWrongState.setToMax();
-    layer.setToMax(wrongState);
-    layer.setToMax(dataHandleData(wrongState));
     CORRADE_COMPARE_AS(out,
         "Ui::StorageQuery::set(): Ui::StorageOperation::Set not supported\n"
         "Ui::DataLayer::set(): Ui::StorageOperation::Set not supported\n"
@@ -3585,31 +3566,7 @@ void DataLayerTest::queryOrUpdateValueInvalid() {
         "Ui::DataLayer::setToMax(): Ui::StorageOperation::Max not supported\n"
         "Ui::StorageQuery::setToMax(): query is immutable\n"
         "Ui::DataLayer::setToMax(): data binding is immutable\n"
-        "Ui::DataLayer::setToMax(): data binding is immutable\n"
-
-        "Ui::StorageQuery::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
-
-        "Ui::StorageQuery::toggle(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Toggle but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::toggle(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Toggle but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::toggle(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Toggle but got Ui::StorageUpdateState::Clamped\n"
-
-        "Ui::StorageQuery::increment(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Increment but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::increment(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Increment but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::increment(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Increment but got Ui::StorageUpdateState::Clamped\n"
-
-        "Ui::StorageQuery::decrement(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Decrement but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::decrement(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Decrement but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::decrement(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Decrement but got Ui::StorageUpdateState::Clamped\n"
-
-        "Ui::StorageQuery::setToMin(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Min but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::setToMin(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Min but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::setToMin(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Min but got Ui::StorageUpdateState::Clamped\n"
-
-        "Ui::StorageQuery::setToMax(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Max but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::setToMax(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Max but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::DataLayer::setToMax(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Max but got Ui::StorageUpdateState::Clamped\n",
+        "Ui::DataLayer::setToMax(): data binding is immutable\n",
         TestSuite::Compare::String);
 }
 
