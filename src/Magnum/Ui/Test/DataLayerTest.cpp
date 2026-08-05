@@ -91,8 +91,6 @@ struct DataLayerTest: TestSuite::Tester {
     void queryConstruct();
     void queryConstructCopy();
     void queryConstructInvalid();
-    void queryValueNonTrivial();
-    void queryValueUpdateInvalid();
     void queryInvalidHandle();
 
     /* Tests StorageQuery::onUpdate() (which calls create()) and remove() */
@@ -106,9 +104,11 @@ struct DataLayerTest: TestSuite::Tester {
     void setIndex();
     void setIndexInvalid();
 
-    /* Tests both the DataLayer and StorageQuery value updating APIs */
-    void updateValue();
-    void updateValueInvalid();
+    /* Tests both the DataLayer and StorageQuery value querying and updating
+       APIs */
+    void queryOrUpdateValue();
+    void queryValueNonTrivial();
+    void queryOrUpdateValueInvalid();
 
     void invalidHandle();
 
@@ -135,7 +135,7 @@ const struct {
 const struct {
     const char* name;
     bool throughLayer, layerDataHandleOverloads;
-} UpdateValueData[]{
+} QueryOrUpdateValueData[]{
     {"through the query", false, false},
     {"through the layer", true, false},
     {"through the layer, LayerDataHandle overloads", true, true},
@@ -255,8 +255,6 @@ DataLayerTest::DataLayerTest() {
         &DataLayerTest::queryConstructSetupTeardown);
 
     addTests({&DataLayerTest::queryConstructInvalid,
-              &DataLayerTest::queryValueNonTrivial,
-              &DataLayerTest::queryValueUpdateInvalid,
               &DataLayerTest::queryInvalidHandle});
 
     addTests({&DataLayerTest::createRemove,
@@ -271,10 +269,11 @@ DataLayerTest::DataLayerTest() {
               &DataLayerTest::setIndex,
               &DataLayerTest::setIndexInvalid});
 
-    addInstancedTests({&DataLayerTest::updateValue},
-        Containers::arraySize(UpdateValueData));
+    addInstancedTests({&DataLayerTest::queryOrUpdateValue},
+        Containers::arraySize(QueryOrUpdateValueData));
 
-    addTests({&DataLayerTest::updateValueInvalid,
+    addTests({&DataLayerTest::queryValueNonTrivial,
+              &DataLayerTest::queryOrUpdateValueInvalid,
 
               &DataLayerTest::invalidHandle});
 
@@ -1910,8 +1909,8 @@ void DataLayerTest::queryConstruct() {
     CORRADE_COMPARE(updaterCalled, 1);
 
     /* They get called when explicitly executing the query (or later by the
-       layer preUpdate() itself, which is again tested in createRemove()
-       below) */
+       layer preUpdate() itself, which is again tested in createRemove() below,
+       and through layer getters, which are tested in queryOrUpdateValue()) */
     CORRADE_COMPARE(Int(single), 0x333);
     CORRADE_COMPARE(queryCalled, 1);
     CORRADE_COMPARE(query1DSizeTCalled, 0);
@@ -1951,8 +1950,8 @@ void DataLayerTest::queryConstruct() {
 
     /* Test also the updaters if present. This should go through all possible
        setters, thus if more operations are added, certain storage queries get
-       called more than once. Thoroughly tested in updateValue() below, along
-       with corresponding APIs in the DataLayer. */
+       called more than once. Thoroughly tested in queryOrUpdateValue() below,
+       along with corresponding APIs in the DataLayer. */
     if(data.updater) {
         single.reset();
         CORRADE_COMPARE(oneDimensionSizeT.set(-637572134), StorageUpdateState::Approximated);
@@ -2158,182 +2157,6 @@ void DataLayerTest::queryConstructInvalid() {
         "Ui::StorageQuery: either both Ui::StorageOperation::Min|Ui::StorageOperation::Max have to be set or neither\n"
         "Ui::StorageQuery: either both Ui::StorageOperation::Increment|Ui::StorageOperation::Decrement have to be set or neither\n"
         "Ui::StorageQuery: either both Ui::StorageOperation::Increment|Ui::StorageOperation::Decrement have to be set or neither\n",
-        TestSuite::Compare::String);
-}
-
-struct NonTrivial {
-    static int constructed;
-    static int moved;
-    static int destructed;
-
-    explicit NonTrivial(int a): a{a} {
-        ++constructed;
-    }
-    NonTrivial(const NonTrivial&) = delete;
-    NonTrivial(NonTrivial&& other) noexcept: a(other.a) {
-        ++constructed;
-        ++moved;
-    }
-    ~NonTrivial() {
-        ++destructed;
-    }
-    NonTrivial& operator=(const NonTrivial&) = delete;
-    /* Only move construction happens in queryValueNonTrivial() below, no move
-       assignment */
-    NonTrivial& operator=(NonTrivial&& other) = delete;
-
-    int a;
-};
-
-int NonTrivial::constructed = 0;
-int NonTrivial::moved = 0;
-int NonTrivial::destructed = 0;
-
-void DataLayerTest::queryValueNonTrivial() {
-    /* "Simple" StorageQuery value retrieval tested in queryConstruct()
-       already, this verifies that it works for types without a default
-       constructor and move-only types and that destructors are called exactly
-       once in all cases */
-
-    NonTrivial::constructed =
-        NonTrivial::moved =
-        NonTrivial::destructed = 0;
-
-    DataLayer layer{layerHandle(0, 1)};
-
-    struct DummyStorage: AbstractStorage {
-        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
-    } storage{layer};
-
-    StorageQuery<NonTrivial> query{storage, StorageOperation::Min|StorageOperation::Max, [](const DummyStorage&, StorageOperation operation) {
-        if(operation == StorageOperation::Min)
-            return NonTrivial{0x1111};
-        if(operation == StorageOperation::Max)
-            return NonTrivial{0x7777};
-        return NonTrivial{0x4444};
-    }};
-    CORRADE_COMPARE(NonTrivial::constructed, 0);
-    CORRADE_COMPARE(NonTrivial::destructed, 0);
-    CORRADE_COMPARE(NonTrivial::moved, 0);
-
-    /* Each query constructs the instance in-place for the return location,
-       with no moves happening. Except for Clang, somehow, which uses one extra
-       move in the conversion operator but not the others. */
-    #ifndef CORRADE_TARGET_CLANG
-    constexpr int moveCount = 0;
-    #else
-    constexpr int moveCount = 1;
-    #endif
-    CORRADE_COMPARE(NonTrivial{query}.a, 0x4444);
-    CORRADE_COMPARE(NonTrivial::constructed, 1 + moveCount);
-    CORRADE_COMPARE(NonTrivial::moved, moveCount);
-    CORRADE_COMPARE(NonTrivial::destructed, 1 + moveCount);
-
-    CORRADE_COMPARE(query.min().a, 0x1111);
-    CORRADE_COMPARE(NonTrivial::constructed, 2 + moveCount);
-    CORRADE_COMPARE(NonTrivial::moved, moveCount);
-    CORRADE_COMPARE(NonTrivial::destructed, 2 + moveCount);
-
-    CORRADE_COMPARE(query.max().a, 0x7777);
-    CORRADE_COMPARE(NonTrivial::constructed, 3 + moveCount);
-    CORRADE_COMPARE(NonTrivial::moved, moveCount);
-    CORRADE_COMPARE(NonTrivial::destructed, 3 + moveCount);
-}
-
-void DataLayerTest::queryValueUpdateInvalid() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    /* Corresponding assertions in DataLayer APIs are tested in
-       updateValueInvalid() below */
-
-    DataLayer layer{layerHandle(0, 1)};
-
-    struct DummyStorage: AbstractStorage {
-        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
-    } storage{layer};
-
-    StorageQuery<Int> queryNoSet{storage, ~StorageOperation::Set, [](const DummyStorage&, StorageOperation) -> Int {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }};
-
-    StorageQuery<Int> queryNoReset{storage, ~StorageOperation::Reset, [](const DummyStorage&, StorageOperation) -> Int {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }};
-
-    StorageQuery<Int> queryNoToggle{storage, ~StorageOperation::Toggle, [](const DummyStorage&, StorageOperation) -> Int {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }};
-
-    StorageQuery<Int> queryNoMinMax{storage, ~(StorageOperation::Min|StorageOperation::Max), [](const DummyStorage&, StorageOperation) {
-        /* This actually *does* get called from min() / max() asserts, as
-           that's the only way to make them work with non-default-constructible
-           types. See queryValueNoDefaultConstructor() above for such test. */
-        return 0;
-    }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }};
-
-    StorageQuery<Int> queryMinMaxImmutable{storage, StorageOperation::Min|StorageOperation::Max, [](const DummyStorage&, StorageOperation) -> Int {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }};
-
-    StorageQuery<Int> queryNoIncrementDecrement{storage, ~(StorageOperation::Increment|StorageOperation::Decrement), [](const DummyStorage&, StorageOperation) -> Int {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }, [](const DummyStorage&, StorageOperation, const Int*) -> StorageUpdateState {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }};
-
-    StorageQuery<Int> queryWrongState{storage, ~StorageOperations{}, [](const DummyStorage&, StorageOperation) -> Int {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }, [](const DummyStorage&, StorageOperation, const Int*) {
-        return StorageUpdateState::Clamped;
-    }};
-
-    Containers::String out;
-    Error redirectError{&out};
-    queryNoSet.set({});
-    queryNoReset.reset();
-    queryNoToggle.toggle();
-    queryNoIncrementDecrement.increment();
-    queryNoIncrementDecrement.decrement();
-    queryNoMinMax.min();
-    queryNoMinMax.setToMin();
-    queryNoMinMax.max();
-    queryNoMinMax.setToMax();
-    queryMinMaxImmutable.setToMin();
-    queryMinMaxImmutable.setToMax();
-
-    queryWrongState.reset();
-    queryWrongState.toggle();
-    queryWrongState.increment();
-    queryWrongState.decrement();
-    queryWrongState.setToMin();
-    queryWrongState.setToMax();
-    CORRADE_COMPARE_AS(out,
-        "Ui::StorageQuery::set(): Ui::StorageOperation::Set not supported\n"
-        "Ui::StorageQuery::reset(): Ui::StorageOperation::Reset not supported\n"
-        "Ui::StorageQuery::toggle(): Ui::StorageOperation::Toggle not supported\n"
-        "Ui::StorageQuery::increment(): Ui::StorageOperation::Increment not supported\n"
-        "Ui::StorageQuery::decrement(): Ui::StorageOperation::Decrement not supported\n"
-        "Ui::StorageQuery::min(): Ui::StorageOperation::Min not supported\n"
-        "Ui::StorageQuery::setToMin(): Ui::StorageOperation::Min not supported\n"
-        "Ui::StorageQuery::max(): Ui::StorageOperation::Max not supported\n"
-        "Ui::StorageQuery::setToMax(): Ui::StorageOperation::Max not supported\n"
-        "Ui::StorageQuery::setToMin(): query is immutable\n"
-        "Ui::StorageQuery::setToMax(): query is immutable\n"
-
-        "Ui::StorageQuery::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::StorageQuery::toggle(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Toggle but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::StorageQuery::increment(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Increment but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::StorageQuery::decrement(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Decrement but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::StorageQuery::setToMin(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Min but got Ui::StorageUpdateState::Clamped\n"
-        "Ui::StorageQuery::setToMax(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Max but got Ui::StorageUpdateState::Clamped\n",
         TestSuite::Compare::String);
 }
 
@@ -2821,7 +2644,8 @@ void DataLayerTest::createRemove() {
 
     /* They should be all called on the very first update however. The called
        functions then verify the corrrect arguments were passed every time.
-       Each storage is used by two data so it gets called twice. */
+       Each storage is used by two data so it gets called twice. Getters and
+       setters on the layer itself are tested in queryOrUpdateValue() below. */
     layer.preUpdate(LayerState::NeedsCommonDataUpdate);
     CORRADE_COMPARE(storageCalled, 10);
     CORRADE_COMPARE(storageMinCalled, 2);
@@ -3344,22 +3168,37 @@ void DataLayerTest::setIndexInvalid() {
         TestSuite::Compare::String);
 }
 
-void DataLayerTest::updateValue() {
-    auto&& data = UpdateValueData[testCaseInstanceId()];
+void DataLayerTest::queryOrUpdateValue() {
+    auto&& data = QueryOrUpdateValueData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     DataLayer layer{layerHandle(0xab, 0xcd)};
 
     struct DummyStorage: AbstractStorage {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {
-            *createInPlace<Int>() = 1;
+            *createInPlace<Long>() = 1;
         }
 
-        Int& called() const { return *data<Int>(); }
+        Long& called() const { return *data<Long>(); }
 
         StorageQuery<Int> operator[](const Containers::Size3D& index) {
-            return {*this, index, ~StorageOperations{}, [](const DummyStorage&, const Containers::Size3D&, StorageOperation) -> Int {
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            return {*this, index, ~StorageOperations{}, [](const DummyStorage& storage, const Containers::Size3D& index, StorageOperation operation) -> Int {
+                CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x5, 0x4));
+                CORRADE_COMPARE(index, (Containers::Size3D{1, 3, 2}));
+                if(operation == StorageOperation{}) {
+                    storage.called() *= 19;
+                    return 1;
+                }
+                if(operation == StorageOperation::Min) {
+                    storage.called() *= 23;
+                    return 2;
+                }
+                if(operation == StorageOperation::Max) {
+                    storage.called() *= 29;
+                    return 3;
+                }
+                CORRADE_FAIL("Unknown operation" << operation);
+                return 0;
             }, [](const DummyStorage& storage, const Containers::Size3D& index, StorageOperation operation, const Int* value) {
                 CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x5, 0x4));
                 CORRADE_COMPARE(index, (Containers::Size3D{1, 3, 2}));
@@ -3414,6 +3253,9 @@ void DataLayerTest::updateValue() {
         });
 
         if(data.layerDataHandleOverloads) {
+            CORRADE_COMPARE(layer.get<Int>(dataHandleData(layerData)), 1);
+            CORRADE_COMPARE(layer.min<Int>(dataHandleData(layerData)), 2);
+            CORRADE_COMPARE(layer.max<Int>(dataHandleData(layerData)), 3);
             CORRADE_COMPARE(layer.set(dataHandleData(layerData), 1337), StorageUpdateState::Approximated);
             layer.reset(dataHandleData(layerData));
             layer.toggle(dataHandleData(layerData));
@@ -3422,6 +3264,9 @@ void DataLayerTest::updateValue() {
             layer.setToMin(dataHandleData(layerData));
             layer.setToMax(dataHandleData(layerData));
         } else {
+            CORRADE_COMPARE(layer.get<Int>(layerData), 1);
+            CORRADE_COMPARE(layer.min<Int>(layerData), 2);
+            CORRADE_COMPARE(layer.max<Int>(layerData), 3);
             CORRADE_COMPARE(layer.set(layerData, 1337), StorageUpdateState::Approximated);
             layer.reset(layerData);
             layer.toggle(layerData);
@@ -3433,6 +3278,9 @@ void DataLayerTest::updateValue() {
     } else {
         StorageQuery<Int> query = storage[{1, 3, 2}];
 
+        CORRADE_COMPARE(query, 1);
+        CORRADE_COMPARE(query.min(), 2);
+        CORRADE_COMPARE(query.max(), 3);
         CORRADE_COMPARE(query.set(1337), StorageUpdateState::Approximated);
         query.reset();
         query.toggle();
@@ -3444,10 +3292,132 @@ void DataLayerTest::updateValue() {
 
     /* All of the branches above should result in the same amount of updater
        calls */
-    CORRADE_COMPARE(storage.called(), 2*3*5*7*11*13*17);
+    CORRADE_COMPARE(storage.called(), 2ll*3*5*7*11*13*17*19*23*29);
 }
 
-void DataLayerTest::updateValueInvalid() {
+struct NonTrivial {
+    static int constructed;
+    static int moved;
+    static int destructed;
+
+    explicit NonTrivial(int a): a{a} {
+        ++constructed;
+    }
+    NonTrivial(const NonTrivial&) = delete;
+    NonTrivial(NonTrivial&& other) noexcept: a(other.a) {
+        ++constructed;
+        ++moved;
+    }
+    ~NonTrivial() {
+        ++destructed;
+    }
+    NonTrivial& operator=(const NonTrivial&) = delete;
+    /* Only move construction happens in queryValueNonTrivial() below, no move
+       assignment */
+    NonTrivial& operator=(NonTrivial&& other) = delete;
+
+    int a;
+};
+
+int NonTrivial::constructed = 0;
+int NonTrivial::moved = 0;
+int NonTrivial::destructed = 0;
+
+void DataLayerTest::queryValueNonTrivial() {
+    /* "Simple" StorageQuery value retrieval tested in queryOrUpdateValue(),
+       this verifies that it works for types without a default constructor and
+       move-only types and that destructors are called exactly once in all
+       cases */
+
+    NonTrivial::constructed =
+        NonTrivial::moved =
+        NonTrivial::destructed = 0;
+
+    DataLayer layer{layerHandle(0, 1)};
+
+    struct DummyStorage: AbstractStorage {
+        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
+    } storage{layer};
+
+    StorageQuery<NonTrivial> query{storage, StorageOperation::Min|StorageOperation::Max, [](const DummyStorage&, StorageOperation operation) {
+        if(operation == StorageOperation::Min)
+            return NonTrivial{0x1111};
+        if(operation == StorageOperation::Max)
+            return NonTrivial{0x7777};
+        return NonTrivial{0x4444};
+    }};
+    CORRADE_COMPARE(NonTrivial::constructed, 0);
+    CORRADE_COMPARE(NonTrivial::destructed, 0);
+    CORRADE_COMPARE(NonTrivial::moved, 0);
+
+    /* Each query constructs the instance in the lambda above and then
+       move-in-place-constructs it in the internal wrapper lambda. Except for
+       Clang, somehow, which uses one extra move in the conversion operator but
+       not the others. */
+    #ifndef CORRADE_TARGET_CLANG
+    constexpr int moveCount = 0;
+    #else
+    constexpr int moveCount = 1;
+    #endif
+    CORRADE_COMPARE(NonTrivial{query}.a, 0x4444);
+    CORRADE_COMPARE(NonTrivial::constructed, 1*2 + moveCount);
+    CORRADE_COMPARE(NonTrivial::moved, 1*1 + moveCount);
+    CORRADE_COMPARE(NonTrivial::destructed, 1*2 + moveCount);
+
+    CORRADE_COMPARE(query.min().a, 0x1111);
+    CORRADE_COMPARE(NonTrivial::constructed, 2*2 + moveCount);
+    CORRADE_COMPARE(NonTrivial::moved, 2*1 + moveCount);
+    CORRADE_COMPARE(NonTrivial::destructed, 2*2 + moveCount);
+
+    CORRADE_COMPARE(query.max().a, 0x7777);
+    CORRADE_COMPARE(NonTrivial::constructed, 3*2 + moveCount);
+    CORRADE_COMPARE(NonTrivial::moved, 3*1 + moveCount);
+    CORRADE_COMPARE(NonTrivial::destructed, 3*2 + moveCount);
+
+    NonTrivial::constructed =
+        NonTrivial::moved =
+        NonTrivial::destructed = 0;
+
+    /* Similarly for getters on the layer. No extra move due to the conversion
+       operator on clang-cl here. */
+    DataHandle data = query.onUpdate([](const NonTrivial&) {});
+    CORRADE_COMPARE(layer.get<NonTrivial>(data).a, 0x4444);
+    CORRADE_COMPARE(NonTrivial::constructed, 1*2);
+    CORRADE_COMPARE(NonTrivial::moved, 1*1);
+    CORRADE_COMPARE(NonTrivial::destructed, 1*2);
+
+    CORRADE_COMPARE(layer.min<NonTrivial>(data).a, 0x1111);
+    CORRADE_COMPARE(NonTrivial::constructed, 2*2);
+    CORRADE_COMPARE(NonTrivial::moved, 2*1);
+    CORRADE_COMPARE(NonTrivial::destructed, 2*2);
+
+    CORRADE_COMPARE(layer.max<NonTrivial>(data).a, 0x7777);
+    CORRADE_COMPARE(NonTrivial::constructed, 3*2);
+    CORRADE_COMPARE(NonTrivial::moved, 3*1);
+    CORRADE_COMPARE(NonTrivial::destructed, 3*2);
+
+    NonTrivial::constructed =
+        NonTrivial::moved =
+        NonTrivial::destructed = 0;
+
+    /* And LayerDataHandle overloads */
+    CORRADE_COMPARE(layer.get<NonTrivial>(dataHandleData(data)).a, 0x4444);
+    CORRADE_COMPARE(NonTrivial::constructed, 1*2);
+    CORRADE_COMPARE(NonTrivial::moved, 1*1);
+    CORRADE_COMPARE(NonTrivial::destructed, 1*2);
+
+    CORRADE_COMPARE(layer.min<NonTrivial>(dataHandleData(data)).a, 0x1111);
+    CORRADE_COMPARE(NonTrivial::constructed, 2*2);
+    CORRADE_COMPARE(NonTrivial::moved, 2*1);
+    CORRADE_COMPARE(NonTrivial::destructed, 2*2);
+
+    CORRADE_COMPARE(layer.max<NonTrivial>(dataHandleData(data)).a, 0x7777);
+    CORRADE_COMPARE(NonTrivial::constructed, 3*2);
+    CORRADE_COMPARE(NonTrivial::moved, 3*1);
+    CORRADE_COMPARE(NonTrivial::destructed, 3*2);
+}
+
+void DataLayerTest::queryOrUpdateValueInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     /* Corresponding assertions in StorageQuery APIs are tested in
@@ -3478,7 +3448,9 @@ void DataLayerTest::updateValueInvalid() {
     }};
 
     StorageQuery<Int> queryMinMaxImmutable{storage, StorageOperation::Min|StorageOperation::Max, [](const DummyStorage&, StorageOperation) -> Int {
-        CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        /* Not CORRADE_INTERNAL_ASSERT_UNREACHABLE as this is called to verify
+           it *doesn't* assert below */
+        return 0;
     }};
 
     StorageQuery<Int> queryNoMinMax{storage, ~(StorageOperation::Min|StorageOperation::Max), [](const DummyStorage&, StorageOperation) -> Int {
@@ -3507,69 +3479,135 @@ void DataLayerTest::updateValueInvalid() {
     DataHandle minMaxImmutable = queryMinMaxImmutable.onUpdate([](Int){});
     DataHandle wrongState = queryWrongState.onUpdate([](Int){});
 
+    /* Querying min / max on an immutable query is fine as long as the
+       operation is supported */
+    queryMinMaxImmutable.min();
+    queryMinMaxImmutable.max();
+    layer.min<Int>(minMaxImmutable);
+    layer.max<Int>(minMaxImmutable);
+
     Containers::String out;
     Error redirectError{&out};
+    queryNoSet.set({});
     layer.set(noSet, 0);
     layer.set(dataHandleData(noSet), 0);
+
+    queryNoReset.reset();
     layer.reset(noReset);
     layer.reset(dataHandleData(noReset));
+
+    queryNoToggle.toggle();
     layer.toggle(noToggle);
     layer.toggle(dataHandleData(noToggle));
+
+    queryNoIncrementDecrement.increment();
     layer.increment(noIncrementDecrement);
     layer.increment(dataHandleData(noIncrementDecrement));
+    queryNoIncrementDecrement.decrement();
     layer.decrement(noIncrementDecrement);
     layer.decrement(dataHandleData(noIncrementDecrement));
+
+    queryNoMinMax.min();
+    layer.min<Int>(noMinMax);
+    queryNoMinMax.setToMin();
     layer.setToMin(noMinMax);
     layer.setToMin(dataHandleData(noMinMax));
-    layer.setToMax(noMinMax);
-    layer.setToMax(dataHandleData(noMinMax));
+    queryMinMaxImmutable.setToMin();
     layer.setToMin(minMaxImmutable);
     layer.setToMin(dataHandleData(minMaxImmutable));
+
+    queryNoMinMax.max();
+    layer.max<Int>(noMinMax);
+    queryNoMinMax.setToMax();
+    layer.setToMax(noMinMax);
+    layer.setToMax(dataHandleData(noMinMax));
+    queryMinMaxImmutable.setToMax();
     layer.setToMax(minMaxImmutable);
     layer.setToMax(dataHandleData(minMaxImmutable));
 
+    queryWrongState.reset();
     layer.reset(wrongState);
     layer.reset(dataHandleData(wrongState));
+
+    queryWrongState.toggle();
     layer.toggle(wrongState);
     layer.toggle(dataHandleData(wrongState));
+
+    queryWrongState.increment();
     layer.increment(wrongState);
     layer.increment(dataHandleData(wrongState));
+
+    queryWrongState.decrement();
     layer.decrement(wrongState);
     layer.decrement(dataHandleData(wrongState));
+
+    queryWrongState.setToMin();
     layer.setToMin(wrongState);
     layer.setToMin(dataHandleData(wrongState));
+
+    queryWrongState.setToMax();
     layer.setToMax(wrongState);
     layer.setToMax(dataHandleData(wrongState));
     CORRADE_COMPARE_AS(out,
+        "Ui::StorageQuery::set(): Ui::StorageOperation::Set not supported\n"
         "Ui::DataLayer::set(): Ui::StorageOperation::Set not supported\n"
         "Ui::DataLayer::set(): Ui::StorageOperation::Set not supported\n"
+
+        "Ui::StorageQuery::reset(): Ui::StorageOperation::Reset not supported\n"
         "Ui::DataLayer::reset(): Ui::StorageOperation::Reset not supported\n"
         "Ui::DataLayer::reset(): Ui::StorageOperation::Reset not supported\n"
+
+        "Ui::StorageQuery::toggle(): Ui::StorageOperation::Toggle not supported\n"
         "Ui::DataLayer::toggle(): Ui::StorageOperation::Toggle not supported\n"
         "Ui::DataLayer::toggle(): Ui::StorageOperation::Toggle not supported\n"
+
+        "Ui::StorageQuery::increment(): Ui::StorageOperation::Increment not supported\n"
         "Ui::DataLayer::increment(): Ui::StorageOperation::Increment not supported\n"
         "Ui::DataLayer::increment(): Ui::StorageOperation::Increment not supported\n"
+
+        "Ui::StorageQuery::decrement(): Ui::StorageOperation::Decrement not supported\n"
         "Ui::DataLayer::decrement(): Ui::StorageOperation::Decrement not supported\n"
         "Ui::DataLayer::decrement(): Ui::StorageOperation::Decrement not supported\n"
+
+        "Ui::StorageQuery::min(): Ui::StorageOperation::Min not supported\n"
+        "Ui::DataLayer::min(): Ui::StorageOperation::Min not supported\n"
+        "Ui::StorageQuery::setToMin(): Ui::StorageOperation::Min not supported\n"
         "Ui::DataLayer::setToMin(): Ui::StorageOperation::Min not supported\n"
         "Ui::DataLayer::setToMin(): Ui::StorageOperation::Min not supported\n"
-        "Ui::DataLayer::setToMax(): Ui::StorageOperation::Max not supported\n"
-        "Ui::DataLayer::setToMax(): Ui::StorageOperation::Max not supported\n"
+        "Ui::StorageQuery::setToMin(): query is immutable\n"
         "Ui::DataLayer::setToMin(): data binding is immutable\n"
         "Ui::DataLayer::setToMin(): data binding is immutable\n"
+
+        "Ui::StorageQuery::max(): Ui::StorageOperation::Max not supported\n"
+        "Ui::DataLayer::max(): Ui::StorageOperation::Max not supported\n"
+        "Ui::StorageQuery::setToMax(): Ui::StorageOperation::Max not supported\n"
+        "Ui::DataLayer::setToMax(): Ui::StorageOperation::Max not supported\n"
+        "Ui::DataLayer::setToMax(): Ui::StorageOperation::Max not supported\n"
+        "Ui::StorageQuery::setToMax(): query is immutable\n"
         "Ui::DataLayer::setToMax(): data binding is immutable\n"
         "Ui::DataLayer::setToMax(): data binding is immutable\n"
 
+        "Ui::StorageQuery::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::reset(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Reset but got Ui::StorageUpdateState::Clamped\n"
+
+        "Ui::StorageQuery::toggle(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Toggle but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::toggle(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Toggle but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::toggle(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Toggle but got Ui::StorageUpdateState::Clamped\n"
+
+        "Ui::StorageQuery::increment(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Increment but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::increment(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Increment but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::increment(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Increment but got Ui::StorageUpdateState::Clamped\n"
+
+        "Ui::StorageQuery::decrement(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Decrement but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::decrement(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Decrement but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::decrement(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Decrement but got Ui::StorageUpdateState::Clamped\n"
+
+        "Ui::StorageQuery::setToMin(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Min but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::setToMin(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Min but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::setToMin(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Min but got Ui::StorageUpdateState::Clamped\n"
+
+        "Ui::StorageQuery::setToMax(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Max but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::setToMax(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Max but got Ui::StorageUpdateState::Clamped\n"
         "Ui::DataLayer::setToMax(): updater implementation expected to return Ui::StorageUpdateState::Success for Ui::StorageOperation::Max but got Ui::StorageUpdateState::Clamped\n",
         TestSuite::Compare::String);
@@ -3602,6 +3640,12 @@ void DataLayerTest::invalidHandle() {
     layer.isMutable(LayerDataHandle::Null);
     layer.operations(DataHandle::Null);
     layer.operations(LayerDataHandle::Null);
+    layer.get<Int>(DataHandle::Null);
+    layer.get<Int>(LayerDataHandle::Null);
+    layer.min<Int>(DataHandle::Null);
+    layer.min<Int>(LayerDataHandle::Null);
+    layer.max<Int>(DataHandle::Null);
+    layer.max<Int>(LayerDataHandle::Null);
     layer.set(DataHandle::Null, 0);
     layer.set(LayerDataHandle::Null, 0);
     layer.reset(DataHandle::Null);
@@ -3637,6 +3681,12 @@ void DataLayerTest::invalidHandle() {
         "Ui::DataLayer::isMutable(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::DataLayer::operations(): invalid handle Ui::DataHandle::Null\n"
         "Ui::DataLayer::operations(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::DataLayer::get(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::DataLayer::get(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::DataLayer::min(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::DataLayer::min(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::DataLayer::max(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::DataLayer::max(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::DataLayer::set(): invalid handle Ui::DataHandle::Null\n"
         "Ui::DataLayer::set(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::DataLayer::reset(): invalid handle Ui::DataHandle::Null\n"

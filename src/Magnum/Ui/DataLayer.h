@@ -1124,6 +1124,108 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         StorageOperations operations(LayerDataHandle handle) const;
 
         /**
+         * @brief Data binding value
+         *
+         * Returns value of @ref storage(DataHandle) const at
+         * @ref index(DataHandle) const. Expects that @p handle is valid. It's
+         * the user responsibility to ensure that @p T matches the
+         * @ref StorageQuery type the @p handle is coming from.
+         * @see @ref isHandleValid(DataHandle) const, @ref set(), @ref min(),
+         *      @ref max(), @ref StorageQuery::operator T()
+         */
+        template<class T> T get(DataHandle handle) {
+            return getInternal<T>(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::DataLayer::get():",
+                #endif
+                handle, StorageOperation{});
+        }
+
+        /**
+         * @brief Data binding value assuming it belongs to this layer
+         *
+         * Like @ref get(DataHandle) but without checking that @p handle indeed
+         * belongs to this layer. See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        template<class T> T get(LayerDataHandle handle) {
+            return getInternal<T>(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::DataLayer::get():",
+                #endif
+                handle, StorageOperation{});
+        }
+
+        /**
+         * @brief Minimum allowed value for given data binding
+         *
+         * Expects that @p handle is valid and @ref operations() list
+         * @ref StorageOperation::Min. It's the user responsibility to ensure
+         * that @p T matches the @ref StorageQuery type the @p handle is coming
+         * from.
+         * @see @ref isHandleValid(DataHandle) const, @ref setToMin(),
+         *      @ref get(), @ref max(), @ref StorageQuery::min()
+         */
+        template<class T> T min(DataHandle handle) {
+            return getInternal<T>(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::DataLayer::min():",
+                #endif
+                handle, StorageOperation::Min);
+        }
+
+        /**
+         * @brief Minimum allowed value for given data binding assuming it belongs to this layer
+         *
+         * Like @ref min(DataHandle) but without checking that @p handle indeed
+         * belongs to this layer. See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        template<class T> T min(LayerDataHandle handle) {
+            return getInternal<T>(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::DataLayer::min():",
+                #endif
+                handle, StorageOperation::Min);
+        }
+
+        /**
+         * @brief Maximum allowed value for given data binding
+         *
+         * Expects that @p handle is valid and @ref operations() list
+         * @ref StorageOperation::Max. It's the user responsibility to ensure
+         * that @p T matches the @ref StorageQuery type the @p handle is coming
+         * from.
+         * @see @ref isHandleValid(DataHandle) const, @ref setToMax(),
+         *      @ref get(), @ref min(), @ref StorageQuery::max()
+         */
+        template<class T> T max(DataHandle handle) {
+            return getInternal<T>(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::DataLayer::max():",
+                #endif
+                handle, StorageOperation::Max);
+        }
+
+        /**
+         * @brief Maximum allowed value for given data binding assuming it belongs to this layer
+         *
+         * Like @ref max(DataHandle) but without checking that @p handle indeed
+         * belongs to this layer. See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        template<class T> T max(LayerDataHandle handle) {
+            return getInternal<T>(
+                #ifndef CORRADE_NO_ASSERT
+                "Ui::DataLayer::max():",
+                #endif
+                handle, StorageOperation::Max);
+        }
+
+        /**
          * @brief Update the storage value for given data binding
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
@@ -1135,8 +1237,8 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
          * actually changed.
          * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
-         *      @ref operations(), @ref reset(), @ref toggle(),
-         *      @ref isStorageDirty(), @ref StorageQuery::set()
+         *      @ref get(), @ref reset(), @ref toggle(), @ref isStorageDirty(),
+         *      @ref StorageQuery::set()
          */
         template<class T> StorageUpdateState set(DataHandle handle, const T& value) {
             return updateInternal(
@@ -1177,7 +1279,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
          * actually changed.
          * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
-         *      @ref set(), @ref toggle(), @ref isStorageDirty(),
+         *      @ref get(), @ref set(), @ref toggle(), @ref isStorageDirty(),
          *      @ref StorageQuery::reset()
          */
         void reset(DataHandle handle);
@@ -1203,7 +1305,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
          * actually changed.
          * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
-         *      @ref set(), @ref reset(), @ref isStorageDirty(),
+         *      @ref get(), @ref set(), @ref reset(), @ref isStorageDirty(),
          *      @ref StorageQuery::toggle()
          */
         void toggle(DataHandle handle);
@@ -1229,7 +1331,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
          * actually changed.
          * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
-         *      @ref decrement(), @ref isStorageDirty(),
+         *      @ref get(), @ref decrement(), @ref isStorageDirty(),
          *      @ref StorageQuery::increment()
          */
         void increment(DataHandle handle);
@@ -1255,7 +1357,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @ref LayerState::NeedsCommonDataUpdate to be set if the stored value
          * actually changed.
          * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
-         *      @ref increment(), @ref isStorageDirty(),
+         *      @ref get(), @ref increment(), @ref isStorageDirty(),
          *      @ref StorageQuery::decrement()
          */
         void decrement(DataHandle handle);
@@ -1275,17 +1377,13 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @brief Set the storage value to a minimum for given data binding
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
-         * @ref StorageOperation::Min. Note that unlike with
-         * @ref StorageQuery::min() there's no way to query the minimum allowed
-         * value from the @ref DataLayer --- instead use
-         * @ref StorageQuery::onUpdate(Containers::Function<void(T value, T min, T max)>&&, NodeHandle) const
-         * to have the min and max value passed to the data binding on update.
+         * @ref StorageOperation::Min.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if
          * appropriate.
          * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
-         *      @ref setToMax(), @ref isStorageDirty(),
+         *      @ref min(), @ref setToMax(), @ref isStorageDirty(),
          *      @ref StorageQuery::setToMin()
          */
         void setToMin(DataHandle handle);
@@ -1305,17 +1403,13 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @brief Set the storage value to a maximum for given data binding
          *
          * Expects that @p handle is valid, mutable and @ref operations() list
-         * @ref StorageOperation::Max. Note that unlike with
-         * @ref StorageQuery::max() there's no way to query the maximum allowed
-         * value from the @ref DataLayer --- instead use
-         * @ref StorageQuery::onUpdate(Containers::Function<void(T value, T min, T max)>&&, NodeHandle) const
-         * to have the min and max value passed to the data binding on update.
+         * @ref StorageOperation::Max.
          *
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if
          * appropriate.
          * @see @ref isHandleValid(DataHandle) const, @ref isMutable(),
-         *      @ref setToMin(), @ref isStorageDirty(),
+         *      @ref max(), @ref setToMin(), @ref isStorageDirty(),
          *      @ref StorageQuery::setToMax()
          */
         void setToMax(DataHandle handle);
@@ -1358,6 +1452,27 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, std::size_t index);
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, const Containers::Size2D& index);
         MAGNUM_UI_LOCAL void setIndexInternal(UnsignedInt id, const Containers::Size3D& index);
+        template<class T> T getInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* const messagePrefix,
+            #endif
+            DataHandle handle, StorageOperation operation);
+        template<class T> T getInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* const messagePrefix,
+            #endif
+            LayerDataHandle handle, StorageOperation operation);
+        void getInternal(const char* messagePrefix, DataHandle handle, StorageOperation operation, void* value);
+        void getInternal(const char* messagePrefix, LayerDataHandle handle, StorageOperation operation, void* value);
+        /* Called from getInternal() above, compared to those it's a
+           MAGNUM_UI_LOCAL symbol so it can have assertion-dependent signature
+           without causing linker errors if a library is built with assertions
+           but user code isn't and vice versa. */
+        MAGNUM_UI_LOCAL void getInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            UnsignedInt id, StorageOperation operation, void* value);
         StorageUpdateState updateInternal(const char* messagePrefix, DataHandle handle, StorageOperation operation, const void* value);
         StorageUpdateState updateInternal(const char* messagePrefix, LayerDataHandle handle, StorageOperation operation, const void* value);
         /* Called from updateInternal() above, compared to those it's a
@@ -1727,7 +1842,7 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * value, potentially along with @ref StorageQuery::min() and
          * @ref StorageQuery::max() if @ref operations() expose them.
          */
-        bool isMutable() const { return _updater; }
+        bool isMutable() const { return _mutable; }
 
         /**
          * @brief Available storage operations
@@ -1749,8 +1864,8 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
          * stored value actually changed.
-         * @see @ref StorageQuery::set(), @ref toggle(),
-         *      @ref DataLayer::isStorageDirty(),
+         * @see @ref StorageQuery::operator T(), @ref StorageQuery::set(),
+         *      @ref toggle(), @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::reset(DataHandle)
          */
         void reset() const;
@@ -1764,8 +1879,8 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
          * stored value actually changed.
-         * @see @ref StorageQuery::set(), @ref reset(),
-         *      @ref DataLayer::isStorageDirty(),
+         * @see @ref StorageQuery::operator T(), @ref StorageQuery::set(),
+         *      @ref reset(), @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::toggle(DataHandle)
          */
         void toggle() const;
@@ -1779,7 +1894,8 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
          * stored value actually changed.
-         * @see @ref decrement(), @ref DataLayer::isStorageDirty(),
+         * @see @ref StorageQuery::operator T(), @ref decrement(),
+         *      @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::increment(DataHandle)
          */
         void increment() const;
@@ -1793,7 +1909,8 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
          * Calling this function causes the storage to get marked as dirty and
          * @ref LayerState::NeedsCommonDataUpdate to be set on the layer if the
          * stored value actually changed.
-         * @see @ref increment(), @ref DataLayer::isStorageDirty(),
+         * @see @ref StorageQuery::operator T(), @ref increment(),
+         *      @ref DataLayer::isStorageDirty(),
          *      @ref DataLayer::decrement(DataHandle)
          */
         void decrement() const;
@@ -1837,14 +1954,15 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
            getters */
         friend DataLayer;
 
-        explicit AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, StorageOperations operations, void(*(*call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&), StorageUpdateState(*updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*));
+        explicit AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, bool mutable_, StorageOperations operations, void(*(*call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&), StorageUpdateState(*queryOrUpdater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*));
 
         StorageUpdateState updateInternal(const char* messagePrefix, StorageOperation operation, const void* value) const;
 
         DataLayer* _layer;
         DataLayerStorageHandle _storage;
+        bool _mutable;
+        /* 1 byte free */
         StorageOperations _operations;
-        /* 2 bytes free */
         Containers::Size3D _index;
         /* Function pointer taking StorageCallOoverload returning a void(*)(…)
            function pointer. Yes, I know. Sorry. Done this way so it's possible
@@ -1852,7 +1970,9 @@ class MAGNUM_UI_EXPORT AbstractStorageQuery {
            passed to DataLayer::onUpdate() without having to store them as
            several 8-byte pointer members. */
         void(*(*_call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&);
-        StorageUpdateState(*_updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*);
+        /* For a query the const void* argument is non-null and interpreted as
+           mutable, constructing the value there via placement new */
+        StorageUpdateState(*_queryOrUpdater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*);
 };
 
 /**
@@ -2183,6 +2303,7 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @ref storage() is still valid in the @ref layer(). Meant to be used
          * mainly for diagnostic purposes, for regular access prefer to access
          * the storage data directly.
+         * @see @ref DataLayer::get(DataHandle)
          */
         /*implicit*/ operator T() const {
             return queryInternal(
@@ -2220,7 +2341,7 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
          * @ref operations() list @ref StorageOperation::Min.
-         * @see @ref setToMin(), @ref max()
+         * @see @ref setToMin(), @ref max(), @ref DataLayer::min(DataHandle)
          */
         T min() const {
             return queryInternal(
@@ -2235,7 +2356,7 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          *
          * Expects that @ref storage() is still valid in the @ref layer() and
          * @ref operations() list @ref StorageOperation::Max.
-         * @see @ref setToMax(), @ref min()
+         * @see @ref setToMax(), @ref min(), @ref DataLayer::max(DataHandle)
          */
         T max() const {
             return queryInternal(
@@ -2267,8 +2388,6 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
             const char* const messagePrefix,
             #endif
             const StorageOperation operation) const;
-
-        T(*_query)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation);
 };
 
 template<class Storage> Storage DataLayer::storage(const StorageHandle handle) {
@@ -2291,6 +2410,57 @@ template<class Storage> Storage DataLayer::storage(const DataLayerStorageHandle 
         "AbstractStorage subclasses expected to be trivially copyable with no extra members");
     AbstractStorage storage = storageInternal(handle);
     return static_cast<const Storage&>(storage);
+}
+
+template<class T> T DataLayer::getInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const DataHandle handle, const StorageOperation operation)
+{
+    /* There's (lol) unfortunately no better way to delay a construction of a
+       type. Here the union constructor *doesn't* construct the T, it's instead
+       done by _queryOrUpdater via placement new, but it *does* destruct it,
+       which happens after the value is moved out by the return statement. */
+    union Uninitialized {
+        Uninitialized() {}
+        ~Uninitialized() {
+            value.~T();
+        }
+        T value;
+    } uninitialized;
+    getInternal(
+        #ifndef CORRADE_NO_ASSERT
+        messagePrefix
+        #else
+        {}
+        #endif
+        , handle, operation, &uninitialized.value);
+    return Utility::move(uninitialized.value);
+}
+
+template<class T> T DataLayer::getInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const LayerDataHandle handle, const StorageOperation operation)
+{
+    /* Same as above */
+    union Uninitialized {
+        Uninitialized() {}
+        ~Uninitialized() {
+            value.~T();
+        }
+        T value;
+    } uninitialized;
+    getInternal(
+        #ifndef CORRADE_NO_ASSERT
+        messagePrefix
+        #else
+        {}
+        #endif
+        , handle, operation, &uninitialized.value);
+    return Utility::move(uninitialized.value);
 }
 
 namespace Implementation {
@@ -2367,18 +2537,20 @@ namespace Implementation {
         }
     };
     /* This has to specialize on both the index and the G to be a more
-       specialized match than the above variants, thus copied four times */
+       specialized match than the above variants, thus copied four times. The
+       functions get never called but it cannot be just a std::nullptr_t in
+       order to compile as an (unreachable) function call. */
     template<class Storage, class T> struct StorageUpdate<0, Storage, T, std::nullptr_t> {
-        constexpr static std::nullptr_t call = nullptr;
+        constexpr static StorageUpdateState(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*) = nullptr;
     };
     template<class Storage, class T> struct StorageUpdate<1, Storage, T, std::nullptr_t> {
-        constexpr static std::nullptr_t call = nullptr;
+        constexpr static StorageUpdateState(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*) = nullptr;
     };
     template<class Storage, class T> struct StorageUpdate<2, Storage, T, std::nullptr_t> {
-        constexpr static std::nullptr_t call = nullptr;
+        constexpr static StorageUpdateState(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*) = nullptr;
     };
     template<class Storage, class T> struct StorageUpdate<3, Storage, T, std::nullptr_t> {
-        constexpr static std::nullptr_t call = nullptr;
+        constexpr static StorageUpdateState(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*) = nullptr;
     };
 
     /* The Ui::StorageQuery stores a pointer to a concrete instantation of this
@@ -2410,6 +2582,14 @@ namespace Implementation {
                 };
         }
         CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+    }
+
+    template<UnsignedInt dimensions, class T, class Storage, class F, class G> static StorageUpdateState storageQueryOrUpdate(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, const void* const data) {
+        if(data && (operation == StorageOperation{} || operation == StorageOperation::Min || operation == StorageOperation::Max)) {
+            new(static_cast<T*>(const_cast<void*>(data))) T{StorageQuery<dimensions, Storage, T, F>::call(layer, handle, index, operation)};
+            return {};
+        }
+        return StorageUpdate<dimensions, Storage, T, G>::call(layer, handle, index, operation, data);
     }
 }
 
@@ -2455,7 +2635,7 @@ template<class T> template<class Storage, class F, class G, typename std::enable
 
 template<class T> template<class Storage, class F, class G, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&, StorageOperation)>::value && std::is_convertible<G&&, StorageUpdateState(*)(const Storage&, const Containers::Size3D&, StorageOperation, const T*)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, const StorageOperations operations, F, G): StorageQuery{storage, index, operations, Implementation::StorageArgs<3, F, G>{}} {}
 
-template<class T> template<UnsignedInt dimensions, class Storage, class F, class G> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, const StorageOperations operations, Implementation::StorageArgs<dimensions, F, G>): AbstractStorageQuery{storage, index, operations, Implementation::storageCall<dimensions, T, Storage, F>, Implementation::StorageUpdate<dimensions, Storage, T, G>::call}, _query{Implementation::StorageQuery<dimensions, Storage, T, F>::call} {
+template<class T> template<UnsignedInt dimensions, class Storage, class F, class G> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, const StorageOperations operations, Implementation::StorageArgs<dimensions, F, G>): AbstractStorageQuery{storage, index, !std::is_same<G, std::nullptr_t>::value, operations, Implementation::storageCall<dimensions, T, Storage, F>, Implementation::storageQueryOrUpdate<dimensions, T, Storage, F, G>} {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
         std::is_trivially_copyable<Storage>::value &&
@@ -2474,15 +2654,22 @@ template<class T> T StorageQuery<T>::queryInternal(
     #endif
     const StorageOperation operation) const
 {
-    /* Calling into _query even from asserts to have this compile even with a
-       non-default-constructible T */
+    /* Same as DataLayer::getInternal(), see a comment there for details */
+    union Uninitialized {
+        Uninitialized() {}
+        ~Uninitialized() {
+            value.~T();
+        }
+        T value;
+    } uninitialized;
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
         messagePrefix << "invalid handle" << storageHandle(_layer->handle(), _storage),
-        _query(*_layer, _storage, _index, operation));
+        Utility::move(uninitialized.value));
     CORRADE_ASSERT(_operations >= operation,
         messagePrefix << operation << "not supported",
-        _query(*_layer, _storage, _index, operation));
-    return _query(*_layer, _storage, _index, operation);
+        Utility::move(uninitialized.value));
+    _queryOrUpdater(*_layer, _storage, _index, operation, &uninitialized.value);
+    return Utility::move(uninitialized.value);
 }
 #endif
 

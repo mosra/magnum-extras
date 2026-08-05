@@ -287,9 +287,10 @@ struct Data {
        changing data properties, such as by DataLayer::setIndex(), and
        explicitly with DataLayer::setDirty(). */
     UnsignedInt storageIdDirty;
+    bool isMutable;
+    /* 1 byte free */
     /* Operations supported by the updater function */
     StorageOperations operations;
-    /* 2 bytes free */
     /* Linearized storage index (basically a linear data position as if the 3D
        storage would be contiguous). The logic is that with a byte-sized
        storage, we wouldn't be able to address more than 32/64 bits anyway, so
@@ -299,14 +300,13 @@ struct Data {
 
     Containers::FunctionData function;
     void(*call)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&);
-    /* Nullptr if the data binding is immutable */
     /** @todo to save space the layer could maintain a separate array
-        containing just the updater pointers and have them referenced from here
-        via a 20-byte index; and have a possibility for onUpdate() to say
-        "don't need the updater at all" for labels and other immutable
-        bindings ... but so far it looks like a lot of extra complication for
-        minimal gains */
-    StorageUpdateState(*updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*);
+        containing just the query / updater pointers and have them referenced
+        from here via a 20-byte index; and have a possibility for onUpdate() to
+        say "don't need the query / updater at all" for labels and other
+        bindings that need neither an explicit query nor an update ... but so
+        far it looks like a lot of extra complication for minimal gains */
+    StorageUpdateState(*queryOrUpdater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*);
 };
 
 }
@@ -737,6 +737,7 @@ DataHandle DataLayer::create(const AbstractStorageQuery& query, const Implementa
 
     /* The data binding is implicitly dirty upon creation */
     data.storageIdDirty = storageId|DataIsDirty;
+    data.isMutable = query._mutable;
     data.operations = query._operations;
     /* While the 3D size is 3*4/8 bytes, in practice addressing anything with a
        >4/8 byte address is impossible, thus the 3D index gets linearized into
@@ -745,7 +746,7 @@ DataHandle DataLayer::create(const AbstractStorageQuery& query, const Implementa
 
     data.function = Utility::move(function);
     data.call = query._call(overload);
-    data.updater = query._updater;
+    data.queryOrUpdater = query._queryOrUpdater;
 
     /* Make sure the update function is called for the new data */
     setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
@@ -943,13 +944,13 @@ void DataLayer::setIndexInternal(const UnsignedInt id, const Containers::Size3D&
 bool DataLayer::isMutable(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::DataLayer::isMutable(): invalid handle" << handle, {});
-    return _state->data[dataHandleId(handle)].updater;
+    return _state->data[dataHandleId(handle)].isMutable;
 }
 
 bool DataLayer::isMutable(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::DataLayer::isMutable(): invalid handle" << handle, {});
-    return _state->data[layerDataHandleId(handle)].updater;
+    return _state->data[layerDataHandleId(handle)].isMutable;
 }
 
 StorageOperations DataLayer::operations(const DataHandle handle) const {
@@ -1126,17 +1127,62 @@ StorageUpdateState DataLayer::updateInternal(
        supported, so check also for mutability. All other operations are not
        allowed to be specified if the StorageQuery is constructed without an
        updater, so for Set, Reset etc. this check wouldn't be needed. */
-    CORRADE_ASSERT(data.updater,
+    CORRADE_ASSERT(data.isMutable,
         messagePrefix << "data binding is immutable", {});
     CORRADE_ASSERT(data.operations >= operation,
         messagePrefix << operation << "not supported", {});
     const UnsignedInt storageId = extractStorageId(data.storageIdDirty);
     const StorageData& storage = state.storages[storageId];
-    const StorageUpdateState updateState = data.updater(*this, dataLayerStorageHandle(storageId, state.storages[storageId].used.generation), delinearizeIndex(storage.used.size, data.linearizedIndex), operation, value);
+    const StorageUpdateState updateState = data.queryOrUpdater(*this, dataLayerStorageHandle(storageId, state.storages[storageId].used.generation), delinearizeIndex(storage.used.size, data.linearizedIndex), operation, value);
     /* All operations except Set are expected to return only Success */
     CORRADE_ASSERT(operation == StorageOperation::Set || updateState == StorageUpdateState::Success,
         messagePrefix << "updater implementation expected to return" << StorageUpdateState::Success << "for" << operation << "but got" << updateState, {});
     return updateState;
+}
+
+void DataLayer::getInternal(const char*
+    #ifndef CORRADE_NO_ASSERT
+    const messagePrefix
+    #endif
+    , const DataHandle handle, const StorageOperation operation, void* const value)
+{
+    CORRADE_ASSERT(isHandleValid(handle),
+        messagePrefix << "invalid handle" << handle, );
+    getInternal(
+        #ifndef CORRADE_NO_ASSERT
+        messagePrefix,
+        #endif
+        dataHandleId(handle), operation, value);
+}
+
+void DataLayer::getInternal(const char*
+    #ifndef CORRADE_NO_ASSERT
+    const messagePrefix
+    #endif
+    , const LayerDataHandle handle, const StorageOperation operation, void* const value)
+{
+    CORRADE_ASSERT(isHandleValid(handle),
+        messagePrefix << "invalid handle" << handle, );
+    getInternal(
+        #ifndef CORRADE_NO_ASSERT
+        messagePrefix,
+        #endif
+        layerDataHandleId(handle), operation, value);
+}
+
+void DataLayer::getInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const UnsignedInt id, StorageOperation operation, void* const value)
+{
+    const State& state = *_state;
+    const Data& data = state.data[id];
+    CORRADE_ASSERT(data.operations >= operation,
+        messagePrefix << operation << "not supported", );
+    const UnsignedInt storageId = extractStorageId(data.storageIdDirty);
+    const StorageData& storage = state.storages[storageId];
+    data.queryOrUpdater(*this, dataLayerStorageHandle(storageId, state.storages[storageId].used.generation), delinearizeIndex(storage.used.size, data.linearizedIndex), operation, value);
 }
 
 LayerFeatures DataLayer::doFeatures() const {
@@ -1221,7 +1267,7 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
     }
 }
 
-AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, const StorageOperations operations, void(*(*const call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&), StorageUpdateState(*const updater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _operations{operations}, _index{index}, _call{call}, _updater{updater} {
+AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, const bool mutable_, const StorageOperations operations, void(*(*const call)(Implementation::StorageCallOoverload))(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&), StorageUpdateState(*const queryOrUpdater)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, StorageOperation, const void*)): _layer{&storage.layer()}, _storage{storageHandleStorage(storage.handle())}, _mutable{mutable_}, _operations{operations}, _index{index}, _call{call}, _queryOrUpdater{queryOrUpdater} {
     /* The class is always constructed through the StorageQuery subclass, so
        make the assertions mention that to reduce confusion */
     CORRADE_ASSERT(_layer->isHandleValid(_storage),
@@ -1239,8 +1285,10 @@ AbstractStorageQuery::AbstractStorageQuery(const AbstractStorage& storage, const
         CORRADE_ASSERT(!(operations & expected) || operations >= expected,
             "Ui::StorageQuery: either both" << expected << "have to be set or neither", );
     #endif
-    /* Min|Max can be used for the query as well */
-    CORRADE_ASSERT(!(operations & ~(StorageOperation::Min|StorageOperation::Max)) || updater,
+    /* Min|Max can be used for the query as well. The `queryOrUpdater` is never
+       null, but it's combined from separate `query` and `updater` lambdas
+       where the latter can be null, and in that case `mutable_` is false. */
+    CORRADE_ASSERT(!(operations & ~(StorageOperation::Min|StorageOperation::Max)) || mutable_,
         "Ui::StorageQuery:" << (operations & ~(StorageOperation::Min|StorageOperation::Max)) << "requires a non-null updater", );
 }
 
@@ -1316,11 +1364,11 @@ StorageUpdateState AbstractStorageQuery::updateInternal(const char*
        supported, so check also for mutability. All other operations are not
        allowed to be specified if the StorageQuery is constructed without an
        updater, so for Set, Reset etc. this check wouldn't be needed. */
-    CORRADE_ASSERT(_updater,
+    CORRADE_ASSERT(_mutable,
         messagePrefix << "query is immutable", {});
     CORRADE_ASSERT(_operations >= operation,
         messagePrefix << operation << "not supported", {});
-    const StorageUpdateState state = _updater(*_layer, _storage, _index, operation, value);
+    const StorageUpdateState state = _queryOrUpdater(*_layer, _storage, _index, operation, value);
     CORRADE_ASSERT(operation == StorageOperation::Set || state == StorageUpdateState::Success,
         messagePrefix << "updater implementation expected to return" << StorageUpdateState::Success << "for" << operation << "but got" << state, {});
     return state;
