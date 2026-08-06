@@ -1334,7 +1334,7 @@ const struct {
         ParseState::Success, -1337.420f,
         ParseState::Success, -1337.420},
 
-    /* Overflow to positive/negative infninity */
+    /* Overflow to positive/negative infinity */
     {"largest 32-bit value", "340282346638528859811704183484516925440",
         /* https://en.wikipedia.org/wiki/Single-precision_floating-point_format */
         ParseState::Success, FloatFromBits{0x7f7fffffu}.value,
@@ -1413,7 +1413,7 @@ const struct {
     {"duplicated minus sign", "--13.37"},
     {"duplicated plus sign", "++13.37"},
     {"plus and minus sign", "+-13.37"},
-    {"minus and plus sign", "+-13.37"},
+    {"minus and plus sign", "-+13.37"},
 
     /* I don't intend to support this weird hex representation once Corrade has
        own float parsers so disallowing it here already. (A hex representation
