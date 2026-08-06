@@ -54,6 +54,7 @@ corrade_add_test(UiBlurShaderTest BlurShaderTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiButtonTest ButtonTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiDataLayerTest DataLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiDebugLayerTest DebugLayerTest.cpp LIBRARIES MagnumUiTestLib)
+corrade_add_test(UiEnumStorageTest EnumStorageTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiEventTest EventTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiEventLayerTest EventLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiFormatterTest FormatterTest.cpp LIBRARIES MagnumUiTestLib)
@@ -125,6 +126,7 @@ set_property(TARGET
     UiDataLayerTest # Asserts in storageHandle() helpers, and graceful assert
                     # propagation in DataLayer::createStorage<T>()
     UiHandleTest # Asserts in most *Handle() helpers
+    UiEnumStorageTest # Asserts in any API of the template class
     UiNumericStorageTest # Asserts in inline StorageQuery constructors
     UiStorageTest # Asserts in inline StorageQuery constructors
     UiTextLayerTest # Asserts in fontHandle() and related helpers

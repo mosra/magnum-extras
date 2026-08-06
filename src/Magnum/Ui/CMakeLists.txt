@@ -113,6 +113,7 @@ set(MagnumUi_HEADERS
     Button.h
     DataLayer.h
     DebugLayer.h
+    EnumStorage.h
     Event.h
     EventLayer.h
     Formatter.h
