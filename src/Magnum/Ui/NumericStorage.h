@@ -211,10 +211,11 @@ template<class T> class NumericStorage: public AbstractStorage {
          *
          * Expects that the @p size is non-empty. If @p owner is a user
          * interface reference, expects that it contains a @ref DataLayer
-         * instance. While the stored value is *not* initialized in any way,
+         * instance. While the stored values are *not* initialized in any way,
          * the @ref range() is set to min and max representable values of given
-         * type, and @ref step() is set to @cpp T(1) @ce. You can use
-         * @ref mutableData() to fill the storage upon creation.
+         * type, @ref step() is set to @cpp T(1) @ce and @ref defaultValue() to
+         * @cpp T{} @ce. You can use @ref mutableData() to fill the storage
+         * upon creation.
          *
          * Delegates to either @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags)
          * or @ref AbstractStorage::AbstractStorage(UserInterface&, const Containers::Size3D&, StorageFlags),
@@ -303,7 +304,7 @@ template<class T> class NumericStorage: public AbstractStorage {
          * @brief Constructing a non-owned storage from a r-value reference is not allowed
          *
          * This prevents the storage to be accidentally constructed from a
-         * temporary value instead.
+         * temporary value.
          */
         template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, T&& value, StorageFlags flags = {}) = delete;
         /** @copydoc NumericStorage(Owner&, NonOwnedT, T&&, StorageFlags) */
@@ -371,7 +372,7 @@ template<class T> class NumericStorage: public AbstractStorage {
          * and max representable values of given type, and @ref step() is set
          * to @cpp T(1) @ce.
          *
-         * It's expected that @ref setDirty() is called whenever the value is
+         * It's expected that @ref setDirty() is called whenever the values are
          * modified externally. Also note that external modifications don't get
          * clamped against the @ref range() and as such the query values may
          * fall outside of it.
@@ -379,23 +380,9 @@ template<class T> class NumericStorage: public AbstractStorage {
          * Delegates to either @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags)
          * or @ref AbstractStorage::AbstractStorage(UserInterface&, const Containers::Size3D&, StorageFlags),
          * see their documentation for detailed description of all constraints.
-         *
-         * Delegates to @ref NumericStorage(Owner&, NoInitT, StorageFlags) and
-         * then uses the pointed-to @p value as the storage, along with
-         * remembering whether it's mutable. See the documentation of
-         * @ref NumericStorage(Owner&, NoInitT, StorageFlags) for more
-         * information.
-         *
-         * The @p value is expected to stay in scope for the whole storage
-         * lifetime. If the @p value is a @cpp const @ce reference, data
-         * updates through the storage are not possible. It's expected that
-         * @ref setDirty() is called whenever the value is modified externally.
-         * Also note that there's no way to clamp external modifications
-         * against the @ref range() and as such the query values may fall
-         * outside of it.
-         * @see @ref NonOwned, @ref NumericStorage(Owner&, ValueInitT, StorageFlags),
-         *      @ref NumericStorage(Owner&, NoInitT, StorageFlags),
-         *      @ref NumericStorage(Owner&, DirectInitT, const T&, StorageFlags)
+         * @see @ref NonOwned, @ref NumericStorage(Owner&, ValueInitT, std::size_t, StorageFlags),
+         *      @ref NumericStorage(Owner&, NoInitT, std::size_t, StorageFlags),
+         *      @ref NumericStorage(Owner&, DirectInitT, std::size_t, const T&, StorageFlags)
          */
         template<class Owner> explicit NumericStorage(Owner& owner, NonOwnedT, const Containers::StridedArrayView3D<T>& values, StorageFlags flags = {}): AbstractStorage{owner, Implementation::numericStorageViewSize(values), flags} {
             create(NonOwned, values);
@@ -513,8 +500,8 @@ template<class T> class NumericStorage: public AbstractStorage {
          * @ref setStep() in any way.
          *
          * Unlike @ref setRange(), calling this function *does not* cause the
-         * storage to be marked as dirty, as it doesn't have any effect on the
-         * values.
+         * storage to be marked as dirty, as it doesn't have any effect on
+         * existing values.
          */
         const NumericStorage<T>& setDefaultValue(T value) const;
 
@@ -586,8 +573,8 @@ template<class T> class NumericStorage: public AbstractStorage {
          *
          * Note that to reduce combinatorial type explosion, the query uses a
          * @ref Type which is always at least 32-bit. All value updates
-         * ultimately use the original @ref StorageType however. Use
-         * @ref value() "value<U>()" if you need a query in a different type.
+         * ultimately result in the original @ref StorageType being used to
+         * store the value however.
          */
         StorageQuery<Type> operator[](const Containers::Size3D& index) const;
 
@@ -600,11 +587,13 @@ template<class T> class NumericStorage: public AbstractStorage {
          *
          * In case of an owned storage (created using the @ref ValueInit,
          * @ref NoInit or @ref DirectInit constructor variants) the returned
-         * view is tightly packed with a size of @ref size(). In case of a
-         * non-owned storage (created using the @ref NonOwned constructor) the
-         * returned view matches the one passed to the constructor, possibly
-         * with extra dimensions added at the front.
-         * @see @ref mutableData()
+         * view is tightly packed with a size of @ref size(), and the view
+         * is only guaranteed to be valid for as long as no new storages are
+         * created in the underlying @ref DataLayer. In case of a non-owned
+         * storage (created using the @ref NonOwned constructor) the returned
+         * view matches the one passed to the constructor, possibly with extra
+         * dimensions added at the front.
+         * @see @ref layer()
          */
         Containers::StridedArrayView3D<const T> data() const;
 
