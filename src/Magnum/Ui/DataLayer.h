@@ -2608,7 +2608,7 @@ namespace Implementation {
        which signature is used in a particular DataLayer::onUpdate() call. Done
        this way to not have to several store pointers to all possible overloads
        in each Ui::StorageQuery instance. */
-    template<UnsignedInt dimensions, class T, class Storage, class F> static auto storageCall(StorageCallOoverload overload) -> void(*)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&) {
+    template<UnsignedInt dimensions, class T, class Storage, class F> auto storageCall(StorageCallOoverload overload) -> void(*)(DataLayer&, DataLayerStorageHandle, const Containers::Size3D&, DataHandle, Containers::FunctionData&) {
         switch(overload) {
             case StorageCallOoverload::ByReference:
                 return [](DataLayer& layer, const DataLayerStorageHandle storageHandle, const Containers::Size3D& index, DataHandle, Containers::FunctionData& result) {
@@ -2634,7 +2634,7 @@ namespace Implementation {
         CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
     }
 
-    template<UnsignedInt dimensions, class T, class Storage, class F, class G> static StorageUpdateState storageQueryOrUpdate(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, const void* const data) {
+    template<UnsignedInt dimensions, class T, class Storage, class F, class G> StorageUpdateState storageQueryOrUpdate(DataLayer& layer, const DataLayerStorageHandle handle, const Containers::Size3D& index, const StorageOperation operation, const void* const data) {
         if(data && (operation == StorageOperation{} || operation == StorageOperation::Min || operation == StorageOperation::Max)) {
             new(static_cast<T*>(const_cast<void*>(data))) T{StorageQuery<dimensions, Storage, T, F>::call(layer, handle, index, operation)};
             return {};
