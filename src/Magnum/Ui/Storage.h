@@ -243,9 +243,8 @@ template<class T> class Storage: public AbstractStorage {
         /**
          * @brief Raw storage data
          *
-         * Meant to be used mainly for diagnostic purposes, for value access
-         * prefer to use the @ref StorageQuery instances returned by
-         * @ref operator[]() and @ref value(). The returned view matches the
+         * For direct value access use the @ref StorageQuery instances returned
+         * by @ref operator[]() and @ref value(). The returned view matches the
          * one passed to the constructor.
          */
         Containers::StridedArrayView3D<const T> data() const {

@@ -2300,9 +2300,7 @@ template<class T> class StorageQuery: public AbstractStorageQuery {
          * @brief Storage value
          *
          * Returns value of given @ref storage() at @ref index(). Expects that
-         * @ref storage() is still valid in the @ref layer(). Meant to be used
-         * mainly for diagnostic purposes, for regular access prefer to access
-         * the storage data directly.
+         * @ref storage() is still valid in the @ref layer().
          * @see @ref DataLayer::get(DataHandle)
          */
         /*implicit*/ operator T() const {

@@ -594,9 +594,9 @@ template<class T> class NumericStorage: public AbstractStorage {
         /**
          * @brief Raw storage data
          *
-         * Meant to be used mainly for diagnostic purposes. For mutable access
-         * use either @ref mutableData() or the @ref StorageQuery instances
-         * returned by @ref value() and @ref operator[]().
+         * For mutable access use either @ref mutableData() or the
+         * @ref StorageQuery instances returned by @ref value() and
+         * @ref operator[]().
          *
          * In case of an owned storage (created using the @ref ValueInit,
          * @ref NoInit or @ref DirectInit constructor variants) the returned
