@@ -357,8 +357,8 @@ DataHandle Input::backgroundData() const {
 }
 
 DataHandle Input::textData() const {
-    /* The text is implicitly from the text layer. It can be null only
-       for a NoCreate'd instance, otherwise not. */
+    /* The text is implicitly from the text layer. It can be null only for a
+       NoCreate'd instance, otherwise not. */
     return _textData == LayerDataHandle::Null ? DataHandle::Null :
         dataHandle(ui().textLayer(), _textData);
 }
