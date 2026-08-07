@@ -288,7 +288,8 @@ template<class T> class NumericStorage: public AbstractStorage {
          * Behaves like calling @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
          * with @p value turned into a view of size @cpp {1, 1, 1} @ce but
          * results in a more compact internal representation.
-         * @see @ref ValueInit, @ref NumericStorage(Owner&, ValueInitT, StorageFlags),
+         * @see @ref ValueInit, @ref isMutable(),
+         *      @ref NumericStorage(Owner&, ValueInitT, StorageFlags),
          *      @ref NumericStorage(Owner&, NoInitT, StorageFlags),
          *      @ref NumericStorage(Owner&, DirectInitT, const T&, StorageFlags)
          */
@@ -317,7 +318,8 @@ template<class T> class NumericStorage: public AbstractStorage {
          * with @p values turned into a view of size
          * @cpp {1, 1, values.size()} @ce but results in a more compact
          * internal representation.
-         * @see @ref NonOwned, @ref NumericStorage(Owner&, ValueInitT, std::size_t, StorageFlags),
+         * @see @ref NonOwned, @ref isMutable(),
+         *      @ref NumericStorage(Owner&, ValueInitT, std::size_t, StorageFlags),
          *      @ref NumericStorage(Owner&, NoInitT, std::size_t, StorageFlags),
          *      @ref NumericStorage(Owner&, DirectInitT, std::size_t, const T&, StorageFlags)
          */
@@ -341,7 +343,8 @@ template<class T> class NumericStorage: public AbstractStorage {
          * with @p values turned into a view of size
          * @cpp {1, values.size()[0], values.size()[1]} @ce but results in a
          * more compact internal representation.
-         * @see @ref NonOwned, @ref NumericStorage(Owner&, ValueInitT, const Containers::Size2D&, StorageFlags),
+         * @see @ref NonOwned, @ref isMutable(),
+         *      @ref NumericStorage(Owner&, ValueInitT, const Containers::Size2D&, StorageFlags),
          *      @ref NumericStorage(Owner&, NoInitT, const Containers::Size2D&, StorageFlags),
          *      @ref NumericStorage(Owner&, DirectInitT, const Containers::Size2D&, const T&, StorageFlags)
          */
@@ -380,7 +383,8 @@ template<class T> class NumericStorage: public AbstractStorage {
          * Delegates to either @ref AbstractStorage::AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags)
          * or @ref AbstractStorage::AbstractStorage(UserInterface&, const Containers::Size3D&, StorageFlags),
          * see their documentation for detailed description of all constraints.
-         * @see @ref NonOwned, @ref NumericStorage(Owner&, ValueInitT, std::size_t, StorageFlags),
+         * @see @ref NonOwned, @ref isMutable(),
+         *      @ref NumericStorage(Owner&, ValueInitT, std::size_t, StorageFlags),
          *      @ref NumericStorage(Owner&, NoInitT, std::size_t, StorageFlags),
          *      @ref NumericStorage(Owner&, DirectInitT, std::size_t, const T&, StorageFlags)
          */
@@ -433,6 +437,20 @@ template<class T> class NumericStorage: public AbstractStorage {
          *      @ref NumericStorage(Owner&, NonOwnedT, const Containers::StridedArrayView3D<T>&, StorageFlags)
          */
         template<class Owner> explicit NumericStorage(Owner& owner, const Containers::Size3D& size, StorageFlags flags = {}): NumericStorage{owner, ValueInit, size, flags} {}
+
+        /**
+         * @brief Whether the storage is mutable
+         *
+         * Returns @cpp true @ce if the storage is owned (i.e., created using
+         * the @ref ValueInit, @ref NoInit or @ref DirectInit constructor) or
+         * if it's created using the @ref NonOwned constructor from a mutable
+         * view or value reference, @cpp false @ce otherwise.
+         *
+         * Immutable storages return immutable queries from @ref value() and
+         * @ref operator[]() and don't allow accessing @ref mutableData().
+         * @see @ref StorageQuery::isMutable()
+         */
+        bool isMutable() const;
 
         /** @brief Accepted value range */
         Containers::Pair<T, T> range() const;
@@ -575,6 +593,7 @@ template<class T> class NumericStorage: public AbstractStorage {
          * @ref Type which is always at least 32-bit. All value updates
          * ultimately result in the original @ref StorageType being used to
          * store the value however.
+         * @see @ref isMutable()
          */
         StorageQuery<Type> operator[](const Containers::Size3D& index) const;
 
@@ -606,6 +625,7 @@ template<class T> class NumericStorage: public AbstractStorage {
          * constructor variant, or for batch updates. Note that the user is
          * responsible for calling @ref setDirty() upon a modification in order
          * to correctly trigger updates on associated data bindings.
+         * @see @ref isMutable()
          */
         Containers::StridedArrayView3D<T> mutableData() const;
 

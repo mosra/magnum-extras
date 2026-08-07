@@ -623,6 +623,8 @@ template<class T> void NumericStorageTest::constructValueInit() {
     CORRADE_COMPARE(first1.size(), (Containers::Size3D{3, sizeFirstY, 1}));
     CORRADE_COMPARE(first2.size(), (Containers::Size3D{3, sizeFirstY, 1}));
 
+    CORRADE_VERIFY(first1.isMutable());
+    CORRADE_VERIFY(first2.isMutable());
     /* See comment at defaultRangeFor() for details */
     CORRADE_COMPARE(first1.range(), defaultRangeFor<T>());
     /* Using N.0 because unlike N, which is ambiguous conversion to Half, this
@@ -842,6 +844,7 @@ template<class T> void NumericStorageTest::constructNoInit() {
     CORRADE_VERIFY(!first.isDirty());
     CORRADE_COMPARE(first.flags(), StorageFlags{0x18});
     CORRADE_COMPARE(first.size(), (Containers::Size3D{3, sizeFirstY, 1}));
+    CORRADE_VERIFY(first.isMutable());
     CORRADE_COMPARE(first.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(first.step(), T(1.0));
     CORRADE_COMPARE(first.defaultValue(), T(0.0));
@@ -992,6 +995,7 @@ template<class T> void NumericStorageTest::constructDirectInit() {
     CORRADE_VERIFY(!first.isDirty());
     CORRADE_COMPARE(first.flags(), StorageFlags{0x18});
     CORRADE_COMPARE(first.size(), (Containers::Size3D{3, sizeFirstY, 1}));
+    CORRADE_VERIFY(first.isMutable());
     CORRADE_COMPARE(first.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(first.step(), T(1.0));
     CORRADE_COMPARE(first.defaultValue(), StorageTraits<T>::value());
@@ -1134,6 +1138,8 @@ template<class T> void NumericStorageTest::constructNonOwned3D() {
     CORRADE_COMPARE(storage2.flags(), StorageFlags{0x18});
     CORRADE_COMPARE(storage1.size(), (Containers::Size3D{2, 5, 3}));
     CORRADE_COMPARE(storage2.size(), (Containers::Size3D{2, 5, 3}));
+    CORRADE_VERIFY(storage1.isMutable());
+    CORRADE_VERIFY(!storage2.isMutable());
     CORRADE_COMPARE(storage1.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
@@ -1218,6 +1224,8 @@ template<class T> void NumericStorageTest::constructNonOwned2D() {
     CORRADE_COMPARE(storage2.flags(), StorageFlags{0x20});
     CORRADE_COMPARE(storage1.size(), (Containers::Size3D{1, 2, 3}));
     CORRADE_COMPARE(storage2.size(), (Containers::Size3D{1, 2, 3}));
+    CORRADE_VERIFY(storage1.isMutable());
+    CORRADE_VERIFY(!storage2.isMutable());
     CORRADE_COMPARE(storage1.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
@@ -1298,6 +1306,8 @@ template<class T> void NumericStorageTest::constructNonOwned1D() {
     CORRADE_COMPARE(storage2.flags(), StorageFlags{0x10});
     CORRADE_COMPARE(storage1.size(), (Containers::Size3D{1, 1, 3}));
     CORRADE_COMPARE(storage2.size(), (Containers::Size3D{1, 1, 3}));
+    CORRADE_VERIFY(storage1.isMutable());
+    CORRADE_VERIFY(!storage2.isMutable());
     CORRADE_COMPARE(storage1.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
@@ -1377,6 +1387,8 @@ template<class T> void NumericStorageTest::constructNonOwned() {
     CORRADE_COMPARE(storage2.flags(), StorageFlags{0x08});
     CORRADE_COMPARE(storage1.size(), (Containers::Size3D{1, 1, 1}));
     CORRADE_COMPARE(storage2.size(), (Containers::Size3D{1, 1, 1}));
+    CORRADE_VERIFY(storage1.isMutable());
+    CORRADE_VERIFY(!storage2.isMutable());
     CORRADE_COMPARE(storage1.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage2.range(), defaultRangeFor<T>());
     CORRADE_COMPARE(storage1.step(), T(1.0));
@@ -1976,6 +1988,7 @@ void NumericStorageTest::nonOwnedMutableDataInvalid() {
 
     const Int storageData[7]{};
     NumericStorage<Int> storage{layer, NonOwned, storageData};
+    CORRADE_VERIFY(!storage.isMutable());
 
     Containers::String out;
     Error redirectError{&out};

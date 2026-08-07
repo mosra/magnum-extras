@@ -295,6 +295,10 @@ template<class T> template<UnsignedInt dimensions> void NumericStorage<T>::creat
     createNonOwnedInternal(values.data(), true, Containers::Stride<dimensions>{values.stride()}.begin(), dimensions);
 }
 
+template<class T> bool NumericStorage<T>::isMutable() const {
+    return !(AbstractStorage::data<Data<T>>()->flags >= Flag::NonOwnedImmutable);
+}
+
 template<class T> Containers::Pair<T, T> NumericStorage<T>::range() const {
     const Data<T>& data = *AbstractStorage::data<Data<T>>();
     return {data.min, data.max};
@@ -514,6 +518,7 @@ template MAGNUM_UI_EXPORT void NumericStorage<type>::create<2>(NonOwnedT, const 
 template MAGNUM_UI_EXPORT void NumericStorage<type>::create<2>(NonOwnedT, const Containers::StridedArrayView2D<const type>&); \
 template MAGNUM_UI_EXPORT void NumericStorage<type>::create<3>(NonOwnedT, const Containers::StridedArrayView3D<type>&); \
 template MAGNUM_UI_EXPORT void NumericStorage<type>::create<3>(NonOwnedT, const Containers::StridedArrayView3D<const type>&); \
+template MAGNUM_UI_EXPORT bool NumericStorage<type>::isMutable() const; \
 template MAGNUM_UI_EXPORT Containers::Pair<type, type> NumericStorage<type>::range() const; \
 template MAGNUM_UI_EXPORT const NumericStorage<type>& NumericStorage<type>::setRange(type, type) const; \
 template MAGNUM_UI_EXPORT type NumericStorage<type>::step() const;          \
