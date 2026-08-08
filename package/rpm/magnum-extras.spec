@@ -1,6 +1,6 @@
 Name: magnum-extras
 Version: 2020.06.496.gff88fb6
-Release: 1
+Release: 1%{?dist}
 Summary: Extras for the Magnum C++11 graphics engine
 License: MIT
 Source: %{name}-%{version}.tar.gz
