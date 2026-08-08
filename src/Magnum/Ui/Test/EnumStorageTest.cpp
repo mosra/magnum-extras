@@ -524,10 +524,11 @@ template<class T> void EnumStorageTest::constructValueInit() {
     CORRADE_COMPARE(&second1.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     CORRADE_COMPARE(&second2.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     /* Single-item storage should fit in-place always on 64-bit, on 32-bit only
-       up to 4 bytes */
+       up to 4 bytes. On 32-bit x86 Android the 8-byte enum is aligned to four
+       bytes so it still fits. WTF. */
     #ifdef CORRADE_TARGET_32BIT
-    CORRADE_COMPARE(second1.isAllocated(), sizeof(T) >= 8);
-    CORRADE_COMPARE(second2.isAllocated(), sizeof(T) >= 8);
+    CORRADE_COMPARE(second1.isAllocated(), sizeof(T) >= 8 && alignof(T) >= 8);
+    CORRADE_COMPARE(second2.isAllocated(), sizeof(T) >= 8 && alignof(T) >= 8);
     #else
     CORRADE_VERIFY(!second1.isAllocated());
     CORRADE_VERIFY(!second2.isAllocated());
@@ -611,7 +612,7 @@ template<class T> void EnumStorageTest::constructNoInit() {
         EnumStorage<T>{layer, NoInit, StorageFlags{0x28}};
     CORRADE_COMPARE(&second.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     #ifdef CORRADE_TARGET_32BIT
-    CORRADE_COMPARE(second.isAllocated(), sizeof(T) >= 8);
+    CORRADE_COMPARE(second.isAllocated(), sizeof(T) >= 8 && alignof(T) >= 8);
     #else
     CORRADE_VERIFY(!second.isAllocated());
     #endif
@@ -678,7 +679,7 @@ template<class T> void EnumStorageTest::constructDirectInit() {
         EnumStorage<T>{layer, DirectInit, T::Value, StorageFlags{0x28}};
     CORRADE_COMPARE(&second.layer(), data.implicitLayer ? &ui.dataLayer() : &layer);
     #ifdef CORRADE_TARGET_32BIT
-    CORRADE_COMPARE(second.isAllocated(), sizeof(T) >= 8);
+    CORRADE_COMPARE(second.isAllocated(), sizeof(T) >= 8 && alignof(T) >= 8);
     #else
     CORRADE_VERIFY(!second.isAllocated());
     #endif
