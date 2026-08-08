@@ -1375,6 +1375,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);
         MAGNUM_UI_LOCAL Containers::Pair<Vector3, Vector2> textureCoordinatesInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void setTextureCoordinatesInternal(UnsignedInt id, const Vector3& offset, const Vector2& size);
+        MAGNUM_UI_LOCAL Containers::Pair<Vector2, Vector2> calculateQuadMinMax(UnsignedInt id, const Vector2& nodeOffset, const Vector2& nodeSize, const Float smoothness);
 
         /* These can't be MAGNUM_UI_LOCAL otherwise deriving from this class
            in tests causes linker errors */

@@ -532,6 +532,37 @@ LayerStates BaseLayer::doState() const {
     return states;
 }
 
+Containers::Pair<Vector2, Vector2> BaseLayer::calculateQuadMinMax(const UnsignedInt id, const Vector2& nodeOffset, const Vector2& nodeSize, const Float smoothness) {
+    auto& state = static_cast<const State&>(*_state);
+    auto& sharedState = static_cast<const Shared::State&>(state.shared);
+    const Implementation::BaseLayerData& data = state.data[id];
+
+    Vector4 padding = data.padding;
+    if(data.calculatedStyle < sharedState.styleCount)
+        padding += sharedState.styles[data.calculatedStyle].padding;
+    else {
+        CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
+        padding += state.dynamicStylePaddings[data.calculatedStyle - sharedState.styleCount];
+    }
+
+    /* Add an an adjustment for quad smoothness in order to prevent the edges
+       from looking cut off. Cannot do such an expansion in the shader because
+       a similar operation needs to be done for texture coordinates, which may
+       have a different scale altogether and the shader would need to get such
+       a scale as an additional input. Doing this here would also work for
+       potential future rotation, where, again, the shader would need to get a
+       2D "smoothness expansion vector" value, different for every data (and
+       then another for textures), instead of just a single smoothness uniform
+       for all.
+
+       Finally, in the SubdividedQuads case, the smoothness passed here is 0,
+       as there it's dealt with in the shader instead. */
+    padding -= Vector4{smoothness};
+
+    return {nodeOffset + padding.xy(),
+            nodeOffset + nodeSize - Math::gather<'z', 'w'>(padding)};
+}
+
 void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) {
     /* The base implementation populates data.calculatedStyle */
     AbstractVisualLayer::doUpdate(states, dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, clipRectOffsets, clipRectSizes, compositeRectOffsets, compositeRectSizes);
@@ -690,32 +721,14 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
             const Implementation::BaseLayerData& data = state.data[dataId];
 
-            /* Padding together with an adjustment for quad smoothness in order
-               to prevent the edges from looking cut off. Cannot do such an
-               expansion in the shader because a similar operation needs to be
-               done for texture coordinates, which may have a different scale
-               altogether and the shader would need to get such a scale as
-               an additional input. Doing this here would also work for
-               potential future rotation, where, again, the shader would need
-               to get a 2D "smoothness expansion vector" value, different for
-               every data (and then another for textures), instead of just a
-               single smoothness uniform for all. */
-            Vector4 padding = data.padding - Vector4{smoothness};
-            if(data.calculatedStyle < sharedState.styleCount)
-                padding += sharedState.styles[data.calculatedStyle].padding;
-            else {
-                CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
-                padding += state.dynamicStylePaddings[data.calculatedStyle - sharedState.styleCount];
-            }
-
             /* 0---1
                |   |
                |   |
                |   |
                2---3 */
-            const Vector2 offset = nodeOffsets[nodeId];
-            const Vector2 min = offset + padding.xy();
-            const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
+            const Containers::Pair<Vector2, Vector2> minMax = calculateQuadMinMax(dataId, nodeOffsets[nodeId], nodeSizes[nodeId], smoothness);
+            const Vector2 min = minMax.first();
+            const Vector2 max = minMax.second();
             const Vector2 sizeHalf = (max - min)*0.5f;
             const Vector2 sizeHalfNegative = -sizeHalf;
             const Float opacity = nodeOpacities[nodeId];
@@ -822,19 +835,12 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                because the shader has to do expansion for outline width and
                corner radii on its own anyway, and doing the outer smoothness
                expansion there as well makes the code more understandable. */
-            Vector4 padding = data.padding;
-            if(data.calculatedStyle < sharedState.styleCount)
-                padding += sharedState.styles[data.calculatedStyle].padding;
-            else {
-                CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
-                padding += state.dynamicStylePaddings[data.calculatedStyle - sharedState.styleCount];
-            }
+            const Containers::Pair<Vector2, Vector2> minMax = calculateQuadMinMax(dataId, nodeOffsets[nodeId], nodeSizes[nodeId], 0.0f);
+            const Vector2 min = minMax.first();
+            const Vector2 max = minMax.second();
 
             /* All four vertices in each corner get set to the same position
                and center distance */
-            const Vector2 offset = nodeOffsets[nodeId];
-            const Vector2 min = offset + padding.xy();
-            const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
             const Float sizeHalfY = (max.y() - min.y())*0.5f;
             const Float sizeHalfYNegative = -sizeHalfY;
             for(UnsignedByte i = 0; i != 4; ++i) {
