@@ -1484,7 +1484,6 @@ int main(int argc, char** argv) {
         EnumNames<Int(TextStyle::Count), TextStyle> enumNames{"TextStyle::"};
         EnumNames<Int(TextEditingStyle::Count), TextEditingStyle> editingEnumNames{"TextEditingStyle::"};
         EnumNames<Int(TextFont::Count), TextFont> fontNames{"TextFont::"};
-        EnumNames<Int(TextFont::Count), TextFont> alignmentNames{"TextFont::"};
 
         for(std::size_t i = 0; i != Containers::arraySize(textStyles); ++i) {
             const TextLayerStyle& style = textStyles[i];
