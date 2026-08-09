@@ -173,6 +173,16 @@ const BaseLayerStyleUniform BaseStyleUniformsDark[]{
     #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
     #undef _c
 };
+constexpr Vector4 BaseStylePaddingsDark[]{
+    #define _c(style, ...) __VA_ARGS__,
+    #include "Magnum/Ui/Implementation/themeDarkBaseStyles.h"
+    #undef _c
+};
+constexpr UnsignedInt BaseStyleUniformMappingDark[]{
+    #define _u(...) __VA_ARGS__
+    #include "Magnum/Ui/Implementation/themeDarkBaseStyles.h"
+    #undef _u
+};
 
 constexpr TextLayerCommonStyleUniform TextCommonStyleUniformDark{};
 
@@ -339,7 +349,8 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             .setStyle(
                 BaseCommonStyleUniformDark,
                 BaseStyleUniformsDark,
-                {})
+                BaseStyleUniformMappingDark,
+                BaseStylePaddingsDark)
             .setStyleTransition<BaseStyle,
                 Implementation::styleTransitionToInactiveOut,
                 Implementation::styleTransitionToInactiveOver,

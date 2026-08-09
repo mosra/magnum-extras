@@ -158,6 +158,7 @@ set(MagnumUi_PRIVATE_HEADERS
     Implementation/PasswordFont.h
     Implementation/Theme.h
     Implementation/themeDarkBaseStyleUniforms.h
+    Implementation/themeDarkBaseStyles.h
     Implementation/themeDarkLayoutStyles.h
     Implementation/themeDarkTextEditingStyles.h
     Implementation/themeDarkTextStyles.h

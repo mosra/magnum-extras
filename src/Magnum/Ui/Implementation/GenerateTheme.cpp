@@ -85,6 +85,10 @@ enum class TextEditingStyle {
     Count
 };
 
+struct BaseLayerStyle {
+    Vector4 padding;
+};
+
 struct TextLayerStyle {
     TextFont font = TextFont::Main;
     Text::Alignment alignment = Text::Alignment::MiddleCenter;
@@ -98,7 +102,7 @@ struct LayoutLayerStyle {
     Vector4 padding, margin;
 };
 
-void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Containers::ArrayView<Ui::TextLayerStyleUniform> textUniforms, Containers::ArrayView<TextLayerStyle> textStyles, Containers::ArrayView<Ui::TextLayerEditingStyleUniform> textEditingUniforms, Containers::ArrayView<Vector4> textEditingPaddings, Containers::ArrayView<Ui::TextLayerStyleUniform> textSelectionUniforms, Containers::ArrayView<LayoutLayerStyle> layoutStyles) {
+void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Containers::ArrayView<BaseLayerStyle> /*baseStyles*/, Containers::ArrayView<Ui::TextLayerStyleUniform> textUniforms, Containers::ArrayView<TextLayerStyle> textStyles, Containers::ArrayView<Ui::TextLayerEditingStyleUniform> textEditingUniforms, Containers::ArrayView<Vector4> textEditingPaddings, Containers::ArrayView<Ui::TextLayerStyleUniform> textSelectionUniforms, Containers::ArrayView<LayoutLayerStyle> layoutStyles) {
     const Float baseOpacity = 0.8f;
     const Float disabledOpacity = 0.3f;
 
@@ -1224,6 +1228,7 @@ int main(int argc, char** argv) {
     /** @todo ability to poison the colors etc. with NaNs to catch cases where
         they're accidentally not filled */
     Ui::BaseLayerStyleUniform baseUniforms[Int(BaseStyle::Count)];
+    BaseLayerStyle baseStyles[Int(BaseStyle::Count)];
     Ui::TextLayerStyleUniform textUniforms[Int(TextStyle::Count) + Int(TextEditingStyle::Count)];
     TextLayerStyle textStyles[Int(TextStyle::Count)];
     Ui::TextLayerEditingStyleUniform textEditingUniforms[Int(TextEditingStyle::Count)];
@@ -1232,6 +1237,7 @@ int main(int argc, char** argv) {
 
     dark(
         baseUniforms,
+        baseStyles,
         Containers::arrayView(textUniforms).prefix(Int(TextStyle::Count)),
         textStyles,
         textEditingUniforms,
@@ -1364,6 +1370,60 @@ int main(int argc, char** argv) {
         arrayAppend(output, "#endif\n"_s);
 
         const Containers::String filename = Utility::Path::join({*Utility::Path::currentDirectory(), args.value<Containers::StringView>("output"), filePrefix + "BaseStyleUniforms.h"});
+        if(!Utility::Path::write(filename, output))
+            return 1; /* LCOV_EXCL_LINE */
+        Debug{} << "Wrote" << filename;
+
+    /* Base layer styles */
+    } {
+        Containers::Array<char> output;
+        arrayAppend(output, preamble);
+        arrayAppend(output,
+            "/* BaseStyle enum name, padding */\n"
+            "#ifdef _c\n"_s);
+
+        EnumNames<Int(BaseStyle::Count), BaseStyle> enumNames{"BaseStyle::"};
+
+        for(std::size_t i = 0; i != Containers::arraySize(baseStyles); ++i) {
+            const BaseLayerStyle& style = baseStyles[i];
+            const Containers::StringView name = enumNames[i];
+
+            arrayAppend(output, Utility::format(
+                style.padding == Vector4{} ?
+                    "_c({}, {{}})\n" :
+                    "_c({}, {{{:.1f}f, {:.1f}f, {:.1f}f, {:.1f}f}})\n",
+                name,
+                style.padding.x(),
+                style.padding.y(),
+                style.padding.z(),
+                style.padding.w()));
+        }
+
+        /* Uniform mapping, currently trivial. Separated from the above to not
+           cause massive diffs every time a new style is added or the mapping
+           changes. */
+        arrayAppend(output,Utility::format(
+            "#endif\n"
+            "/* Style -> uniform ID in {}BaseStyleUniforms.h */\n"
+            "#ifdef _u\n_u(", filePrefix));
+        std::size_t lineBegin = output.size() - 3;
+        for(std::size_t i = 0; i != Containers::arraySize(baseStyles); ++i) {
+            /* If the next number (<999) together with a comma is beyond 79
+               chars, wrap */
+            if(output.size() + 4 - lineBegin > 79) {
+                /* Remove the last space, replace with a newline & indent */
+                arrayRemoveSuffix(output, 1);
+                arrayAppend(output, "\n   "_s);
+                lineBegin = output.size() - 3;
+            }
+
+            arrayAppend(output, Utility::format("{}, ", i));
+        }
+        /* Remove the last ", " */
+        arrayRemoveSuffix(output, 2);
+        arrayAppend(output, ")\n#endif\n"_s);
+
+        const Containers::String filename = Utility::Path::join({*Utility::Path::currentDirectory(), args.value<Containers::StringView>("output"), filePrefix + "BaseStyles.h"});
         if(!Utility::Path::write(filename, output))
             return 1; /* LCOV_EXCL_LINE */
         Debug{} << "Wrote" << filename;
