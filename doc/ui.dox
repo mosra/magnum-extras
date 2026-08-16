@@ -47,9 +47,9 @@ archive and extract it somewhere:
 @subsection ui-setup-subproject 1a. Option A: add dependencies as CMake subprojects
 
 The UI library is located in the [Magnum Extras](https://github.com/mosra/magnum-extras)
-repository and additionally relies on font and image loading plugins to be able
-to draw text and icons. Like before, the easiest way without having to install
-anything is adding those as CMake subprojects, for an alternative, see
+repository and additionally relies on font loading plugins to be able to draw
+text and icons. Like before, the easiest way without having to install anything
+is adding those as CMake subprojects, for an alternative, see
 @ref ui-setup-install below. Clone the relevant repositories like this (or use
 `git submodule add`, if you already have a Git repository):
 
@@ -66,7 +66,7 @@ add the new subdirectories using @cmake add_subdirectory() @ce so the file
 looks like below. The `EXCLUDE_FROM_ALL` arguments ensure only the parts you
 actually use are built (and excludes the subdirectories from the `install`
 target as well), and the final @cmake add_dependencies() @ce call makes sure
-that by the time your executable is built, the plugins it dynamically loads are
+that by the time your executable is built, the plugin it dynamically loads is
 ready as well:
 
 @code{.cmake}
@@ -82,14 +82,13 @@ add_subdirectory(magnum EXCLUDE_FROM_ALL)
 add_subdirectory(magnum-plugins EXCLUDE_FROM_ALL)
 add_subdirectory(magnum-extras EXCLUDE_FROM_ALL)
 set(MAGNUM_WITH_SDL2APPLICATION ON CACHE BOOL "" FORCE)
-set(MAGNUM_WITH_STBIMAGEIMPORTER ON CACHE BOOL "" FORCE)
 set(MAGNUM_WITH_STBTRUETYPEFONT ON CACHE BOOL "" FORCE)
 set(MAGNUM_WITH_UI ON CACHE BOOL "" FORCE)
 
 add_subdirectory(src)
 
-# And make sure the plugins get built as dependencies of the main executable
-add_dependencies(MyApplication Magnum::StbTrueTypeFont Magnum::StbImageImporter)
+# And make sure the plugin gets built as a dependency of the main executable
+add_dependencies(MyApplication Magnum::StbTrueTypeFont)
 @endcode
 
 The above doesn't rely on any additional dependencies besides SDL2, which you
@@ -118,9 +117,8 @@ If you cannot use a package, follow the manual building guide for
 @ref building-corrade-manual "Corrade", @ref building-manual "Magnum",
 @ref building-plugins-manual "Magnum Plugins" and
 @ref building-extras-manual "Magnum Extras" to build & install everything.
-Enable `MAGNUM_WITH_SDL2APPLICATION` for Magnum, `MAGNUM_WITH_STBIMAGEIMPORTER`
-and `MAGNUM_WITH_STBTRUETYPEFONT` for Magnum Plugins, and `MAGNUM_WITH_UI` for
-Magnum Extras.
+Enable `MAGNUM_WITH_SDL2APPLICATION` for Magnum, `MAGNUM_WITH_STBTRUETYPEFONT`
+for Magnum Plugins, and `MAGNUM_WITH_UI` for Magnum Extras.
 
 Once you install everything, you don't need to edit the bootstrap project
 `CMakeLists.txt` in any way, worst case you may have to pass
