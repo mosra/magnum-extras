@@ -1167,6 +1167,34 @@ baseLayer.create(1, bar);
 }
 
 {
+/* Keep in sync with ui-baselayer-style-alignment.png in
+   doc/generated/ui-baselayer.cpp */
+/* [BaseLayer-style-alignment] */
+baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
+    Ui::BaseLayerStyleUniform{} /* 0 */
+        .setColor(0xdcdcdc_rgbf)
+        .setCornerRadius(2.0f),
+    Ui::BaseLayerStyleUniform{} /* 1 */
+        .setColor(0x3bd267_rgbf)
+        .setCornerRadius(4.0f)
+}, {
+    {0.0f, 3.0f, 0.0f, 0.0f},   /* 0 */
+    {8.0f, 0.0f, 3.0f, 8.0f}    /* 1 */
+});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle background = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
+baseLayer.create(0, background);
+
+Ui::NodeHandle indicator = ui.createNode(background, {}, ui.nodeSize(background));
+Ui::DataHandle indicatorData = baseLayer.create(1, indicator);
+baseLayer.setAlignment(indicatorData,
+    Ui::BaseLayerAlignment::Top|Ui::BaseLayerAlignment::Right);
+/* [BaseLayer-style-alignment] */
+}
+
+{
 /* [BaseLayer-dynamic-styles-allocate] */
 /* Attempt to allocate a dynamic style ID, if available */
 Containers::Optional<UnsignedInt> dynamicStyleId = baseLayer.allocateDynamicStyle();

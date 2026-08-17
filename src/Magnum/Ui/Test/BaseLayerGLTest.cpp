@@ -276,23 +276,44 @@ const struct {
     bool partialUpdate;
     Vector2 nodeOffset, nodeSize;
     Vector4 paddingFromStyle, paddingFromData;
+    BaseLayerAlignments alignment;
 } RenderPaddingData[]{
     {"no padding", false,
-        {8.0f, 8.0f}, {112.0f, 48.0f}, {}, {}},
+        {8.0f, 8.0f}, {112.0f, 48.0f}, {}, {}, {}},
     /* Deliberately having one excessively shifted to left/top and the other to
        bottom/right. It shouldn't cause any strange artifacts. */
     {"from style", false,
         {-64.0f, -128.0f}, {192.0f, 192.0f},
-        {72.0f, 136.0f, 8.0f, 8.0f}, {}},
+        {72.0f, 136.0f, 8.0f, 8.0f}, {}, {}},
     {"from data", false,
         {0.0f, 0.0f}, {192.0f, 192.0f},
-        {}, {8.0f, 8.0f, 72.0f, 136.0f}},
+        {}, {8.0f, 8.0f, 72.0f, 136.0f}, {}},
     {"from both", false,
         {0.0f, 0.0f}, {128.0f, 64.0f},
-        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
+        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}, {}},
     {"from both, partial update", true,
         {0.0f, 0.0f}, {128.0f, 64.0f},
-        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
+        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}, {}},
+    {"from both, alignment right/top", false,
+        {0.0f, 0.0f}, {128.0f, 64.0f},
+        /* Left and bottom padding is subtracted from *remaining* node size
+           (i.e., excluding right and top padding) compared to above */
+        {0.0f, 8.0f, 0.0f, 64.0f - 8.0f - 8.0f},
+        {128.0f - 8.0f - 8.0f, 0.0f, 8.0f, 0.0f},
+        BaseLayerAlignment::Right|BaseLayerAlignment::Top},
+    {"from both, alignment left/bottom", false,
+        {0.0f, 0.0f}, {128.0f, 64.0f},
+        /* Right and top padding is subtracted from remaining node size
+           compared to above */
+        {0.0f, 64.0f - 8.0f - 8.0f, 0.0f, 8.0f},
+        {8.0f, 0.0f, 128.0f - 8.0f - 8.0f, 0.0f},
+        BaseLayerAlignment::Left|BaseLayerAlignment::Bottom},
+    {"from both, alignment center, partial update", true,
+        {0.0f, 0.0f}, {128.0f, 64.0f},
+        /* Style top left and data bottom right is picked so it's reaching
+           {8, 8} and {120, 56} from the center of {64, 32} */
+        {56.0f, 24.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 56.0f, 24.0f},
+        BaseLayerAlignment::Center},
 };
 
 const struct {
@@ -1430,6 +1451,13 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderPadding() {
 
     if(!data.paddingFromData.isZero()) {
         layer.setPadding(nodeData, data.paddingFromData);
+        CORRADE_COMPARE_AS(ui.state(),
+            UserInterfaceState::NeedsDataUpdate,
+            TestSuite::Compare::GreaterOrEqual);
+    }
+
+    if(data.alignment) {
+        layer.setAlignment(nodeData, data.alignment);
         CORRADE_COMPARE_AS(ui.state(),
             UserInterfaceState::NeedsDataUpdate,
             TestSuite::Compare::GreaterOrEqual);

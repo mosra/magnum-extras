@@ -96,6 +96,8 @@ struct BaseLayerData {
     Color4 color;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     UnsignedInt style, calculatedStyle;
+    BaseLayerAlignments alignment;
+    /* 28 bits free */
     Vector3 textureCoordinateOffset;
     Vector2 textureCoordinateSize;
 };

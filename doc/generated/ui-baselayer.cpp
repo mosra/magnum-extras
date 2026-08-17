@@ -165,7 +165,7 @@ int UiBaseLayer::exec() {
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 128}, {512, 256}}, {PixelFormat::RGBA8Unorm})), "ui-baselayer-style-color.png");
     }
 
-    Ui::BaseLayerGL::Shared layerShared{Ui::BaseLayerGL::Shared::Configuration{11}};
+    Ui::BaseLayerGL::Shared layerShared{Ui::BaseLayerGL::Shared::Configuration{13}};
     layerShared.setStyle(
         Ui::BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
@@ -211,7 +211,13 @@ int UiBaseLayer::exec() {
          Ui::BaseLayerStyleUniform{} /* 9, progress over */
             .setColor(0x3bd267_rgbf*1.1f, 0x3bd267_rgbf*0.9f)
             .setCornerRadius(6.0f),
-         Ui::BaseLayerStyleUniform{}
+         Ui::BaseLayerStyleUniform{} /* 10, alignment background */
+            .setColor(0xdcdcdc_rgbf)
+            .setCornerRadius(2.0f),
+         Ui::BaseLayerStyleUniform{} /* 11, alignment indicator */
+            .setColor(0x3bd267_rgbf)
+            .setCornerRadius(4.0f),
+         Ui::BaseLayerStyleUniform{} /* 12, for the BaseLayerSharedFlag enum */
             .setCornerRadius(12.0f)
             .setColor(0xffffffff_rgbaf*0.667f)
             .setOutlineColor(0x00000000_rgbaf)},
@@ -225,7 +231,9 @@ int UiBaseLayer::exec() {
          Vector4{3.0f}, /* 7, button inner */
          Vector4{3.0f}, /* 8, progress under */
          {}, /* 9 */
-         {}, /* 10 */
+         {0.0f, 3.0f, 0.0f, 0.0f}, /* 10 */
+         {8.0f, 0.0f, 3.0f, 8.0f}, /* 11 */
+         {}, /* 12 */
     });
     Ui::BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), layerShared));
 
@@ -293,6 +301,22 @@ int UiBaseLayer::exec() {
         ui.removeNode(root);
         /* GL coordinates are Y up, so take the upper half, not lower */
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 128}, {512, 256}}, {PixelFormat::RGBA8Unorm})), "ui-baselayer-style-padding.png");
+
+    /* Keep in sync (along with styles) with BaseLayer-style-alignment in
+       doc/snippets/Ui.cpp */
+    } {
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+
+        Ui::NodeHandle root = ui.createNode({}, {128, 32});
+        Ui::NodeHandle background = ui.createNode(root, {4, 4}, {120, 24});
+        Ui::NodeHandle indicator = ui.createNode(background, {}, {120, 24});
+        layer.create(10, background);
+        Ui::DataHandle indicatorData = layer.create(11, indicator);
+        layer.setAlignment(indicatorData, Ui::BaseLayerAlignment::Top|Ui::BaseLayerAlignment::Right);
+        ui.draw();
+        ui.removeNode(root);
+        /* GL coordinates are Y up, so take the upper half, not lower */
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 128}, {512, 256}}, {PixelFormat::RGBA8Unorm})), "ui-baselayer-style-alignment.png");
     }
 
     Ui::BaseLayerGL::Shared layerTexturedShared{Ui::BaseLayerGL::Shared::Configuration{3}
@@ -337,7 +361,7 @@ int UiBaseLayer::exec() {
         renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
 
         Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
-        layer.create(10, node);
+        layer.create(12, node);
         ui.draw();
         ui.removeNode(node);
         converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-flag-default.png");

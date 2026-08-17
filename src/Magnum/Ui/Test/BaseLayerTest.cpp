@@ -96,6 +96,10 @@ struct BaseLayerTest: TestSuite::Tester {
     void sharedSetStyleImplicitMappingImplicitPadding();
     void sharedSetStyleImplicitMappingInvalidSize();
 
+    void debugAlignment();
+    void debugAlignments();
+    void debugAlignmentsSupersets();
+
     void construct();
     void constructCopy();
     void constructMove();
@@ -116,6 +120,7 @@ struct BaseLayerTest: TestSuite::Tester {
     void setColor();
     void setOutlineWidth();
     void setPadding();
+    void setAlignment();
     void setTextureCoordinates();
     void setTextureCoordinatesInvalid();
 
@@ -199,6 +204,7 @@ const struct {
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
+    BaseLayerAlignments alignment;
     Float expectedPadding;
     Vector2 expectedBlurPadding;
     LayerStates states;
@@ -206,75 +212,75 @@ const struct {
 } UpdateDataOrderData[]{
     {"empty update",
         true, false, false, 5, 0, 0, 0, 0.0f,
-        {}, {}, {}, {}, 0.0f, {},
+        {}, {}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"empty update, textured",
         true, true, false, 5, 0, 0, 0, 0.0f,
-        {}, {}, {}, {}, 0.0f, {},
+        {}, {}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"empty update, subdivided",
         true, false, true, 5, 0, 0, 0, 0.0f,
-        {}, {}, {}, {}, 0.0f, {},
+        {}, {}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"empty update, background blur",
         true, true, false, 5, 0, 16, 1, 0.0f,
-        {}, {}, {}, {}, 0.0f, {},
+        {}, {}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"",
         false, false, false, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"smoothness expansion",
         false, false, false, 5, 0, 0, 0, 100.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 10.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 10.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"textured",
         false, true, false, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"textured, smoothness expansion",
         false, true, false, 5, 0, 0, 0, 100.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 10.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 10.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"subdivided",
         false, false, true, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"subdivided, (no) smoothness expansion",
         false, false, true, 5, 0, 0, 0, 10.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"textured + subdivided",
         false, true, true, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"textured + subdivided, (no) smoothness expansion",
         false, true, true, 5, 0, 0, 0, 10.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"node offset/size update only",
         false, false, false, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsNodeOffsetSizeUpdate, false, true, false},
     {"node offset/size update only, subdivided",
         false, false, true, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsNodeOffsetSizeUpdate, false, true, false},
     {"node order update only",
         false, false, false, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsNodeOrderUpdate, true, false, false},
     {"node order update only, subdivided",
         false, false, true, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsNodeOrderUpdate, true, false, false},
     {"node enabled update only",
         false, false, false, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsNodeEnabledUpdate, false, true, false},
     {"node enabled update only, subdivided",
         false, false, true, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsNodeEnabledUpdate, false, true, false},
     /* Cannot use NeedsNodeOpacityUpdate alone because then AbstractVisualLayer
        doUpdate() doesn't fill in calculated styles, leading to OOB errors. */
@@ -283,102 +289,140 @@ const struct {
         -- what can I do differently to test that? */
     {"node enabled + opacity update only",
         false, false, false, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate, false, true, false},
     {"node enabled + opacity update only, subdivided",
         false, false, true, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate, false, true, false},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
     {"shared data update only",
         false, false, false, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsSharedDataUpdate, false, false, false},
     {"common data update only",
         false, false, false, 5, 0, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsCommonDataUpdate, false, false, false},
     /* This would cause an update of the dynamic style data in derived classes
        if appropriate internal flags would be set internally, but in the base
        class it's nothing */
     {"common data update only, dynamic styles",
         false, false, false, 2, 3, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsCommonDataUpdate, false, false, false},
     {"padding from style",
         false, false, false, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {2.0f, 0.5f, 1.0f, 1.5f}, {}, 0.0f, {},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"padding from data",
         false, false, false, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {}, {2.0f, 0.5f, 1.0f, 1.5f}, 0.0f, {},
+        {}, {2.0f, 0.5f, 1.0f, 1.5f}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"padding from both style and data",
         false, false, false, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, 0.0f, {},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {}, 0.0f, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"padding from both style and data, alignment left/bottom",
+        false, false, false, 5, 0, 0, 0, 0.0f,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        /* Right and top padding is subtracted from *remaining* node size
+           (i.e., excluding the left and bottom padding) compared to above */
+        {0.5f, 0.0f, 13.0f - 2.0f - 1.0f, 0.75f},
+        {1.5f, 17.0f - 1.5f - 0.5f, 0.0f, 0.75f},
+        BaseLayerAlignment::Left|BaseLayerAlignment::Bottom, 0.0f, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"padding from both style and data, alignment right/centerY",
+        false, false, false, 5, 0, 0, 0, 0.0f,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        /* Left padding is (in total) subtracted from remaining node width
+           compared to above, style top and data bottom is picked so it's
+           reaching Y = 2 and 17 from the center of Y = 10 */
+        {7.0f - 1.0f - 0.5f, 8.0f, 1.0f, 0.0f},
+        {6.0f - 0.0f - 1.5f, 0.0f, 0.0f, 7.0f},
+        BaseLayerAlignment::Right|BaseLayerAlignment::CenterY, 0.0f, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"padding from both style and data, alignment centerX/top, smoothness expansion",
+        false, false, false, 5, 0, 0, 0, 100.0f,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        /* Bottom padding is (in total) subtracted from remaining node height
+           compared to above, style left and data right is picked so it's
+           reaching X = 1 and 11 from the center of X = 5.5 */
+        {4.5f, 0.0f, 0.0f, 10.0f - 0.0f - 0.75f},
+        {0.0f, 0.5f, 5.5f, 7.0f - 0.5f - 0.75f},
+        BaseLayerAlignment::CenterX|BaseLayerAlignment::Top, 10.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"padding from both style and data, subdivided",
         false, false, true, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, 0.0f, {},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {}, 0.0f, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"padding from both style and data, subdivided, alignment center, (no) smoothness expansion",
+        false, false, true, 5, 0, 0, 0, 100.0f,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        /* Style top and data bottom is picked so it's reaching Y = 2
+           and 17 from the center of Y = 10, style left and data right is
+           picked so it's reaching X = 1 and 11 from the center of X = 5.5 */
+        {4.5f, 8.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 5.5f, 7.0f},
+        BaseLayerAlignment::Center, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"unused dynamic styles",
         false, false, false, 5, 17, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"dynamic styles",
         false, false, false, 2, 3, 0, 0, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"dynamic styles, padding from dynamic style",
         false, false, false, 2, 3, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {2.0f, 0.5f, 1.0f, 1.5f}, {}, 0.0f, {},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"dynamic styles, padding from both dynamic style and data",
         false, false, false, 2, 3, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, 0.0f, {},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     {"dynamic styles, padding from both dynamic style and data, subdivided",
         false, false, true, 2, 3, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, 0.0f, {},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
     /* This one should result in no extra padding in composite rects */
     {"background blur with zero radius",
         false, false, false, 5, 0, 0, 1, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     /* It should be done independently of what other features are enabled */
     {"background blur with zero radius, textured + subdivided",
         false, true, true, 5, 0, 0, 1, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     /* These two should result in the same padding; total radius is 36 and
        UI / framebuffer size ratio is {10, 100} */
     {"background blur with radius 9 and 16 passes",
         false, false, false, 5, 0, 9, 16, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         0.0f, {36.0f/10.0f, 36.0f/100.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     {"background blur with radius 9 and 16 passes, smoothness expansion",
         false, false, false, 5, 0, 9, 16, 10.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         1.0f, {4.0f*(9.0f + 10)/10.0f, 4.0f*(9.0f + 10)/100.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     {"background blur with radius 18 and 4 passes",
         false, false, false, 5, 0, 18, 4, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         0.0f, {36.0f/10.0f, 36.0f/100.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     {"background blur with radius 18 and 4 passes, composite offset/size update only",
         false, false, false, 5, 0, 18, 4, 0.0f,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         0.0f, {36.0f/10.0f, 36.0f/100.0f},
         LayerState::NeedsCompositeOffsetSizeUpdate, false, false, true},
 };
@@ -557,7 +601,11 @@ BaseLayerTest::BaseLayerTest() {
                        &BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize},
         Containers::arraySize(SharedSetStyleData));
 
-    addTests({&BaseLayerTest::construct,
+    addTests({&BaseLayerTest::debugAlignment,
+              &BaseLayerTest::debugAlignments,
+              &BaseLayerTest::debugAlignmentsSupersets,
+
+              &BaseLayerTest::construct,
               &BaseLayerTest::constructCopy,
               &BaseLayerTest::constructMove});
 
@@ -585,6 +633,7 @@ BaseLayerTest::BaseLayerTest() {
     addTests({&BaseLayerTest::setColor,
               &BaseLayerTest::setOutlineWidth,
               &BaseLayerTest::setPadding,
+              &BaseLayerTest::setAlignment,
               &BaseLayerTest::setTextureCoordinates,
               &BaseLayerTest::setTextureCoordinatesInvalid,
 
@@ -1555,6 +1604,42 @@ void BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
         "Ui::BaseLayer::Shared::setStyle(): there's 3 uniforms for 5 styles, provide an explicit mapping\n");
 }
 
+void BaseLayerTest::debugAlignment() {
+    Containers::String out;
+    Debug{&out} << BaseLayerAlignment::CenterY << BaseLayerAlignment(0xbe);
+    CORRADE_COMPARE(out, "Ui::BaseLayerAlignment::CenterY Ui::BaseLayerAlignment(0xbe)\n");
+}
+
+void BaseLayerTest::debugAlignments() {
+    Containers::String out;
+    Debug{&out} << (BaseLayerAlignment::CenterX|BaseLayerAlignment(0x80)) << BaseLayerAlignments{};
+    CORRADE_COMPARE(out, "Ui::BaseLayerAlignment::CenterX|Ui::BaseLayerAlignment(0x80) Ui::BaseLayerAlignments{}\n");
+}
+
+void BaseLayerTest::debugAlignmentsSupersets() {
+    /* CenterX is a superset of Left and Right, so only one should get
+       printed */
+    {
+        Containers::String out;
+        Debug{&out} << (BaseLayerAlignment::CenterX|BaseLayerAlignment::Left|BaseLayerAlignment::Right);
+        CORRADE_COMPARE(out, "Ui::BaseLayerAlignment::CenterX\n");
+
+    /* CenterY is a superset of Top and Bottom, so only one should get
+       printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (BaseLayerAlignment::CenterY|BaseLayerAlignment::Top|BaseLayerAlignment::Bottom);
+        CORRADE_COMPARE(out, "Ui::BaseLayerAlignment::CenterY\n");
+
+    /* Center is a superset of CenterX and CenterY, so only one should get
+       printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (BaseLayerAlignment::Center|BaseLayerAlignment::CenterX|BaseLayerAlignment::CenterY);
+        CORRADE_COMPARE(out, "Ui::BaseLayerAlignment::Center\n");
+    }
+}
+
 void BaseLayerTest::construct() {
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
@@ -1829,6 +1914,7 @@ template<class T> void BaseLayerTest::createRemove() {
     CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
+    CORRADE_COMPARE(layer.alignment(first), BaseLayerAlignments{});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Default null node */
@@ -1838,6 +1924,7 @@ template<class T> void BaseLayerTest::createRemove() {
     CORRADE_COMPARE(layer.color(second), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(second), Vector4{0.0f});
     CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
+    CORRADE_COMPARE(layer.alignment(second), BaseLayerAlignments{});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Testing also the getter overloads and templates */
@@ -1888,6 +1975,7 @@ void BaseLayerTest::createRemoveHandleRecycle() {
     layer.setColor(second, 0xff3366_rgbf);
     layer.setOutlineWidth(second, Vector4{2.0f});
     layer.setPadding(second, Vector4{5.0f});
+    layer.setAlignment(second, BaseLayerAlignment::CenterY|BaseLayerAlignment::Left);
     layer.setTextureCoordinates(second, Vector3{3.0f}, Vector2{4.0f});
     CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(first), Vector4{0.0f});
@@ -1896,6 +1984,7 @@ void BaseLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(second), Vector4{2.0f});
     CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
+    CORRADE_COMPARE(layer.alignment(second), BaseLayerAlignment::CenterY|BaseLayerAlignment::Left);
     CORRADE_COMPARE(layer.textureCoordinates(second), Containers::pair(Vector3{3.0f}, Vector2{4.0f}));
 
     /* Data that reuses a previous slot should have all properties cleared back
@@ -1906,6 +1995,7 @@ void BaseLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.color(second2), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(second2), Vector4{0.0f});
     CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
+    CORRADE_COMPARE(layer.alignment(second2), BaseLayerAlignments{});
     CORRADE_COMPARE(layer.textureCoordinates(second2), Containers::pair(Vector3{0.0f}, Vector2{1.0f}));
 }
 
@@ -2119,6 +2209,55 @@ void BaseLayerTest::setPadding() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
+void BaseLayerTest::setAlignment() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{2, 3}};
+
+    /* Needed in order to be able to call update() */
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}},
+        {0, 0, 0},
+        {});
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
+    /* Just to be sure the setters aren't picking up the first ever data
+       always */
+    layer.create(2);
+
+    DataHandle data = layer.create(1);
+    CORRADE_COMPARE(layer.alignment(data), BaseLayerAlignments{});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting alignment marks the layer as dirty */
+    layer.setAlignment(data, BaseLayerAlignment::Right|BaseLayerAlignment::Bottom);
+    CORRADE_COMPARE(layer.alignment(data), BaseLayerAlignment::Right|BaseLayerAlignment::Bottom);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Testing also the other overload */
+    layer.setAlignment(dataHandleData(data), BaseLayerAlignment::CenterY);
+    CORRADE_COMPARE(layer.alignment(dataHandleData(data)), BaseLayerAlignment::CenterY);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+}
+
 void BaseLayerTest::setTextureCoordinates() {
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
@@ -2250,6 +2389,10 @@ void BaseLayerTest::invalidHandle() {
     layer.padding(LayerDataHandle::Null);
     layer.setPadding(DataHandle::Null, {});
     layer.setPadding(LayerDataHandle::Null, {});
+    layer.alignment(DataHandle::Null);
+    layer.alignment(LayerDataHandle::Null);
+    layer.setAlignment(DataHandle::Null, {});
+    layer.setAlignment(LayerDataHandle::Null, {});
     layer.textureCoordinates(DataHandle::Null);
     layer.textureCoordinates(LayerDataHandle::Null);
     layer.setTextureCoordinates(DataHandle::Null, {}, {});
@@ -2267,6 +2410,10 @@ void BaseLayerTest::invalidHandle() {
         "Ui::BaseLayer::padding(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::BaseLayer::setPadding(): invalid handle Ui::DataHandle::Null\n"
         "Ui::BaseLayer::setPadding(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::BaseLayer::alignment(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::BaseLayer::alignment(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::BaseLayer::setAlignment(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::BaseLayer::setAlignment(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::BaseLayer::textureCoordinates(): invalid handle Ui::DataHandle::Null\n"
         "Ui::BaseLayer::textureCoordinates(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::BaseLayer::setTextureCoordinates(): invalid handle Ui::DataHandle::Null\n"
@@ -2398,6 +2545,9 @@ void BaseLayerTest::updateDataOrder() {
 
     if(!data.paddingFromData.isZero())
         layer.setPadding(data3, data.paddingFromData);
+
+    if(data.alignment)
+        layer.setAlignment(data3, data.alignment);
 
     if(data.textured)
         layer.setTextureCoordinates(data7, {0.25f, 0.5f, 37.0f}, {0.5f, 0.125f});

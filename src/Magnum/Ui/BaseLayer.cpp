@@ -45,6 +45,40 @@
 
 namespace Magnum { namespace Ui {
 
+Debug& operator<<(Debug& debug, const BaseLayerAlignment value) {
+    debug << "Ui::BaseLayerAlignment" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case BaseLayerAlignment::value: return debug << "::" #value;
+        _c(Left)
+        _c(Right)
+        _c(Top)
+        _c(Bottom)
+        _c(CenterX)
+        _c(CenterY)
+        _c(Center)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const BaseLayerAlignments value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::BaseLayerAlignments{}", {
+        BaseLayerAlignment::Center,
+        /* Implied by Center, has to be after */
+        BaseLayerAlignment::CenterX,
+        BaseLayerAlignment::CenterY,
+        /* Implied by CenterX / CenterY, has to be after */
+        BaseLayerAlignment::Left,
+        BaseLayerAlignment::Right,
+        BaseLayerAlignment::Top,
+        BaseLayerAlignment::Bottom,
+    });
+}
+
 Debug& operator<<(Debug& debug, const BaseLayerSharedFlag value) {
     debug << "Ui::BaseLayerSharedFlag" << Debug::nospace;
 
@@ -318,6 +352,7 @@ DataHandle BaseLayer::create(const UnsignedInt style, const NodeHandle node) {
     data.color = Color3{1.0f};
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
+    data.alignment = {};
     if(sharedState.flags >= BaseLayerSharedFlag::Textured) {
         data.textureCoordinateOffset = state.defaultTextureCoordinateOffset;
         data.textureCoordinateSize = state.defaultTextureCoordinateSize;
@@ -409,6 +444,35 @@ void BaseLayer::setPadding(const LayerDataHandle handle, const Vector4& padding)
 
 void BaseLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding) {
     static_cast<State&>(*_state).data[id].padding = padding;
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
+}
+
+BaseLayerAlignments BaseLayer::alignment(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::BaseLayer::alignment(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).data[dataHandleId(handle)].alignment;
+}
+
+BaseLayerAlignments BaseLayer::alignment(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::BaseLayer::alignment(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).data[layerDataHandleId(handle)].alignment;
+}
+
+void BaseLayer::setAlignment(const DataHandle handle, const BaseLayerAlignments alignment) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::BaseLayer::setAlignment(): invalid handle" << handle, );
+    setAlignmentInternal(dataHandleId(handle), alignment);
+}
+
+void BaseLayer::setAlignment(const LayerDataHandle handle, const BaseLayerAlignments alignment) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::BaseLayer::setAlignment(): invalid handle" << handle, );
+    setAlignmentInternal(layerDataHandleId(handle), alignment);
+}
+
+void BaseLayer::setAlignmentInternal(const UnsignedInt id, const BaseLayerAlignments alignment) {
+    static_cast<State&>(*_state).data[id].alignment = alignment;
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
@@ -545,6 +609,26 @@ Containers::Pair<Vector2, Vector2> BaseLayer::calculateQuadMinMax(const Unsigned
         padding += state.dynamicStylePaddings[data.calculatedStyle - sharedState.styleCount];
     }
 
+    /* If any alignment is specified, the padding is interpreted as (half)
+       width or height. Simply apply that to the padding itself because that
+       makes it easier to deal with in code below. */
+    if(data.alignment >= BaseLayerAlignment::CenterX) {
+        padding[0] = nodeSize.x()*0.5f - padding[0];
+        padding[2] = nodeSize.x()*0.5f - padding[2];
+    } else if(data.alignment >= BaseLayerAlignment::Left) {
+        padding[2] = nodeSize.x() - padding[2] - padding[0];
+    } else if(data.alignment >= BaseLayerAlignment::Right) {
+        padding[0] = nodeSize.x() - padding[0] - padding[2];
+    }
+    if(data.alignment >= BaseLayerAlignment::CenterY) {
+        padding[1] = nodeSize.y()*0.5f - padding[1];
+        padding[3] = nodeSize.y()*0.5f - padding[3];
+    } else if(data.alignment >= BaseLayerAlignment::Top) {
+        padding[3] = nodeSize.y() - padding[3] - padding[1];
+    } else if(data.alignment >= BaseLayerAlignment::Bottom) {
+        padding[1] = nodeSize.y() - padding[1] - padding[3];
+    }
+
     /* Add an an adjustment for quad smoothness in order to prevent the edges
        from looking cut off. Cannot do such an expansion in the shader because
        a similar operation needs to be done for texture coordinates, which may
@@ -554,6 +638,10 @@ Containers::Pair<Vector2, Vector2> BaseLayer::calculateQuadMinMax(const Unsigned
        2D "smoothness expansion vector" value, different for every data (and
        then another for textures), instead of just a single smoothness uniform
        for all.
+
+       Since the alignment was baked into the padding values above, we don't
+       need to take it into account here and can simply substract on all
+       sides.
 
        Finally, in the SubdividedQuads case, the smoothness passed here is 0,
        as there it's dealt with in the shader instead. */

@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::BaseLayer, struct @ref Magnum::Ui::BaseLayerCommonStyleUniform, @ref Magnum::Ui::BaseLayerStyleUniform, enum @ref Magnum::Ui::BaseLayerSharedFlag, enum set @ref Magnum::Ui::BaseLayerSharedFlags
+ * @brief Class @ref Magnum::Ui::BaseLayer, struct @ref Magnum::Ui::BaseLayerCommonStyleUniform, @ref Magnum::Ui::BaseLayerStyleUniform, enum @ref Magnum::Ui::BaseLayerAlignment, @ref Magnum::Ui::BaseLayerSharedFlag, enum set @ref Magnum::Ui::BaseLayerAlignments, @ref Magnum::Ui::BaseLayerSharedFlags
  * @m_since_latest_{extras}
  */
 
@@ -444,6 +444,94 @@ struct BaseLayerStyleUniform {
 };
 
 /**
+@brief Base layer quad alignment within a node
+@m_since_latest_{extras}
+
+By default, the quad alignment is an empty set, making it fill the whole node
+excluding padding specified with @ref BaseLayer::setPadding() and in per-style
+values coming from @ref BaseLayer::Shared::setStyle().
+@see @ref Ui-BaseLayer-style-alignment, @ref BaseLayerAlignments,
+    @ref BaseLayer::setAlignment()
+*/
+enum class BaseLayerAlignment: UnsignedByte {
+    /**
+     * Align to the left. The right-side padding (in the Z component) is
+     * interpreted as quad width.
+     */
+    Left = 1 << 0,
+
+    /**
+     * Align to the right. The left-side padding (in the X component) is
+     * interpreted as quad width.
+     */
+    Right = 1 << 1,
+
+    /**
+     * Align to the top. The bottom-side padding (in the W component) is
+     * interpreted as quad height.
+     */
+    Top = 1 << 2,
+
+    /**
+     * Align to the bottom. The top-side padding (in the Y component) is
+     * interpreted as quad height.
+     */
+    Bottom = 1 << 3,
+
+    /**
+     * Align to horizontal center, same as specifying
+     * @relativeref{BaseLayerAlignment,Left} and
+     * @relativeref{BaseLayerAlignment,Right} together. The left- and
+     * right-side padding (in the X and Z component) is interpreted as distance
+     * from node center to the left and right edge of the quad. In other words,
+     * if they're the same, they're each a half of the quad width.
+     */
+    CenterX = Left|Right,
+
+    /**
+     * Align to vertical center, same as specifying
+     * @relativeref{BaseLayerAlignment,Top} and
+     * @relativeref{BaseLayerAlignment,Bottom} together. The top- and
+     * bottom-side padding (in the Y and W component) is interpreted as
+     * distance from node center to the top and bottom edge of the quad. In
+     * other words, if they're the same, they're each a half of the quad
+     * height.
+     */
+    CenterY = Top|Bottom,
+
+    /**
+     * Align to center, same as specifying
+     * @relativeref{BaseLayerAlignment,CenterX} and
+     * @relativeref{BaseLayerAlignment,CenterY} together. The left-, top-,
+     * right- and bottom-side padding is interpreted as distance from node
+     * center to the corresponding edge of the quad.
+     */
+    Center = CenterX|CenterY
+};
+
+/**
+@brief Base layer quad alignment within a node
+@m_since_latest_{extras}
+
+@see @ref Ui-BaseLayer-style-alignment, @ref BaseLayer::setAlignment()
+*/
+typedef Containers::EnumSet<BaseLayerAlignment> BaseLayerAlignments;
+
+CORRADE_ENUMSET_OPERATORS(BaseLayerAlignments)
+
+/**
+@debugoperatorenum{BaseLayerAlignment}
+@m_since_latest_{extras}
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerAlignment value);
+
+/**
+@debugoperatorenum{BaseLayerAlignments}
+@m_since_latest_{extras}
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerAlignments value);
+
+/**
 @brief Base layer
 @m_since_latest_{extras}
 
@@ -619,6 +707,27 @@ ensure correct draw order, the green bar is put into a child node, but both
 have the same size to have the whole area react the same way to taps or clicks.
 
 @snippet Ui.cpp BaseLayer-style-padding-data
+
+@subsection Ui-BaseLayer-style-alignment Alignment inside the node
+
+By default, the quad fills the available node area, excluding the padding.
+Sometimes you may however want to have the quad sized independently from the
+node, for example when creating checkbox backgrounds or various indicator dots.
+This, along with alignment inside the node, can be done with
+@ref setAlignment(). It accepts a combination of @ref BaseLayerAlignment values
+which cause the padding value on certain sides to be interpreted as quad width
+or height instead.
+
+@image html ui-baselayer-style-alignment.png width=256px
+
+Above is a node background with a green indicator dot on top. The background
+spans the whole node area except for a @cpp 3.0f @ce padding on the top, the
+dot is then aligned to top right, padded @cpp 3.0f @ce from the right, having a
+width and height of @cpp 8.0f @ce. In the snippet below the padding is
+specified via a style, per-data padding specified with @ref setPadding() is
+affected by alignment the same way.
+
+@snippet Ui.cpp BaseLayer-style-alignment
 
 @subsection Ui-BaseLayer-style-textured Textured drawing
 
@@ -1263,7 +1372,9 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * order left, top, right, bottom and is added to the per-style padding
          * values specified in @ref Shared::setStyle(). By default, the custom
          * padding is a zero vector, i.e. not affecting the padding coming from
-         * the style in any way.
+         * the style in any way. Padding is by default from the edges inwards,
+         * pass a combination of @ref BaseLayerAlignment values to
+         * @ref setAlignment() to change this behavior.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -1306,6 +1417,51 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         void setPadding(LayerDataHandle handle, Float padding) {
             setPadding(handle, Vector4{padding});
         }
+
+        /**
+         * @brief Custom quad alignment
+         *
+         * Expects that @p handle is valid.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        BaseLayerAlignments alignment(DataHandle handle) const;
+
+        /**
+         * @brief Custom quad padding assuming it belongs to this layer
+         *
+         * Like @ref alignment(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        BaseLayerAlignments alignment(LayerDataHandle handle) const;
+
+        /**
+         * @brief Set custom quad alignment
+         *
+         * Expects that @p handle is valid. By default, the alignment is an
+         * empty set, filling the whole node excluding padding. See particular
+         * @ref BaseLayerAlignment values for details about interaction between
+         * alignment and padding.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
+         * @see @ref Ui-BaseLayer-style-alignment,
+         *      @ref isHandleValid(DataHandle) const
+         */
+        void setAlignment(DataHandle handle, BaseLayerAlignments alignment);
+
+        /**
+         * @brief Set custom quad alignment assuming it belongs to this layer
+         *
+         * Like @ref setAlignment(DataHandle, BaseLayerAlignments) but without
+         * checking that @p handle indeed belongs to this layer. See its
+         * documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        void setAlignment(LayerDataHandle handle, BaseLayerAlignments alignment);
 
         /**
          * @brief Quad texture coordinate offset and size
@@ -1384,6 +1540,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color4& color);
         MAGNUM_UI_LOCAL void setOutlineWidthInternal(UnsignedInt id, const Vector4& width);
         MAGNUM_UI_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);
+        MAGNUM_UI_LOCAL void setAlignmentInternal(UnsignedInt id, BaseLayerAlignments alignment);
         MAGNUM_UI_LOCAL Containers::Pair<Vector3, Vector2> textureCoordinatesInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void setTextureCoordinatesInternal(UnsignedInt id, const Vector3& offset, const Vector2& size);
         MAGNUM_UI_LOCAL Containers::Pair<Vector2, Vector2> calculateQuadMinMax(UnsignedInt id, const Vector2& nodeOffset, const Vector2& nodeSize, const Float smoothness);
