@@ -999,6 +999,8 @@ baseLayer.create(BaseStyle::Blue, blueBox);
 }
 
 {
+/* Keep in sync with ui-baselayer-style-color.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-color1] */
 baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
     Ui::BaseLayerStyleUniform{} /* 0 */
@@ -1016,6 +1018,8 @@ Ui::NodeHandle gradient = DOXYGEN_ELLIPSIS({});
 baseLayer.create(1, gradient);
 /* [BaseLayer-style-color1] */
 
+/* Keep in sync with ui-baselayer-style-color.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-color2] */
 Ui::NodeHandle coloredGradient = DOXYGEN_ELLIPSIS({});
 Ui::DataHandle coloredGradientData = baseLayer.create(1, coloredGradient);
@@ -1028,6 +1032,8 @@ baseLayer.create(1, fadedGradient);
 }
 
 {
+/* Keep in sync with ui-baselayer-style-rounded-corners.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-rounded-corners] */
 baseLayerShared.setStyle(
     Ui::BaseLayerCommonStyleUniform{}
@@ -1052,6 +1058,8 @@ baseLayer.create(0, close);
 }
 
 {
+/* Keep in sync with ui-baselayer-style-outline.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-outline] */
 baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
     Ui::BaseLayerStyleUniform{} /* 0 */
@@ -1086,6 +1094,8 @@ baseLayer.create(2, radio);
 
 {
 Float percentage{};
+/* Keep in sync with ui-baselayer-style-outline-data-width.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-outline-data-width] */
 baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
     Ui::BaseLayerStyleUniform{} /* 0 */
@@ -1105,6 +1115,8 @@ baseLayer.setOutlineWidth(progressData, /* Left, top, right, bottom */
 }
 
 {
+/* Keep in sync with ui-baselayer-style-padding.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-padding] */
 baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
     Ui::BaseLayerStyleUniform{} /* 0 */
@@ -1130,6 +1142,8 @@ baseLayer.create(1, button);
 }
 
 {
+/* Keep in sync with ui-baselayer-style-padding.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-padding-data] */
 baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
     Ui::BaseLayerStyleUniform{} /* 0 */
@@ -1453,6 +1467,8 @@ struct LineLayer: Ui::LineLayer {
 Ui::AbstractUserInterface ui{{100, 100}};
 Ui::LineLayer& lineLayer = ui.setLayerInstance(Containers::pointer<LineLayer>(ui.createLayer(), lineLayerShared));
 {
+/* Keep in sync with ui-linelayer-create.png in
+   doc/generated/ui-linelayer.cpp */
 /* [LineLayer-create-strip] */
 Ui::NodeHandle node = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
 
@@ -1461,6 +1477,8 @@ lineLayer.createStrip(1, {
 }, {}, node);
 /* [LineLayer-create-strip] */
 
+/* Keep in sync with ui-linelayer-create.png in
+   doc/generated/ui-linelayer.cpp */
 /* [LineLayer-create-loop] */
 lineLayer.createLoop(1, {
     {-56.0f, -24.0f}, {-8.0f, -24.0f}, {-8.0f, 24.0f}, {-56.0f, 24.0f}
@@ -1469,6 +1487,8 @@ lineLayer.createLoop(1, {
 lineLayer.createLoop(1, {{56.0f, -24.0f}}, {}, node);
 /* [LineLayer-create-loop] */
 
+/* Keep in sync with ui-linelayer-create.png in
+   doc/generated/ui-linelayer.cpp */
 /* [LineLayer-create-indexed] */
 lineLayer.create(1, {
     0, 1, 1, 2,
@@ -1483,6 +1503,8 @@ lineLayer.create(1, {
 }
 
 {
+/* Keep in sync with ui-linelayer-style-smoothness.png in
+   doc/generated/ui-linelayer.cpp */
 /* [LineLayer-style-smoothness] */
 lineLayerShared.setStyle(
     Ui::LineLayerCommonStyleUniform{}
@@ -1506,6 +1528,8 @@ lineLayer.createLoop(1, {DOXYGEN_ELLIPSIS({})}, {}, glow);
 }
 
 {
+/* Keep in sync with ui-linelayer-style-color.png in
+   doc/generated/ui-linelayer.cpp */
 /* [LineLayer-style-color1] */
 lineLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::LineLayerCommonStyleUniform{}), {
     Ui::LineLayerStyleUniform{}, /* 0 */
@@ -1527,6 +1551,8 @@ lineLayer.createStrip(1, {DOXYGEN_ELLIPSIS({})}, {}, fadedBlue);
 ui.setNodeOpacity(fadedBlue, 0.25f);
 /* [LineLayer-style-color1] */
 
+/* Keep in sync with ui-linelayer-style-color.png in
+   doc/generated/ui-linelayer.cpp */
 /* [LineLayer-style-color2] */
 Ui::NodeHandle gradient = DOXYGEN_ELLIPSIS({});
 lineLayer.createStrip(0, {
@@ -1575,6 +1601,8 @@ lineLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::LineLayerCommonStyleUniform{}),
 /* [LineLayer-style-alignment-padding-struct-slice] */
 }
 
+/* Keep in sync with ui-linelayer-style-outline.png in
+   doc/generated/ui-linelayer.cpp */
 /* [LineLayer-style-width] */
 lineLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::LineLayerCommonStyleUniform{}), {
     Ui::LineLayerStyleUniform{} /* 0 */
@@ -1779,6 +1807,8 @@ textLayer.create(1, "hello!", {}, node);
 }
 
 {
+/* Keep in sync with ui-textlayer-style-color.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-style-color] */
 textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
     Ui::TextLayerStyleUniform{}, /* 0 */
@@ -1802,6 +1832,8 @@ ui.setNodeOpacity(fadedBlue, 0.25f);
 }
 
 {
+/* Keep in sync with ui-textlayer-style-alignment-padding.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-style-alignment-padding] */
 textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {DOXYGEN_ELLIPSIS(Ui::TextLayerStyleUniform{})}, {DOXYGEN_ELLIPSIS(Ui::FontHandle{})}, {
     Text::Alignment::TopLeft
@@ -1812,6 +1844,8 @@ textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {D
 }
 
 {
+/* Keep in sync with ui-textlayer-style-data-padding.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-style-data-padding] */
 textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
     Ui::TextLayerStyleUniform{} /* 0 */
@@ -1865,6 +1899,8 @@ textLayer.create(DOXYGEN_ELLIPSIS(0), "Γεια!",
 
 {
 Ui::NodeHandle node{};
+/* Keep in sync with ui-textlayer-style-features.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-style-features-data] */
 textLayer.create(DOXYGEN_ELLIPSIS(0), "Status: 418 I'm a Teapot",
     Ui::TextProperties{}.setFeatures({
@@ -1881,6 +1917,8 @@ textLayer.create(DOXYGEN_ELLIPSIS(0), "Status: 418 I'm a Teapot",
    errors, not more! */
 PluginManager::Manager<Text::AbstractFont> fontManager;
 Containers::Pointer<Text::AbstractFont> font = fontManager.loadAndInstantiate("SomethingWhatever");
+/* Keep in sync with ui-textlayer-style-features.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-style-features-fill-glyph-cache] */
 font->fillGlyphCache(glyphCache, {
     /* Small capitals */
@@ -1944,6 +1982,8 @@ Ui::FontHandle font16Handle = textLayerShared.addFont(*font, 16.0f, {});
 Ui::FontHandle font12Handle = textLayerShared.addFont(*font, 12.0f, {});
 /* [TextLayer-distancefield-setup-fonts] */
 
+/* Keep in sync with ui-textlayer-style-smoothness.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-distancefield-smoothness] */
 textLayerShared.setStyle(
     Ui::TextLayerCommonStyleUniform{}
@@ -1970,6 +2010,8 @@ textLayer.create(1, "big", {}, big);
 textLayer.create(2, "smooth", {}, smooth);
 /* [TextLayer-distancefield-smoothness] */
 
+/* Keep in sync with ui-textlayer-style-offset-outline.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-distancefield-offset-outline] */
 textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
     Ui::TextLayerStyleUniform{}    /* 0 */
@@ -1998,6 +2040,8 @@ Ui::NodeHandle node{};
    errors, not more! */
 PluginManager::Manager<Text::AbstractFont> fontManager;
 Containers::Pointer<Text::AbstractFont> font = fontManager.loadAndInstantiate("SomethingWhatever");
+/* Keep in sync with ui-textlayer-single-glyph.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-single-glyph-runtime] */
 textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), font->glyphForName("coffee"), {}, node);
 /* [TextLayer-single-glyph-runtime] */
@@ -2065,6 +2109,8 @@ textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), 3, iconFontHandle, DOXYGEN_ELLIPSIS(n
 }
 
 {
+/* Keep in sync with ui-textlayer-transformation.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-transformation-clock1] */
 PluginManager::Manager<Trade::AbstractImporter> importerManager;
 Containers::Pointer<Trade::AbstractImporter> importer =
@@ -2080,6 +2126,8 @@ if(!importer || !importer->openData(R"(
 Containers::Optional<Trade::ImageData2D> needle = importer->image2D(0);
 /* [TextLayer-transformation-clock1] */
 
+/* Keep in sync with ui-textlayer-transformation.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-transformation-clock2] */
 Vector3i offset[1];
 Containers::Optional<Range3Di> flushRange = textLayer.shared().glyphCache()
@@ -2102,6 +2150,8 @@ Ui::FontHandle needleFont = textLayer.shared().addInstancelessFont(needleFontId,
 /* [TextLayer-transformation-clock2] */
 
 UnsignedInt style = 0;
+/* Keep in sync with ui-textlayer-transformation.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-transformation-clock3] */
 Ui::NodeHandle clock = DOXYGEN_ELLIPSIS(ui.createNode({}, {64, 64}));
 textLayer.create(style, "12", Text::Alignment::TopCenter, clock);
@@ -2180,6 +2230,8 @@ textLayer.setCursor(text, 7, 4); /* Selecting "o w" with cursor at byte 7 */
 /* [TextLayer-editing-create] */
 }
 
+/* Keep in sync with ui-textlayer-editing-color.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-editing-style-text-selection] */
 textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
     Ui::TextLayerStyleUniform{} /* 0 */
@@ -2198,6 +2250,8 @@ textLayerShared.setEditingStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonEditingStyle
 }, {DOXYGEN_ELLIPSIS()});
 /* [TextLayer-editing-style-text-selection] */
 
+/* Keep in sync with ui-textlayer-editing-padding.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-editing-style-padding] */
 textLayerShared.setEditingStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonEditingStyleUniform{}), {DOXYGEN_ELLIPSIS()}, {}, {
     /* Begin, top, end, bottom */
@@ -2206,6 +2260,8 @@ textLayerShared.setEditingStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonEditingStyle
 });
 /* [TextLayer-editing-style-padding] */
 
+/* Keep in sync with ui-textlayer-editing-rounded.png in
+   doc/generated/ui-textlayer.cpp */
 /* [TextLayer-editing-style-rounded] */
 textLayerShared.setEditingStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonEditingStyleUniform{}), {
     Ui::TextLayerEditingStyleUniform{}  /* (Cursor) style 0 */

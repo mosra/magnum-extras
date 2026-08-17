@@ -259,6 +259,8 @@ int UiTextLayer::exec() {
     );
     Ui::TextLayer& layer = ui.setLayerInstance(Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), layerShared));
 
+    /* Keep in sync (along with styles) with TextLayer-style-color in
+       doc/snippets/Ui.cpp */
     {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -274,6 +276,9 @@ int UiTextLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {384, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-color.png");
+
+    /* Keep in sync (along with styles) with TextLayer-style-data-padding in
+       doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -286,6 +291,9 @@ int UiTextLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {192, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-data-padding.png");
+
+    /* Keep in sync (along with styles) with TextLayer-style-features in
+       doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -303,6 +311,9 @@ int UiTextLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 128}, {256, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-features.png");
+
+    /* Keep in sync (along with styles) with TextLayer-single-glyph-runtime in
+       doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -312,6 +323,9 @@ int UiTextLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {64, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-single-glyph.png");
+
+    /* Keep in sync (along with styles) with
+       TextLayer-editing-style-text-selection in doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -322,6 +336,9 @@ int UiTextLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {256, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-editing-color.png");
+
+    /* Keep in sync (along with styles) with TextLayer-editing-style-padding in
+       doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -332,6 +349,9 @@ int UiTextLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {256, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-editing-padding.png");
+
+    /* Keep in sync (along with styles) with TextLayer-editing-style-rounded in
+       doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -433,6 +453,8 @@ int UiTextLayer::exec() {
         {{}, {}, {}, {}, {}, Vector4{2.0f, 0.0f, 2.0f, 0.0f} /* 5 */});
     Ui::TextLayer& layerDistanceField = ui.setLayerInstance(Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), layerSharedDistanceField, Ui::TextLayerFlag::Transformable));
 
+    /* Keep in sync (along with styles) with TextLayer-distancefield-smoothness
+       in doc/snippets/Ui.cpp */
     {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -446,6 +468,9 @@ int UiTextLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 176}, {384, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-smoothness.png");
+
+    /* Keep in sync (along with styles) with
+       TextLayer-distancefield-offset-outline in doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -457,6 +482,9 @@ int UiTextLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {384, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-offset-outline.png");
+
+    /* Keep in sync (along with styles) with TextLayer-transformation-clock1,
+       -clock2 and -clock3 in doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 

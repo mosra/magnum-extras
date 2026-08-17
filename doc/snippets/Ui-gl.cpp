@@ -770,6 +770,8 @@ ui.setBaseLayerInstance(
 
 {
 Ui::UserInterfaceGL ui{NoCreate};
+/* Keep in sync with ui-baselayer-style-textured.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-textured1] */
 Ui::BaseLayerGL::Shared texturedLayerShared{
     Ui::BaseLayerGL::Shared::Configuration{DOXYGEN_ELLIPSIS(1)}
@@ -791,6 +793,8 @@ DOXYGEN_ELLIPSIS()
 texturedLayer.setTexture(texture);
 /* [BaseLayer-style-textured1] */
 
+/* Keep in sync with ui-baselayer-style-textured.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-textured2] */
 Ui::NodeHandle image = DOXYGEN_ELLIPSIS({});
 Ui::NodeHandle outlined = DOXYGEN_ELLIPSIS({});
@@ -824,6 +828,8 @@ baseLayer.create(baseLayer.shared().styleCount() + dynamicStyleId, node);
 
 {
 Ui::UserInterfaceGL ui{NoCreate};
+/* Keep in sync with ui-baselayer-flag-blur.png in
+   doc/generated/ui-baselayer.cpp */
 /* [BaseLayer-style-background-blur] */
 ui.setRendererInstance(Containers::pointer<Ui::RendererGL>(
     Ui::RendererGL::Flag::CompositingFramebuffer));

@@ -101,6 +101,8 @@ int UiLineLayer::exec() {
         {});
     Ui::LineLayer& layerNoSmoothness = ui.setLayerInstance(Containers::pointer<Ui::LineLayerGL>(ui.createLayer(), layerNoSmoothnessShared));
 
+    /* Keep in sync (along with styles) with LineLayer-create-strip, -loop and
+       -indexed in doc/snippets/Ui.cpp */
     {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -162,6 +164,8 @@ int UiLineLayer::exec() {
          {}});
     Ui::LineLayer& layer = ui.setLayerInstance(Containers::pointer<Ui::LineLayerGL>(ui.createLayer(), layerShared));
 
+    /* Keep in sync (along with styles) with LineLayer-style-smoothness in
+       doc/snippets/Ui.cpp */
     {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -180,6 +184,9 @@ int UiLineLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-linelayer-style-smoothness.png");
+
+    /* Keep in sync (along with styles) with LineLayer-style-color1 and -color2
+       in doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -229,6 +236,9 @@ int UiLineLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 128}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-linelayer-style-color.png");
+
+    /* Keep in sync (along with styles) with LineLayer-style-width in
+       doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 

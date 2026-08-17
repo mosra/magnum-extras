@@ -144,6 +144,8 @@ int UiBaseLayer::exec() {
         {});
     Ui::BaseLayerGL& layerNoSmoothness = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), layerNoSmoothnessShared));
 
+    /* Keep in sync with BaseLayer-style-color1 and -color2 in
+       doc/snippets/Ui.cpp */
     {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -227,6 +229,8 @@ int UiBaseLayer::exec() {
     });
     Ui::BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), layerShared));
 
+    /* Keep in sync (along with styles) with BaseLayer-style-rounded-corners in
+       doc/snippets/Ui.cpp */
     {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -238,6 +242,9 @@ int UiBaseLayer::exec() {
         ui.removeNode(heading);
         /* GL coordinates are Y up, so take the upper half, not lower */
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 128}, {512, 256}}, {PixelFormat::RGBA8Unorm})), "ui-baselayer-style-rounded-corners.png");
+
+    /* Keep in sync (along with styles) with BaseLayer-style-outline in
+       doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -252,6 +259,9 @@ int UiBaseLayer::exec() {
         ui.removeNode(root);
         /* GL coordinates are Y up, so take the upper half, not lower */
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 128}, {512, 256}}, {PixelFormat::RGBA8Unorm})), "ui-baselayer-style-outline.png");
+
+    /* Keep in sync (along with styles) with BaseLayer-style-outline-data-width
+       in doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -263,6 +273,9 @@ int UiBaseLayer::exec() {
         ui.removeNode(progress);
         /* GL coordinates are Y up, so take the upper half, not lower */
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {512, 256}}, {PixelFormat::RGBA8Unorm})), "ui-baselayer-style-outline-data-width.png");
+
+    /* Keep in sync (along with styles) with BaseLayer-style-padding and
+       -padding-data in doc/snippets/Ui.cpp */
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -298,6 +311,8 @@ int UiBaseLayer::exec() {
     Ui::BaseLayerGL& layerTextured = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), layerTexturedShared));
     layerTextured.setTexture(textureBalloon);
 
+    /* Keep in sync (along with styles) with BaseLayer-style-textured1 and
+       -textured2 in doc/snippets/Ui-gl.cpp */
     {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -342,6 +357,8 @@ int UiBaseLayer::exec() {
     layerBackgroundBlur
         .setBackgroundBlurPassCount(8);
 
+    /* Keep in sync (along with styles) with BaseLayer-style-background-blur in
+       doc/snippets/Ui-gl.cpp */
     {
         renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
 
