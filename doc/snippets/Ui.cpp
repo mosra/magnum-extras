@@ -1154,7 +1154,7 @@ baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
         .setCornerRadius(6.0f)
 }, {
     Vector4{3.0f},              /* 0 */
-    {},                         /* 1 */
+    {}                          /* 1 */
 });
 
 DOXYGEN_ELLIPSIS()
@@ -1457,7 +1457,7 @@ lineLayerShared.setStyle(Ui::LineLayerCommonStyleUniform{}, {
 }, {
     Ui::LineAlignment{},             /* Alignment for style 0 */
     Ui::LineAlignment::MiddleCenter, /* Alignment for style 1 */
-    Ui::LineAlignment::BottomLeft,   /* Alignment for style 2 */
+    Ui::LineAlignment::BottomLeft    /* Alignment for style 2 */
 }, {});
 /* [LineLayer-setup-style] */
 
@@ -1952,12 +1952,12 @@ textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
 }, {DOXYGEN_ELLIPSIS()}, {DOXYGEN_ELLIPSIS()}, {
     Text::Feature::SmallCapitals,  /* 0 */
     Text::Feature::TabularFigures, /* 1 */
-    Text::Feature::SlashedZero,    /* 2 */
+    Text::Feature::SlashedZero     /* 2 */
 }, {
     0, /* title */
     0, /* main title */
     1, /* numeric fields */
-    0, /* general text */
+    0  /* general text */
 }, {
     1, /* title uses feature 0 */
     1, /* main title uses feature 0 as well */
@@ -2193,7 +2193,7 @@ textLayerShared.setEditingStyle(Ui::TextLayerCommonEditingStyleUniform{}, {
     Ui::TextLayerEditingStyleUniform{}  /* 0 */
         .setBackgroundColor(0xa5c9ea_rgbf),
     Ui::TextLayerEditingStyleUniform{}  /* 1 */
-        .setBackgroundColor(0x2f83cc_rgbf),
+        .setBackgroundColor(0x2f83cc_rgbf)
 }, {}, {
     /* Begin, top, end, bottom */
     {1.0f, 0.0f, 1.0f, 0.0f},           /* 0 */
@@ -2208,7 +2208,7 @@ textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
     Ui::TextLayerStyleUniform{} /* 1 */
         DOXYGEN_ELLIPSIS(),
     Ui::TextLayerStyleUniform{} /* 2 */
-        DOXYGEN_ELLIPSIS(),
+        DOXYGEN_ELLIPSIS()
 }, {DOXYGEN_ELLIPSIS()}, {DOXYGEN_ELLIPSIS()}, {}, {}, {}, {
     -1, /* Style 0 uses no cursor style */
     0,  /* Style 1 uses editing style 0 for cursor */
@@ -2241,7 +2241,7 @@ textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
     Ui::TextLayerStyleUniform{} /* 2 */
         DOXYGEN_ELLIPSIS(),
     Ui::TextLayerStyleUniform{} /* 3 */
-        .setColor(0x2f363f_rgbf),
+        .setColor(0x2f363f_rgbf)
 }, DOXYGEN_ELLIPSIS({}, {}, {}, {}, {}, {}, {},{}));
 
 textLayerShared.setEditingStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonEditingStyleUniform{}), {DOXYGEN_ELLIPSIS()}, {
@@ -2269,7 +2269,7 @@ textLayerShared.setEditingStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonEditingStyle
         .setCornerRadius(1.0f),
     Ui::TextLayerEditingStyleUniform{}  /* (Selection) style 1 */
         .setBackgroundColor(0x2f83cc_rgbf)
-        .setCornerRadius(2.0f),
+        .setCornerRadius(2.0f)
 }, {DOXYGEN_ELLIPSIS()}, {DOXYGEN_ELLIPSIS()});
 /* [TextLayer-editing-style-rounded] */
 
