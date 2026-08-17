@@ -50,6 +50,7 @@ properties that are used by the @ref LineLayer shaders to draw the layer data,
 packed in a form that allows direct usage in uniform buffers. Is uploaded
 using @ref LineLayer::Shared::setStyle(), style data that aren't used by the
 shader are passed to the function separately.
+@see @ref Ui-LineLayer-style
 */
 struct LineLayerCommonStyleUniform {
     /** @brief Construct with default values */
@@ -123,6 +124,7 @@ of styles is specified with the
 @ref LineLayer::Shared::Configuration::Configuration() constructor, uniforms
 are then uploaded using @ref LineLayer::Shared::setStyle(), style data that
 aren't used by the shader are passed to the function separately.
+@see @ref Ui-LineLayer-style
 */
 struct MAGNUM_UI_EXPORT LineLayerStyleUniform {
     /** @brief Construct with default values */
@@ -272,7 +274,7 @@ struct MAGNUM_UI_EXPORT LineLayerStyleUniform {
 @brief Line cap style
 @m_since_latest_{extras}
 
-@see @ref LineLayer::Shared::capStyle(),
+@see @ref Ui-LineLayer-style-cap-join, @ref LineLayer::Shared::capStyle(),
     @ref LineLayer::Shared::Configuration::setCapStyle(), @ref LineJoinStyle
 */
 enum class LineCapStyle: UnsignedByte {
@@ -325,7 +327,7 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LineCapStyle value);
 @brief Line join style
 @m_since_latest_{extras}
 
-@see @ref LineLayer::Shared::joinStyle(),
+@see @ref Ui-LineLayer-style-cap-join, @ref LineLayer::Shared::joinStyle(),
     @ref LineLayer::Shared::Configuration::setJoinStyle(), @ref LineCapStyle
 */
 enum class LineJoinStyle: UnsignedByte {
@@ -386,7 +388,7 @@ namespace Implementation {
 @brief Line alignment
 @m_since_latest_{extras}
 
-@see @ref LineLayer::setAlignment()
+@see @ref Ui-LineLayer-style-alignment-padding, @ref LineLayer::setAlignment()
 */
 enum class LineAlignment: UnsignedByte {
     /**
@@ -797,7 +799,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
          * detailed description of all constraints.
-         * @see @ref createStrip(), @ref createLoop(), @ref setAlignment(),
+         * @see @ref Ui-LineLayer-create, @ref createStrip(),
+         *      @ref createLoop(), @ref setAlignment(),
          *      @ref Color4::premultiplied()
          */
         /* This one takes Vector4 instead of Color4 because color views are
@@ -875,7 +878,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * with @p indices being a @cpp {0, 1, 1, 2, 2, 3, ..., points.size() - 2, points.size() - 1} @ce
          * range. See its documentation for more information about other
          * arguments.
-         * @see @ref createLoop(), @ref setAlignment()
+         * @see @ref Ui-LineLayer-create, @ref createLoop(),
+         *      @ref setAlignment()
          */
         /* These take Vector4 / Vector3 instead of Color4 / Color3 because
            color views are implicitly convertible to vector views but not the
@@ -954,7 +958,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * with @p indices being a @cpp {0, 1, 1, 2, 2, 3, ..., points.size() - 1, 0, @ce
          * range. See its documentation for more information about other
          * arguments.
-         * @see @ref createStrip(), @ref setAlignment()
+         * @see @ref Ui-LineLayer-create, @ref createStrip(),
+         *      @ref setAlignment()
          */
         /* This one takes Vector4 instead of Color4 because color views are
            implicitly convertible to vectors but not the other way around */
@@ -1022,6 +1027,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Delegates to @ref AbstractLayer::remove(DataHandle), see its
          * documentation for detailed description of all constraints.
+         * @see @ref Ui-LineLayer-create
          */
         void remove(DataHandle handle);
 
@@ -1087,8 +1093,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref setLineStrip(), @ref setLineLoop(),
-         *      @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-LineLayer-data-update, @ref setLineStrip(),
+         *      @ref setLineLoop(), @ref isHandleValid(DataHandle) const
          */
         /* This one takes Vector4 instead of Color4 because color views are
            implicitly convertible to vectors but not the other way around */
@@ -1124,8 +1130,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref setLine(), @ref setLineLoop(),
-         *      @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-LineLayer-data-update, @ref setLine(),
+         *      @ref setLineLoop(), @ref isHandleValid(DataHandle) const
          */
         /* This one takes Vector4 instead of Color4 because color views are
            implicitly convertible to vectors but not the other way around */
@@ -1161,8 +1167,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref setLine(), @ref setLineStrip(),
-         *      @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-LineLayer-data-update, @ref setLine(),
+         *      @ref setLineStrip(), @ref isHandleValid(DataHandle) const
          */
         /* This one takes Vector4 instead of Color4 because color views are
            implicitly convertible to vectors but not the other way around */
@@ -1218,7 +1224,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const,
+         * @see @ref Ui-LineLayer-style-color,
+         *      @ref isHandleValid(DataHandle) const,
          *      @ref Color4::premultiplied()
          */
         void setColor(DataHandle handle, const Color4& color);
@@ -1264,7 +1271,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-LineLayer-style-alignment-padding,
+         *      @ref isHandleValid(DataHandle) const
          */
         void setAlignment(DataHandle handle, Containers::Optional<LineAlignment> alignment);
 
@@ -1310,7 +1318,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-LineLayer-style-alignment-padding,
+         *      @ref isHandleValid(DataHandle) const
          */
         void setPadding(DataHandle handle, const Vector4& padding);
 

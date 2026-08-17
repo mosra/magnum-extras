@@ -53,6 +53,7 @@ properties that are used by the @ref TextLayer shaders to draw the layer data,
 packed in a form that allows direct usage in uniform buffers. Is uploaded
 using @ref TextLayer::Shared::setStyle(), style data that aren't used by the
 shader are passed to the function separately.
+@see @ref Ui-TextLayer-style
 */
 struct TextLayerCommonStyleUniform {
     /** @brief Construct with default values */
@@ -132,6 +133,7 @@ aren't used by the shader are passed to the function separately. If dynamic
 styles are enabled with @ref TextLayer::Shared::Configuration::setDynamicStyleCount(),
 instances of this class are also passed to @ref TextLayer::setDynamicStyle()
 and variants.
+@see @ref Ui-TextLayer-style
 */
 struct TextLayerStyleUniform {
     /** @brief Construct with default values */
@@ -2018,10 +2020,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @ref setDynamicStyleWithCursorSelection(),
          * @ref setDynamicStyleWithCursor() or
          * @ref setDynamicStyleWithSelection() to specify those as well.
-         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
-         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
-         *      @ref dynamicStylePaddings(), @ref allocateDynamicStyle(),
-         *      @ref recycleDynamicStyle()
+         * @see @ref Ui-TextLayer-dynamic-styles, @ref dynamicStyleUniforms(),
+         *      @ref dynamicStyleFonts(), @ref dynamicStyleAlignments(),
+         *      @ref dynamicStyleFeatures(), @ref dynamicStylePaddings(),
+         *      @ref allocateDynamicStyle(), @ref recycleDynamicStyle()
          */
         void setDynamicStyle(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding);
         /** @overload */
@@ -2082,9 +2084,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * non-editable styles or editable styles where showing neither cursor
          * nor selection is desirable, for example in widgets that aren't
          * focused.
-         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
-         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
-         *      @ref dynamicStyleCursorStyles(),
+         * @see @ref Ui-TextLayer-dynamic-styles, @ref dynamicStyleUniforms(),
+         *      @ref dynamicStyleFonts(), @ref dynamicStyleAlignments(),
+         *      @ref dynamicStyleFeatures(), @ref dynamicStyleCursorStyles(),
          *      @ref dynamicStyleCursorStyle(),
          *      @ref dynamicStyleSelectionStyles(),
          *      @ref dynamicStyleSelectionStyle(),
@@ -2187,8 +2189,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
          * detailed description of all constraints.
-         * @see @ref Shared::hasFontInstance(), @ref setText(),
-         *      @ref setCursor(), @ref updateText(), @ref editText()
+         * @see @ref Ui-TextLayer-create, @ref Shared::hasFontInstance(),
+         *      @ref setText(), @ref setCursor(), @ref updateText(),
+         *      @ref editText()
          */
         DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, TextDataFlags flags = {}, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -2275,7 +2278,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
          * detailed description of all constraints.
-         * @see @ref Shared::glyphCacheFontId(), @ref setGlyph()
+         * @see @ref Ui-TextLayer-single-glyphs,
+         *      @ref Shared::glyphCacheFontId(), @ref setGlyph()
          */
         DataHandle createGlyph(UnsignedInt style, UnsignedInt glyph, const TextProperties& properties, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -2359,7 +2363,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * removal in the next @ref update() and delegates to
          * @ref AbstractLayer::remove(DataHandle), see its documentation for
          * detailed description of all constraints.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-TextLayer-create, @ref isHandleValid(DataHandle) const
          */
         void remove(DataHandle handle);
 
@@ -2490,7 +2494,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * set, unless the operation performed is a no-op, which is when both
          * @p removeSize and @p insertText size are both @cpp 0 @ce and
          * @p cursor is equal to @ref cursor().
-         * @see @ref isHandleValid(DataHandle) const,
+         * @see @ref Ui-TextLayer-editing,
+         *      @ref isHandleValid(DataHandle) const,
          *      @ref flags(DataHandle) const
          */
         void setCursor(DataHandle handle, UnsignedInt position, UnsignedInt selection);
@@ -2611,8 +2616,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * set, and if @ref TextLayerFlag::Transformable isn't enabled and
          * @p handle is attached to a node, @ref LayerState::NeedsLayoutUpdate
          * as well.
-         * @see @ref setCursor(), @ref updateText(), @ref editText(),
-         *      @ref isHandleValid(DataHandle) const,
+         * @see @ref Ui-TextLayer-update, @ref setCursor(), @ref updateText(),
+         *      @ref editText(), @ref isHandleValid(DataHandle) const,
          *      @ref Shared::isHandleValid(FontHandle) const
          */
         void setText(DataHandle handle, Containers::StringView text, const TextProperties& properties);
@@ -2691,7 +2696,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * attached to a node and the actual text changes, i.e., unless both
          * @p removeSize and @p insertText are @cpp 0 @ce,
          * @ref LayerState::NeedsLayoutUpdate is set as well.
-         * @see @ref setText(), @ref isHandleValid(DataHandle) const,
+         * @see @ref Ui-TextLayer-editing, @ref setText(),
+         *      @ref isHandleValid(DataHandle) const,
          *      @ref flags(DataHandle) const
          */
         void updateText(DataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor, UnsignedInt selection);
@@ -2750,7 +2756,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * being no character to move over or delete. Additionally, if
          * @p handle is attached to a node and the actual text changes,
          * @ref LayerState::NeedsLayoutUpdate is set as well.
-         * @see @ref setText(), @ref flags(DataHandle) const,
+         * @see @ref Ui-TextLayer-editing, @ref setText(),
+         *      @ref flags(DataHandle) const,
          *      @ref isHandleValid(DataHandle) const
          */
         void editText(DataHandle handle, TextEdit edit, Containers::StringView insert);
@@ -2835,7 +2842,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * again for the same @p handle *replaces* the previous callback.
          * Passing @cpp nullptr @ce as @p function removes the previous
          * callback. By default no callback is present.
-         * @see @ref isHandleValid(DataHandle) const,
+         * @see @ref Ui-TextLayer-editing-callback,
+         *      @ref isHandleValid(DataHandle) const,
          *      @ref flags(DataHandle) const
          */
         /* The function also isn't called `onTextEdit()` like in the event
@@ -2895,7 +2903,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * set, and if @ref TextLayerFlag::Transformable isn't enabled and
          * @p handle is attached to a node, @ref LayerState::NeedsLayoutUpdate
          * as well.
-         * @see @ref isHandleValid(DataHandle) const,
+         * @see @ref Ui-TextLayer-update, @ref isHandleValid(DataHandle) const,
          *      @ref Shared::isHandleValid(FontHandle) const,
          *      @ref Shared::glyphCacheFontId()
          */
@@ -2972,7 +2980,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const,
+         * @see @ref Ui-TextLayer-style-color,
+         *      @ref isHandleValid(DataHandle) const,
          *      @ref Color4::premultiplied()
          */
         void setColor(DataHandle handle, const Color4& color);
@@ -3024,7 +3033,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set, and if @p handle is attached to a node,
          * @ref LayerState::NeedsLayoutUpdate as well.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-TextLayer-style-alignment-padding,
+         *      @ref isHandleValid(DataHandle) const
          */
         void setPadding(DataHandle handle, const Vector4& padding);
 
@@ -3110,7 +3120,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-TextLayer-transformation,
+         *      @ref isHandleValid(DataHandle) const
          */
         void setTransformation(DataHandle handle, const Vector2& translation, const Complex& rotation, Float scaling);
 
@@ -3166,7 +3177,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref rotate(), @ref scale(),
+         * @see @ref Ui-TextLayer-transformation, @ref rotate(), @ref scale(),
          *      @ref isHandleValid(DataHandle) const
          */
         void translate(DataHandle handle, const Vector2& translation);
@@ -3202,8 +3213,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref translate(), @ref scale(),
-         *      @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-TextLayer-transformation, @ref translate(),
+         *      @ref scale(), @ref isHandleValid(DataHandle) const
          */
         void rotate(DataHandle handle, const Complex& rotation);
 
@@ -3256,8 +3267,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref translate(), @ref rotate(),
-         *      @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-TextLayer-transformation, @ref translate(),
+         *      @ref rotate(), @ref isHandleValid(DataHandle) const
          */
         void scale(DataHandle handle, Float scaling);
 
@@ -3374,6 +3385,7 @@ enum class TextLayerSharedFlag: UnsignedByte {
      * @ref TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL&, const Configuration&)
      * or @ref TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL&&, const Configuration&)
      * constructors.
+     * @see @ref Ui-TextLayer-distancefield
      */
     DistanceField = 1 << 0
 };
@@ -3723,7 +3735,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @ref dynamicStyleCount() is non-zero,
          * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
          * upload of changed dynamic style uniform data.
-         * @see @ref isHandleValid(FontHandle) const
+         * @see @ref Ui-TextLayer-style, @ref isHandleValid(FontHandle) const
          */
         Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, Containers::ArrayView<const TextFeatureValue> features, const Containers::StridedArrayView1D<const UnsignedInt>& featureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& featureCounts, const Containers::StridedArrayView1D<const Int>& cursorStyles, const Containers::StridedArrayView1D<const Int>& selectionStyles, const Containers::StridedArrayView1D<const Vector4>& paddings);
         /** @overload */
@@ -3798,7 +3810,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @ref dynamicStyleCount() is non-zero,
          * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
          * upload of changed dynamic style uniform data.
-         * @see @ref isHandleValid(FontHandle) const
+         * @see @ref Ui-TextLayer-style, @ref isHandleValid(FontHandle) const
          */
         Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Int>& styleCursorStyles, const Containers::StridedArrayView1D<const Int>& styleSelectionStyles, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
         /** @overload */
@@ -3853,6 +3865,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * If @ref dynamicStyleCount() is non-zero,
          * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
          * upload of changed dynamic style uniform data.
+         * @see @ref Ui-TextLayer-editing
          */
         Shared& setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const Int>& textUniforms, const Containers::StridedArrayView1D<const Vector4>& paddings);
         /** @overload */
@@ -3904,6 +3917,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * If @ref dynamicStyleCount() is non-zero,
          * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
          * upload of changed dynamic style uniform data.
+         * @see @ref Ui-TextLayer-editing
          */
         Shared& setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Int>& styleTextUniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
         /** @overload */

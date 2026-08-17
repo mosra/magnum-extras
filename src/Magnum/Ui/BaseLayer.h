@@ -50,6 +50,7 @@ properties that are used by the @ref BaseLayer shaders to draw the layer data,
 packed in a form that allows direct usage in uniform buffers. Is uploaded
 using @ref BaseLayer::Shared::setStyle(), style data that aren't used by the
 shader are passed to the function separately.
+@see @ref Ui-BaseLayer-style
 */
 struct BaseLayerCommonStyleUniform {
     /** @brief Construct with default values */
@@ -193,6 +194,7 @@ are then uploaded using @ref BaseLayer::Shared::setStyle(), style data that
 aren't used by the shader are passed to the function separately. If dynamic
 styles are enabled with @ref BaseLayer::Shared::Configuration::setDynamicStyleCount(),
 instances of this class are also passed to @ref BaseLayer::setDynamicStyle().
+@see @ref Ui-BaseLayer-style
 */
 struct BaseLayerStyleUniform {
     /** @brief Construct with default values */
@@ -935,6 +937,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Calling this function causes
          * @ref LayerState::NeedsCompositeOffsetSizeUpdate to be set.
+         * @see @ref Ui-BaseLayer-style-background-blur
          */
         BaseLayer& setBackgroundBlurPassCount(UnsignedInt count);
 
@@ -961,6 +964,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * the @p offset is @cpp {0.0f, 0.0f, 0.0f} @ce and @p size is
          * @cpp {1.0f, 1.0f} @ce, i.e. covering the whole first slice of the
          * texture.
+         * @see @ref Ui-BaseLayer-style-textured
          */
         BaseLayer& setDefaultTextureCoordinates(const Vector3& offset, const Vector2& size);
 
@@ -1039,8 +1043,9 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * to be set to trigger an upload of changed dynamic style uniform
          * data. If @p padding changed, @ref LayerState::NeedsDataUpdate gets
          * set as well.
-         * @see @ref dynamicStyleUniforms(), @ref dynamicStylePaddings(),
-         *      @ref allocateDynamicStyle(), @ref recycleDynamicStyle()
+         * @see @ref Ui-BaseLayer-dynamic-styles, @ref dynamicStyleUniforms(),
+         *      @ref dynamicStylePaddings(), @ref allocateDynamicStyle(),
+         *      @ref recycleDynamicStyle()
          */
         void setDynamicStyle(UnsignedInt id, const BaseLayerStyleUniform& uniform, const Vector4& padding);
 
@@ -1060,6 +1065,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
          * detailed description of all constraints.
+         * @see @ref Ui-BaseLayer-create
          */
         DataHandle create(UnsignedInt style, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1096,6 +1102,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Delegates to @ref AbstractLayer::remove(DataHandle), see its
          * documentation for detailed description of all constraints.
+         * @see @ref Ui-BaseLayer-create
          */
         void remove(DataHandle handle) {
             AbstractVisualLayer::remove(handle);
@@ -1142,7 +1149,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const,
+         * @see @ref Ui-BaseLayer-style-color,
+         *      @ref isHandleValid(DataHandle) const,
          *      @ref Color4::premultiplied()
          */
         void setColor(DataHandle handle, const Color4& color);
@@ -1190,7 +1198,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-BaseLayer-style-outline,
+         *      @ref isHandleValid(DataHandle) const
          */
         void setOutlineWidth(DataHandle handle, const Vector4& width);
 
@@ -1258,7 +1267,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref Ui-BaseLayer-style-padding,
+         *      @ref isHandleValid(DataHandle) const
          */
         void setPadding(DataHandle handle, const Vector4& padding);
 
@@ -1331,7 +1341,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref BaseLayerGL::setTexture(),
+         * @see @ref Ui-BaseLayer-style-textured,
+         *      @ref BaseLayerGL::setTexture(),
          *      @ref isHandleValid(DataHandle) const
          */
         void setTextureCoordinates(DataHandle handle, const Vector3& offset, const Vector2& size);
@@ -1397,7 +1408,8 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      * and @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with a
      * color coming from a texture set in @ref BaseLayerGL::setTexture() and
      * texture coordinates specified with @ref BaseLayer::setTextureCoordinates().
-     * @see @ref BaseLayerSharedFlag::TextureMask
+     * @see @ref Ui-BaseLayer-style-textured,
+     *      @ref BaseLayerSharedFlag::TextureMask
      */
     Textured = 1 << 0,
 
@@ -1430,7 +1442,8 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      * and @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha to achieve
      * additional effects.
      *
-     * @see @ref BaseLayerSharedFlag::TextureMask
+     * @see @ref Ui-BaseLayer-style-background-blur,
+     *      @ref BaseLayerSharedFlag::TextureMask
      */
     BackgroundBlur = 1 << 1,
 
@@ -1497,7 +1510,8 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      *
      * @endparblock
      *
-     * @see @ref BaseLayerSharedFlag::BackgroundBlur,
+     * @see @ref Ui-BaseLayer-style-textured,
+     *      @ref BaseLayerSharedFlag::BackgroundBlur,
      *      @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha
      */
     TextureMask = Textured|(1 << 4),
@@ -1605,6 +1619,7 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          * If @ref dynamicStyleCount() is non-zero,
          * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
          * upload of changed dynamic style uniform data.
+         * @see @ref Ui-BaseLayer-style
          */
         Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& paddings);
         /** @overload */
@@ -1641,6 +1656,7 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          * If @ref dynamicStyleCount() is non-zero,
          * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
          * upload of changed dynamic style uniform data.
+         * @see @ref Ui-BaseLayer-style
          */
         Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
         /** @overload */
@@ -1723,7 +1739,8 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared::Configuration {
          * @return Reference to self (for method chaining)
          *
          * Initial count is @cpp 0 @ce.
-         * @see @ref Configuration(UnsignedInt, UnsignedInt),
+         * @see @ref Ui-BaseLayer-dynamic-styles,
+         *      @ref Configuration(UnsignedInt, UnsignedInt),
          *      @ref AbstractVisualLayer::allocateDynamicStyle(),
          *      @ref AbstractVisualLayer::recycleDynamicStyle(),
          *      @ref AbstractVisualLayer::dynamicStyleUsedCount()
@@ -1806,6 +1823,7 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared::Configuration {
          * @cpp 0.5f/255.0f @ce, i.e. weights that don't contribute any value
          * even when combined from both sides of the blur circle for an
          * 8-bit-per-channel render target are ignored.
+         * @see @ref Ui-BaseLayer-style-background-blur
          */
         Configuration& setBackgroundBlurRadius(UnsignedInt radius, Float cutoff = 0.5f/255.0f);
 
