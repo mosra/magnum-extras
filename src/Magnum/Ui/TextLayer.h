@@ -53,8 +53,6 @@ properties that are used by the @ref TextLayer shaders to draw the layer data,
 packed in a form that allows direct usage in uniform buffers. Is uploaded
 using @ref TextLayer::Shared::setStyle(), style data that aren't used by the
 shader are passed to the function separately.
-
-Currently this is just a placeholder with no properties.
 */
 struct TextLayerCommonStyleUniform {
     /** @brief Construct with default values */
