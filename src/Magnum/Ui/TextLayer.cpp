@@ -1302,7 +1302,7 @@ void TextLayer::shapeGlyphInternal(
     /* Query the glyph rectangle in order to align it. Compared to a regular
        text run, where the glyphs might not be present in the glyph cache yet
        (and can thus be filled in on-demand), here we require those to be
-       present upfront.
+       present upfront -- cannot align them otherwise.
 
        The mapping array isn't filled with a trivial glyph mapping sequence if
        none was provided as that'd be an unnecessary and potentially large

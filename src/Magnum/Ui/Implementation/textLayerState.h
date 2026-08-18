@@ -57,7 +57,8 @@ struct TextLayerFont {
        things simple, every Font item has its own even though they might come
        from the same AbstractFont originally. */
     Containers::Pointer<Text::AbstractShaper> shaper;
-    /* Size at which to render divided by `font->size()` */
+    /* Size at which to render divided by `font->size()`. For instance-less
+       fonts it's the scale value passed to addInstancelessFont(). */
     Float scale;
     UnsignedInt glyphCacheFontId;
     /* Glyph mapping for createGlyph() and setGlyph(). If empty, trivial
