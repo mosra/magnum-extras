@@ -1279,7 +1279,8 @@ const struct {
     /* Node offset is {50.5, 20.5}, size {200.8, 100.4}; bounding box {9, 11},
        ascent 7, descent -4 */
     Vector2 offset;
-    /* Glyph ounding box is {6, 8}, offset {-4, -6} */
+    /* Glyph ounding box is {6, 8}, offset {-4, -6}. Left-side offset is
+       ignored for left alignment. */
     Vector2 offsetGlyph;
     Float editingPaddingL, editingPaddingR;
 } UpdateAlignmentPaddingData[]{
@@ -1287,7 +1288,7 @@ const struct {
         Text::Alignment::LineLeft, Text::ShapeDirection::Unspecified,
         /* 20.5 + 100.4/2 = 70.7 */
         {50.5f, 70.7f},
-        {50.5f, 76.7f},
+        {46.5f, 76.7f},
         0.1f, 0.3f},
     {"line right",
         Text::Alignment::LineRight, Text::ShapeDirection::Unspecified,
@@ -1310,7 +1311,7 @@ const struct {
     {"bottom left",
         Text::Alignment::BottomLeft, Text::ShapeDirection::Unspecified,
         {50.5f, 120.9f - 4.0f},
-        {50.5f, 120.9f},
+        {46.5f, 120.9f},
         0.1f, 0.3f},
     {"middle right",
         Text::Alignment::MiddleRight, Text::ShapeDirection::Unspecified,
@@ -1343,13 +1344,13 @@ const struct {
         Text::Alignment::LineEnd, Text::ShapeDirection::RightToLeft,
         /* Same as line left */
         {50.5f, 70.7f},
-        {50.5f, 76.7f},
+        {46.5f, 76.7f},
         0.3f, 0.1f}, /* Swapped compared to LTR */
     {"bottom begin, unspecified direction",
         Text::Alignment::BottomBegin, Text::ShapeDirection::Unspecified,
-        /* Same as bottom start */
+        /* Same as bottom left */
         {50.5f, 120.9f - 4.0f},
-        {50.5f, 120.9f},
+        {46.5f, 120.9f},
         0.1f, 0.3f},
     {"middle begin, RTL",
         Text::Alignment::MiddleBegin, Text::ShapeDirection::RightToLeft,
