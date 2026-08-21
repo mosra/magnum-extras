@@ -567,17 +567,26 @@ inline Anchor input(Anchor anchor, const StorageQuery<Int>& query, InputStyle st
     Input{NonOwned, anchor, query, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedInt>& query, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Long>& query, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedLong>& query, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, style};
     return anchor;
@@ -603,37 +612,58 @@ inline Anchor input(Anchor anchor, const StorageQuery<Int>& query, const Decimal
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedInt>& query, const DecimalFormatter& formatter, ParseState(*parser)(Containers::StringView, UnsignedInt&) = nullptr, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Long>& query, const DecimalFormatter& formatter, ParseState(*parser)(Containers::StringView, Long&) = nullptr, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedLong>& query, const DecimalFormatter& formatter, ParseState(*parser)(Containers::StringView, UnsignedLong&) = nullptr, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Int>& query, const DecimalFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedInt>& query, const DecimalFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Long>& query, const DecimalFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedLong>& query, const DecimalFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;
@@ -659,37 +689,58 @@ inline Anchor input(Anchor anchor, const StorageQuery<Int>& query, const Hexadec
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedInt>& query, const HexadecimalFormatter& formatter, ParseState(*parser)(Containers::StringView, UnsignedInt&) = nullptr, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Long>& query, const HexadecimalFormatter& formatter, ParseState(*parser)(Containers::StringView, Long&) = nullptr, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedLong>& query, const HexadecimalFormatter& formatter, ParseState(*parser)(Containers::StringView, UnsignedLong&) = nullptr, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Int>& query, const HexadecimalFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedInt>& query, const HexadecimalFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Long>& query, const HexadecimalFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<UnsignedLong>& query, const HexadecimalFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;
@@ -711,7 +762,10 @@ inline Anchor input(Anchor anchor, const StorageQuery<Float>& query, InputStyle 
     Input{NonOwned, anchor, query, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Double>& query, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, style};
     return anchor;
@@ -737,17 +791,26 @@ inline Anchor input(Anchor anchor, const StorageQuery<Float>& query, const Float
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Double>& query, const FloatFormatter& formatter, ParseState(*parser)(Containers::StringView, Double&) = nullptr, InputStyle style = InputStyle::Default) {
     Input{NonOwned, anchor, query, formatter, parser, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Float>& query, const FloatFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor input(Anchor anchor, const StorageQuery<Double>& query, const FloatFormatter& formatter, InputStyle style) {
     Input{NonOwned, anchor, query, formatter, style};
     return anchor;

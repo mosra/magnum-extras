@@ -583,17 +583,26 @@ inline Anchor label(Anchor anchor, const StorageQuery<Int>& query, LabelStyle st
     Label{NonOwned, anchor, query, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<UnsignedInt>& query, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<Long>& query, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<UnsignedLong>& query, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, style};
     return anchor;
@@ -617,17 +626,26 @@ inline Anchor label(Anchor anchor, const StorageQuery<Int>& query, const Decimal
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<UnsignedInt>& query, const DecimalFormatter& formatter, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<Long>& query, const DecimalFormatter& formatter, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<UnsignedLong>& query, const DecimalFormatter& formatter, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
@@ -651,17 +669,26 @@ inline Anchor label(Anchor anchor, const StorageQuery<Int>& query, const Hexadec
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<UnsignedInt>& query, const HexadecimalFormatter& formatter, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<Long>& query, const HexadecimalFormatter& formatter, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<UnsignedLong>& query, const HexadecimalFormatter& formatter, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
@@ -684,7 +711,10 @@ inline Anchor label(Anchor anchor, const StorageQuery<Float>& query, LabelStyle 
     Label{NonOwned, anchor, query, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<Double>& query, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, style};
     return anchor;
@@ -708,7 +738,10 @@ inline Anchor label(Anchor anchor, const StorageQuery<Float>& query, const Float
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
 }
-/** @overload */
+/**
+@overload
+@m_since_latest_{extras}
+*/
 inline Anchor label(Anchor anchor, const StorageQuery<Double>& query, const FloatFormatter& formatter, LabelStyle style = LabelStyle::Default) {
     Label{NonOwned, anchor, query, formatter, style};
     return anchor;
