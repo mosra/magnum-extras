@@ -29,7 +29,6 @@
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Magnum/Math/Time.h>
 
-#include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Formatter.h"
 #include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/Label.h"

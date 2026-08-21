@@ -29,7 +29,6 @@
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/Format.h> /** @todo drop once int-to-string APIs exist */
 
-#include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Formatter.h"
 #include "Magnum/Ui/Input.h"

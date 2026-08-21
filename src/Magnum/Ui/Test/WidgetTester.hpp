@@ -38,6 +38,7 @@
 
 #include "Magnum/Ui/AbstractTheme.h"
 #include "Magnum/Ui/AbstractTheme.hpp" /* styleTransition*() functions */
+#include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/EventLayer.h"
@@ -47,6 +48,7 @@
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/UserInterface.h"
+#include "Magnum/Ui/Widget.h"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 

@@ -27,7 +27,6 @@
 #include <Corrade/Containers/String.h>
 #include <Magnum/Math/Time.h>
 
-#include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Panel.h"
 #include "Magnum/Ui/Test/WidgetTester.hpp"
 

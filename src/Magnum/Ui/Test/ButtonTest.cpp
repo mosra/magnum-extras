@@ -30,7 +30,6 @@
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/TestSuite/Compare/SortedContainer.h>
 
-#include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Button.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Icon.h"
