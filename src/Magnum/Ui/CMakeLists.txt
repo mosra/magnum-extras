@@ -74,6 +74,7 @@ set(MagnumUi_GracefulAssert_SRCS
     BaseLayer.cpp
     BaseLayerAnimator.cpp
     Button.cpp
+    Checkbox.cpp
     DataLayer.cpp
     DebugLayer.cpp
     Event.cpp
@@ -111,6 +112,7 @@ set(MagnumUi_HEADERS
     BaseLayer.h
     BaseLayerAnimator.h
     Button.h
+    Checkbox.h
     DataLayer.h
     DebugLayer.h
     EnumStorage.h

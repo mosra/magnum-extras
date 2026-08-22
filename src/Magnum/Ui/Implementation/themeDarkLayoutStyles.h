@@ -29,6 +29,7 @@
 /* LayoutStyle enum name, min size[, padding, margin] */
 #ifdef _c
 _c(Button, {0.0f, 36.0f}, {}, {12.0f, 10.0f})
+_c(Checkbox, {0.0f, 24.0f}, {}, {12.0f, 10.0f})
 _c(Label, {0.0f, 24.0f}, {}, {12.0f, 10.0f})
 _c(LabelTitle, {0.0f, 36.0f}, {}, {12.0f, 10.0f})
 _c(Input, {0.0f, 36.0f}, {}, {12.0f, 10.0f})

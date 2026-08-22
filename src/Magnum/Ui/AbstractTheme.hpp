@@ -101,6 +101,18 @@ enum class BaseStyle: UnsignedShort {
     ButtonFlatPressedHovered,
     ButtonFlatDisabled,
 
+    Checkbox,
+    CheckboxHovered,
+    CheckboxPressed,
+    CheckboxPressedHovered,
+    CheckboxDisabled,
+
+    RadioButton,
+    RadioButtonHovered,
+    RadioButtonPressed,
+    RadioButtonPressedHovered,
+    RadioButtonDisabled,
+
     InputDefault,
     InputDefaultHovered,
     InputDefaultFocused,
@@ -195,6 +207,15 @@ enum class TextStyle: UnsignedShort {
     ButtonFlatDisabledTextOnly,
     ButtonFlatDisabledIcon,
     ButtonFlatDisabledText,
+
+    Checkbox,
+    CheckboxHovered,
+    CheckboxPressed,
+    CheckboxPressedHovered,
+    CheckboxDisabled,
+    CheckboxLabel,
+    CheckboxLabelPressed,
+    CheckboxLabelDisabled,
 
     LabelDefaultIcon,
     LabelDefaultText,
@@ -312,6 +333,7 @@ MAGNUM_UI_EXPORT TextStyle styleTransitionToDisabled(TextStyle index);
 
 enum class LayoutStyle: UnsignedShort {
     Button,
+    Checkbox,
     Label,
     LabelTitle,
     Input,

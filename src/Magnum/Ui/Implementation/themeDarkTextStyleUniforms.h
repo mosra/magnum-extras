@@ -61,6 +61,14 @@ _c(0x5b9dd9ff_rgbaf*0.3f) /* ButtonFlatDisabledIconOnly */
 _c(0x5b9dd9ff_rgbaf*0.3f) /* ButtonFlatDisabledTextOnly */
 _c(0x5b9dd9ff_rgbaf*0.3f) /* ButtonFlatDisabledIcon */
 _c(0x5b9dd9ff_rgbaf*0.3f) /* ButtonFlatDisabledText */
+_c(0x5b9dd9_rgbf) /* Checkbox */
+_c(0xa5c9ea_rgbf) /* CheckboxHovered */
+_c(0x5b9dd9_rgbf) /* CheckboxPressed */
+_c(0xa5c9ea_rgbf) /* CheckboxPressedHovered */
+_c(0x5b9dd9ff_rgbaf*0.3f) /* CheckboxDisabled */
+_c(0xdcdcdc_rgbf) /* CheckboxLabel */
+_c(0xdcdcdc_rgbf) /* CheckboxLabelPressed */
+_c(0xdcdcdcff_rgbaf*0.3f) /* CheckboxLabelDisabled */
 _c(0xdcdcdc_rgbf) /* LabelDefaultIcon */
 _c(0xdcdcdc_rgbf) /* LabelDefaultText */
 _c(0xdcdcdcff_rgbaf*0.3f) /* LabelDefaultDisabledIcon */

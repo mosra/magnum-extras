@@ -47,6 +47,6 @@ _c({1.0f, 2.0f, 1.0f, 2.0f}, 0x5b9dd9ff_rgbaf*0.4f, 4.0f) /* InputSelectionFlat 
 #endif
 /* Style -> selection uniform ID in themeDarkTextStyleUniforms.h */
 #ifdef _u
-_u(125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139,
-   140)
+_u(133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147,
+   148)
 #endif

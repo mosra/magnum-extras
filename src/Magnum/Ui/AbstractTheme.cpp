@@ -530,6 +530,8 @@ Transition<BaseStyle> styleTransition(const BaseStyle index) {
         _cHoveredPressedPressedHoveredDisabled(ButtonInfo)
         _cHoveredPressedPressedHoveredDisabled(ButtonDim)
         _cHoveredPressedPressedHoveredDisabled(ButtonFlat)
+        _cHoveredPressedPressedHoveredDisabled(Checkbox)
+        _cHoveredPressedPressedHoveredDisabled(RadioButton)
         _cHoveredFocusedDisabled(InputDefault)
         _cHoveredFocusedDisabled(InputSuccess)
         _cHoveredFocusedDisabled(InputWarning)
@@ -664,6 +666,8 @@ Transition<TextStyle> styleTransition(const TextStyle index) {
         _cHoveredFocusedBlinkPressedDisabled(InputDangerPassword,)
         _cHoveredFocusedBlinkPressedDisabled(InputFlat,)
         _cHoveredFocusedBlinkPressedDisabled(InputFlatPassword,)
+        _cHoveredPressedPressedHoveredDisabled(Checkbox,)
+        _cPressedDisabled(CheckboxLabel,)
         #undef _cHoveredFocusedBlinkPressedDisabled
         #undef _cHoveredPressedPressedHoveredDisabled
         #undef _cPressedDisabled

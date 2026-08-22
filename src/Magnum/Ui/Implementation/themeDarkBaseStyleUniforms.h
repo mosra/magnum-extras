@@ -72,6 +72,16 @@ _c(ButtonFlatPressed, {}, 0x5b9dd9_rgbf,
 _c(ButtonFlatPressedHovered, {}, 0xa5c9ea_rgbf,
     1.5f, 4.0f, 2.5f)
 _c(ButtonFlatDisabled, {}, 4.0f)
+_c(Checkbox, 0x5b9dd9ff_rgbaf*0.4f, 1.0f)
+_c(CheckboxHovered, 0xa5c9eaff_rgbaf*0.4f, 1.0f)
+_c(CheckboxPressed, 0x5b9dd9ff_rgbaf*0.4f, 1.0f)
+_c(CheckboxPressedHovered, 0xa5c9eaff_rgbaf*0.4f, 1.0f)
+_c(CheckboxDisabled, 0x5b9dd9ff_rgbaf*0.1f, 1.0f)
+_c(RadioButton, 0x5b9dd9ff_rgbaf*0.4f, 12.0f)
+_c(RadioButtonHovered, 0xa5c9eaff_rgbaf*0.4f, 12.0f)
+_c(RadioButtonPressed, 0x5b9dd9ff_rgbaf*0.4f, 12.0f)
+_c(RadioButtonPressedHovered, 0xa5c9eaff_rgbaf*0.4f, 12.0f)
+_c(RadioButtonDisabled, 0x5b9dd9ff_rgbaf*0.1f, 12.0f)
 _c(InputDefault, 0x34424dff_rgbaf*0.8f, 0xdcdcdcff_rgbaf*0.8f,
     {4.0f, 0.0f, 0.0f, 0.0f}, {4.0f, 4.0f, 4.0f, 4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 _c(InputDefaultHovered, 0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,

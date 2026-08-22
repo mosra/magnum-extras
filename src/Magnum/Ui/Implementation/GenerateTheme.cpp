@@ -102,7 +102,7 @@ struct LayoutLayerStyle {
     Vector4 padding, margin;
 };
 
-void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Containers::ArrayView<BaseLayerStyle> /*baseStyles*/, Containers::ArrayView<Ui::TextLayerStyleUniform> textUniforms, Containers::ArrayView<TextLayerStyle> textStyles, Containers::ArrayView<Ui::TextLayerEditingStyleUniform> textEditingUniforms, Containers::ArrayView<Vector4> textEditingPaddings, Containers::ArrayView<Ui::TextLayerStyleUniform> textSelectionUniforms, Containers::ArrayView<LayoutLayerStyle> layoutStyles) {
+void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Containers::ArrayView<BaseLayerStyle> baseStyles, Containers::ArrayView<Ui::TextLayerStyleUniform> textUniforms, Containers::ArrayView<TextLayerStyle> textStyles, Containers::ArrayView<Ui::TextLayerEditingStyleUniform> textEditingUniforms, Containers::ArrayView<Vector4> textEditingPaddings, Containers::ArrayView<Ui::TextLayerStyleUniform> textSelectionUniforms, Containers::ArrayView<LayoutLayerStyle> layoutStyles) {
     const Float baseOpacity = 0.8f;
     const Float disabledOpacity = 0.3f;
 
@@ -1048,6 +1048,101 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
     /* Input spans the same height as a button */
     layoutStyles[Int(LayoutStyle::Input)].minSize = {0.0f, 36.0f};
     layoutStyles[Int(LayoutStyle::Input)].margin = leafWidgetMargin;
+
+    /* Checkbox and radio button ------------------------------------------- */
+
+    /* Same as a button */
+    const Float checkboxIconSize = buttonIconSize;
+    const Float checkboxIconGap = buttonIconGap;
+
+    /* The label is same color as default text (--default-color), checkbox icon
+       itself behaves the same as a flat button (--link-color,
+       --link-active-color). */
+    for(auto&& i: {TextStyle::Checkbox,
+                   TextStyle::CheckboxPressed})
+        textUniforms[Int(i)].setColor(0x5b9dd9_rgbf);
+    for(auto&& i: {TextStyle::CheckboxHovered,
+                   TextStyle::CheckboxPressedHovered})
+        textUniforms[Int(i)].setColor(0xa5c9ea_rgbf);
+    textUniforms[Int(TextStyle::CheckboxDisabled)]
+        .setColor({0x5b9dd9_rgbf, disabledOpacity});
+    for(auto&& i: {TextStyle::CheckboxLabel,
+                   TextStyle::CheckboxLabelPressed})
+        textUniforms[Int(i)].setColor(0xdcdcdc_rgbf);
+    textUniforms[Int(TextStyle::CheckboxLabelDisabled)]
+        .setColor({0xdcdcdc_rgbf, disabledOpacity});
+
+    /* Background is square or circular, with the same color as the icon but
+       40% opacity. The disabled variant is then multiplying the disabled
+       opacity with that. */
+    for(auto&& i: {BaseStyle::Checkbox,
+                   BaseStyle::CheckboxPressed,
+                   BaseStyle::CheckboxHovered,
+                   BaseStyle::CheckboxPressedHovered,
+                   BaseStyle::CheckboxDisabled})
+        baseUniforms[Int(i)].setCornerRadius(1.0f);
+    for(auto&& i: {BaseStyle::RadioButton,
+                   BaseStyle::RadioButtonPressed,
+                   BaseStyle::RadioButtonHovered,
+                   BaseStyle::RadioButtonPressedHovered,
+                   BaseStyle::RadioButtonDisabled})
+        baseUniforms[Int(i)].setCornerRadius(12.0f);
+    for(auto&& i: {BaseStyle::Checkbox,
+                   BaseStyle::CheckboxPressed,
+                   BaseStyle::RadioButton,
+                   BaseStyle::RadioButtonPressed})
+        baseUniforms[Int(i)].setColor({0x5b9dd9_rgbf, 0.4f});
+    for(auto&& i: {BaseStyle::CheckboxHovered,
+                   BaseStyle::CheckboxPressedHovered,
+                   BaseStyle::RadioButtonHovered,
+                   BaseStyle::RadioButtonPressedHovered})
+        baseUniforms[Int(i)].setColor({0xa5c9ea_rgbf, 0.4f});
+    for(auto&& i: {BaseStyle::CheckboxDisabled,
+                   BaseStyle::RadioButtonDisabled})
+        baseUniforms[Int(i)].setColor({0x5b9dd9_rgbf, 0.4f*disabledOpacity});
+
+    /* The checkbox icon is on the left, and the text is aligned to it with
+       padding on the left to fit the icon */
+    for(auto&& i: {TextStyle::Checkbox,
+                   TextStyle::CheckboxPressed,
+                   TextStyle::CheckboxHovered,
+                   TextStyle::CheckboxPressedHovered,
+                   TextStyle::CheckboxDisabled}) {
+        textStyles[Int(i)].alignment = Text::Alignment::MiddleLeft;
+        textStyles[Int(i)].font = TextFont::Icon;
+        textStyles[Int(i)].padding = {0.0f, 0.0f, 0.0f, 0.0f};
+    }
+    /* Pressed checkbox shifts down by 1 unit, same as a button */
+    for(auto&& i: {BaseStyle::Checkbox,
+                   BaseStyle::CheckboxHovered,
+                   BaseStyle::CheckboxDisabled,
+                   BaseStyle::RadioButton,
+                   BaseStyle::RadioButtonHovered,
+                   BaseStyle::RadioButtonDisabled})
+        baseStyles[Int(i)].padding = {0.0f, 12.0f, 24.0f, 12.0f};
+    for(auto&& i: {BaseStyle::CheckboxPressed,
+                   BaseStyle::CheckboxPressedHovered,
+                   BaseStyle::RadioButtonPressed,
+                   BaseStyle::RadioButtonPressedHovered})
+        baseStyles[Int(i)].padding = {0.0f, 11.0f, 24.0f, 13.0f};
+    for(auto&& i: {TextStyle::CheckboxPressed,
+                   TextStyle::CheckboxPressedHovered})
+        textStyles[Int(i)].padding = {0.0f, +1.0f, 0.0f, -1.0f};
+    for(auto&& i: {TextStyle::CheckboxLabel,
+                   TextStyle::CheckboxLabelPressed,
+                   TextStyle::CheckboxLabelDisabled}) {
+        textStyles[Int(i)].alignment = Text::Alignment::MiddleLeft;
+        textStyles[Int(i)].font = TextFont::Main;
+    }
+    for(auto&& i: {TextStyle::CheckboxLabel,
+                   TextStyle::CheckboxLabelDisabled})
+        textStyles[Int(i)].padding = {checkboxIconSize + checkboxIconGap, 0.0f, 0.0f, 0.0f};
+    for(auto&& i: {TextStyle::CheckboxLabelPressed})
+        textStyles[Int(i)].padding = {checkboxIconSize + checkboxIconGap, +1.0f, 0.0f, -1.0f};
+
+    /* Checkbox spans just the height of the icon */
+    layoutStyles[Int(LayoutStyle::Checkbox)].minSize = {0.0f, checkboxIconSize};
+    layoutStyles[Int(LayoutStyle::Checkbox)].margin = leafWidgetMargin;
 
     /* Scroll area --------------------------------------------------------- */
 

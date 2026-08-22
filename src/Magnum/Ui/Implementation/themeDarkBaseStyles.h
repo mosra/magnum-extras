@@ -69,6 +69,16 @@ _c(ButtonFlatHovered, {})
 _c(ButtonFlatPressed, {})
 _c(ButtonFlatPressedHovered, {})
 _c(ButtonFlatDisabled, {})
+_c(Checkbox, {0.0f, 12.0f, 24.0f, 12.0f})
+_c(CheckboxHovered, {0.0f, 12.0f, 24.0f, 12.0f})
+_c(CheckboxPressed, {0.0f, 11.0f, 24.0f, 13.0f})
+_c(CheckboxPressedHovered, {0.0f, 11.0f, 24.0f, 13.0f})
+_c(CheckboxDisabled, {0.0f, 12.0f, 24.0f, 12.0f})
+_c(RadioButton, {0.0f, 12.0f, 24.0f, 12.0f})
+_c(RadioButtonHovered, {0.0f, 12.0f, 24.0f, 12.0f})
+_c(RadioButtonPressed, {0.0f, 11.0f, 24.0f, 13.0f})
+_c(RadioButtonPressedHovered, {0.0f, 11.0f, 24.0f, 13.0f})
+_c(RadioButtonDisabled, {0.0f, 12.0f, 24.0f, 12.0f})
 _c(InputDefault, {})
 _c(InputDefaultHovered, {})
 _c(InputDefaultFocused, {})
@@ -114,5 +124,5 @@ _u(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
    21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
    40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
    59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77,
-   78)
+   78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88)
 #endif

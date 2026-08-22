@@ -52,6 +52,7 @@ corrade_add_test(UiBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiBaseLayerStyleAnimatorTest BaseLayerStyleAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiBlurShaderTest BlurShaderTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiButtonTest ButtonTest.cpp LIBRARIES MagnumUiTestLib)
+corrade_add_test(UiCheckboxTest CheckboxTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiDataLayerTest DataLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiDebugLayerTest DebugLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiEnumStorageTest EnumStorageTest.cpp LIBRARIES MagnumUiTestLib)
@@ -482,6 +483,9 @@ if(MAGNUM_BUILD_GL_TESTS)
             ThemeTestFiles/dark-button-text-icon.png
             ThemeTestFiles/dark-button-text.png
             ThemeTestFiles/dark-button-icon.png)
+    corrade_add_test(UiCheckboxGLTest CheckboxGLTest.cpp
+        FILES
+            ThemeTestFiles/dark-checkbox.png)
     corrade_add_test(UiInputGLTest InputGLTest.cpp
         FILES
             ThemeTestFiles/dark-input.png
@@ -498,7 +502,7 @@ if(MAGNUM_BUILD_GL_TESTS)
             ThemeTestFiles/dark-scrollarea-x.png
             ThemeTestFiles/dark-scrollarea-y.png
             ThemeTestFiles/dark-scrollarea-xy.png)
-    foreach(_widget Button Input Label Panel ScrollArea)
+    foreach(_widget Button Checkbox Input Label Panel ScrollArea)
         target_link_libraries(Ui${_widget}GLTest PRIVATE
             MagnumUi
             Magnum::DebugTools
