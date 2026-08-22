@@ -31,4 +31,6 @@
 _c(0)
 _c(3) /* Yes */
 _c(4) /* No */
+_c(5) /* Checkbox */
+_c(6) /* RadioButton */
 #endif

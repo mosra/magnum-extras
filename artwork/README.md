@@ -19,6 +19,13 @@ broken if not understood:
 -   Similarly, only a single path is actually considered, thus you have to
     "Union" them first.
 
+The empty glyph is by default a rather oversized rectangle. It's not possible
+to make an empty glyph actually empty, so instead there's a layer named Empty
+Glyph containing a path that's collapsed to a single point. Select the layer,
+press Ctrl-A to select the empty path, and press "Set as empty glyph". Pressing
+"Reset empty glyph" will turn it back into the oversized rectangle, so watch
+out.
+
 The output SVG contains the source layers and then a font element with
 individual glyph paths, which are produced by the "Get curves" button. If a
 change to a certain icon doesn't seem to be applied, check that the SVG diff

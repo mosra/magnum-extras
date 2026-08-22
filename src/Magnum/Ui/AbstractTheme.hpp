@@ -46,7 +46,7 @@ namespace Magnum { namespace Ui { namespace Implementation {
 /* Used to size & populate the enum-to-glyph mapping table in
    Implementation/GenerateTheme.cpp. Update when adding new icons in Icon.h as
    otherwise attempting to use them will cause an OOB assert. */
-enum: UnsignedInt { IconCount = 2 };
+enum: UnsignedInt { IconCount = 4 };
 
 enum class BaseStyle: UnsignedShort {
     /* All properties left at defaults. Not used by builtin widgets, meant to

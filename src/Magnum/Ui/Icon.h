@@ -51,7 +51,15 @@ enum class Icon: UnsignedInt {
     None = 0,
 
     Yes,        /**< Yes */
-    No          /**< No */
+    No,         /**< No */
+
+    /** Checked checkbox. An unchecked checkbox uses @ref Icon::None. */
+    Checkbox,
+
+    /**
+     * Checked radio button. An unchecked radio button uses @ref Icon::None.
+     */
+    RadioButton,
 
     /* Make sure to update IconCount in Ui/AbstractTheme.hpp when adding new
        icons as otherwise attempting to use them will cause an OOB assert. */

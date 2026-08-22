@@ -8,7 +8,7 @@
    version="1.1"
    id="svg1"
    sodipodi:docname="ui-icon-font.svg"
-   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -23,15 +23,16 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="px"
-     inkscape:zoom="0.50394254"
-     inkscape:cx="214.31015"
-     inkscape:cy="304.59822"
+     inkscape:zoom="0.71268239"
+     inkscape:cx="193.63464"
+     inkscape:cy="344.47322"
      inkscape:window-width="1920"
      inkscape:window-height="1031"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer6">
+     inkscape:current-layer="layer4"
+     showgrid="false">
     <sodipodi:guide
        position="0,512"
        orientation="0,1000"
@@ -83,7 +84,7 @@
          id="font-face1"
          font-family="Magnum Icon Font" />
       <missing-glyph
-         d="M0,0h1000v1000h-1000z"
+         d="m 256,256 v 0"
          id="missing-glyph1" />
       <glyph
          glyph-name="Yes"
@@ -96,6 +97,16 @@
          unicode=""
          id="glyph3"
          d="m 66,462 a 16,16 0 0 1 -4.140625,-0.54492 16,16 0 0 1 -7.173828,-4.14063 16,16 0 0 1 0,-22.6289 L 233.37109,256 54.685547,77.31445 a 16,16 0 0 1 0,-22.6289 16,16 0 0 1 22.628906,0 L 256,233.37109 434.68555,54.68555 a 16,16 0 0 1 22.6289,0 16,16 0 0 1 0,22.6289 L 278.62891,256 457.31445,434.68555 a 16,16 0 0 1 0,22.6289 16,16 0 0 1 -15.45507,4.14063 16,16 0 0 1 -7.17383,-4.14063 L 256,278.62891 77.314453,457.31445 A 16,16 0 0 1 66,462 Z" />
+      <glyph
+         glyph-name="Checkbox"
+         unicode=""
+         id="glyph7"
+         d="m 417.05859,411.11133 a 32,32 0 0 1 -21.4707,-11.78321 L 218.79102,178.97461 112.71289,273.26563 a 32,32 0 0 1 -45.177734,-2.65821 32,32 0 0 1 2.658203,-45.17773 L 201.42969,108.7793 a 32.0032,32.0032 0 0 1 46.21875,3.89258 l 197.85742,246.60546 a 32,32 0 0 1 -4.93359,44.98438 32,32 0 0 1 -23.51368,6.84961 z" />
+      <glyph
+         glyph-name="RadioButton"
+         unicode=""
+         id="glyph9"
+         d="m 256,400 c -79.529,0 -144,-64.471 -144,-144 0,-79.529 64.471,-144 144,-144 79.529,0 144,64.471 144,144 0,79.529 -64.471,144 -144,144 z" />
     </font>
   </defs>
   <g
@@ -116,16 +127,45 @@
     </g>
     <g
        inkscape:groupmode="layer"
+       id="layer2"
+       inkscape:label="-  RadioButton"
+       style="display:none"
+       sodipodi:insensitive="true">
+      <path
+         id="circle8"
+         style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:0.265;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         d="m 256,112 c -79.529,0 -144,64.471 -144,144 0,79.529 64.471,144 144,144 79.529,0 144,-64.471 144,-144 0,-79.529 -64.471,-144 -144,-144 z"
+         sodipodi:nodetypes="sssss" />
+      <path
+         d=""
+         id="path9" />
+    </g>
+    <g
+       inkscape:groupmode="layer"
        id="layer6"
        inkscape:label="-  No"
-       style="display:inline">
+       style="display:none"
+       sodipodi:insensitive="true">
       <path
          d=""
          id="path3" />
       <path
          id="path2-3"
-         style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:0.265;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0.265;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
          d="m 66,50 a 16,16 0 0 0 -4.140625,0.544922 16,16 0 0 0 -7.173828,4.140625 16,16 0 0 0 0,22.628906 L 233.37109,256 54.685547,434.68555 a 16,16 0 0 0 0,22.6289 16,16 0 0 0 22.628906,0 L 256,278.62891 434.68555,457.31445 a 16,16 0 0 0 22.6289,0 16,16 0 0 0 0,-22.6289 L 278.62891,256 457.31445,77.314453 a 16,16 0 0 0 0,-22.628906 16,16 0 0 0 -15.45507,-4.140625 16,16 0 0 0 -7.17383,4.140625 L 256,233.37109 77.314453,54.685547 A 16,16 0 0 0 66,50 Z" />
+    </g>
+    <g
+       inkscape:groupmode="layer"
+       id="layer4"
+       inkscape:label="-  Checkbox"
+       style="display:inline">
+      <path
+         style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:0.265;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
+         d="m 417.05859,100.88867 a 32,32 0 0 0 -21.4707,11.78321 L 218.79102,333.02539 112.71289,238.73437 a 32,32 0 0 0 -45.177734,2.65821 32,32 0 0 0 2.658203,45.17773 L 201.42969,403.2207 a 32.0032,32.0032 0 0 0 46.21875,-3.89258 L 445.50586,152.72266 a 32,32 0 0 0 -4.93359,-44.98438 32,32 0 0 0 -23.51368,-6.84961 z"
+         id="path8" />
+      <path
+         d=""
+         id="path11" />
     </g>
   </g>
   <g
@@ -145,6 +185,48 @@
        style="font-variation-settings:normal;display:inline;fill:none;fill-opacity:1;stroke:#000000;stroke-width:32;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0.265;stroke-opacity:1;stop-color:#000000"
        d="M 446,65.999997 66,446"
        id="path6" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer1"
+     inkscape:label="Empty Glyph"
+     style="display:none"
+     sodipodi:insensitive="true">
+    <path
+       style="fill:none;stroke:none;stroke-width:32;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:0.265"
+       d="m 256,256 v 0"
+       id="path7"
+       sodipodi:nodetypes="cc" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="Checkbox"
+     style="display:none">
+    <path
+       style="font-variation-settings:normal;display:inline;opacity:1;fill:none;fill-opacity:1;stroke:#000000;stroke-width:64;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0.265;stroke-opacity:1;stop-color:#000000;stop-opacity:1"
+       d="M 91.453523,262.6526 222.68861,379.30277 420.54648,132.69798"
+       id="path10"
+       sodipodi:nodetypes="ccc" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer8"
+     inkscape:label="RadioButton"
+     style="display:none"
+     sodipodi:insensitive="true">
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:32;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0.265;stroke-opacity:1"
+       id="path13"
+       cx="256"
+       cy="256"
+       r="192" />
+    <circle
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:32;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0.265;stroke-opacity:1"
+       id="circle13"
+       cx="256"
+       cy="256"
+       r="144" />
   </g>
   <g
      inkscape:groupmode="layer"

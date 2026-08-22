@@ -39,6 +39,8 @@ Debug& operator<<(Debug& debug, const Icon value) {
         _c(None)
         _c(Yes)
         _c(No)
+        _c(Checkbox)
+        _c(RadioButton)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
