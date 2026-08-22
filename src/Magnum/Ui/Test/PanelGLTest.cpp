@@ -56,17 +56,17 @@ const struct {
 } TestData[]{
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int) {
-            return Panel{NonOwned, Anchor{ui, {}, {48, 36}},PanelStyle(style)}.node();
+            return Panel{NonOwned, Anchor{ui, {}, {48, 36}}, PanelStyle(style)}.node();
         }},
     {"setStyle()",
         [](UserInterface& ui, Int style, Flags, Int) {
-            Panel panel{NonOwned, Anchor{ui, {}, {48, 36}},PanelStyle(style == 0 ? 1 : 0)};
+            Panel panel{NonOwned, Anchor{ui, {}, {48, 36}}, PanelStyle(style == 0 ? 1 : 0)};
             panel.setStyle(PanelStyle(style));
             return panel.node();
         }},
     {"setStyle(), time overload",
         [](UserInterface& ui, Int style, Flags, Int) {
-            Panel panel{NonOwned, Anchor{ui, {}, {48, 36}},PanelStyle(style == 0 ? 1 : 0)};
+            Panel panel{NonOwned, Anchor{ui, {}, {48, 36}}, PanelStyle(style == 0 ? 1 : 0)};
             /** @todo may need an explicit advanceAnimations() once the style
                 actually has transition animations */
             panel.setStyle(PanelStyle(style), 123456_nsec);
