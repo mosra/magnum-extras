@@ -43,6 +43,7 @@
 
 namespace Magnum { namespace Ui {
 
+using namespace Math::Literals;
 using Implementation::BaseStyle;
 using Implementation::TextStyle;
 using Implementation::LayoutStyle;
@@ -77,36 +78,20 @@ Checkbox::Checkbox(const Anchor anchor, const StorageQuery<bool>& query, const C
 void Checkbox::createInternal(const StorageQuery<bool>& query, const Containers::StringView text, const TextProperties& textProperties) {
     ui().layoutLayer().create(LayoutStyle::Checkbox, node());
 
-    _backgroundData = dataHandleData(ui().baseLayer().create(_style == CheckboxStyle::Checkbox ? BaseStyle::Checkbox : BaseStyle::RadioButton, node()));
+    _backgroundData = dataHandleData(ui().baseLayer().create(_style == CheckboxStyle::RadioButton ? BaseStyle::RadioButton : BaseStyle::Checkbox, node()));
     ui().baseLayer().setAlignment(_backgroundData, BaseLayerAlignment::Left|BaseLayerAlignment::CenterY);
-    _checkboxData = dataHandleData(ui().textLayer().createGlyph(TextStyle::Checkbox, Icon::None, {}, node()));
+    _checkboxData = dataHandleData(ui().textLayer().createGlyph(TextStyle::Checkbox, _style == CheckboxStyle::RadioButton ? Icon::RadioButton : Icon::Checkbox, {}, node()));
     _textData = dataHandleData(ui().textLayer().create(TextStyle::CheckboxLabel, text, textProperties, node()));
 
     {
         /** @todo clean this up once I can use C++14 named captures */
         UserInterface& ui = this->ui();
-        const LayerDataHandle backgroundData = _backgroundData;
         const LayerDataHandle checkboxData = _checkboxData;
-        _dataBindingData = query.onUpdate([&ui, backgroundData, checkboxData](bool value) {
-            const BaseStyle style = ui.baseLayer().style<BaseStyle>(backgroundData);
-            Icon icon;
-            /* Cannot just capture the CheckboxStyle passed to the constructor
-               because it might change after. Query the up-to-date style from
-               the base layer instead. It can also never be CheckboxDisabled or
-               RadioButtonDisabled as those are only used internally inside the
-               layer update call. */
-            if(style == BaseStyle::Checkbox ||
-               style == BaseStyle::CheckboxHovered ||
-               style == BaseStyle::CheckboxPressed ||
-               style == BaseStyle::CheckboxPressedHovered)
-                icon = value ? Icon::Checkbox : Icon::None;
-            else if(style == BaseStyle::RadioButton ||
-                    style == BaseStyle::RadioButtonHovered ||
-                    style == BaseStyle::RadioButtonPressed ||
-                    style == BaseStyle::RadioButtonPressedHovered)
-                icon = value ? Icon::RadioButton : Icon::None;
-            else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
-            ui.textLayer().setGlyph(checkboxData, icon, {});
+        _dataBindingData = query.onUpdate([&ui, checkboxData](bool value) {
+            /** @todo switch a style between a checked and unchecked variant
+                instead to make the transition styleable, once it no longer
+                clashes with other transition animations */
+            ui.textLayer().setColor(checkboxData, value ? 0xffffffff_rgbaf : 0x00000000_rgbaf);
         }, node());
     }
 
@@ -140,9 +125,7 @@ Checkbox::Checkbox(NonOwnedT, const Anchor anchor, const StorageQuery<bool>& que
 Checkbox& Checkbox::setStyle(const CheckboxStyle style) {
     _style = style;
     ui().baseLayer().transitionStyle(_backgroundData, style == CheckboxStyle::RadioButton ? BaseStyle::RadioButton : BaseStyle::Checkbox);
-    /* Mark the data binding as dirty to make it update the icon glyph with the
-       next onUpdate() callback */
-    ui().dataLayer().setDirty(_dataBindingData);
+    ui().textLayer().setGlyph(_checkboxData, _style == CheckboxStyle::RadioButton ? Icon::RadioButton : Icon::Checkbox, {});
     return *this;
 }
 

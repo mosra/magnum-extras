@@ -62,7 +62,6 @@ struct CheckboxTest: WidgetTester {
     void editSet();
     void editToggle();
     void editToggleEvent();
-    void updatePressedHoveredDisabled();
 };
 
 const struct {
@@ -92,19 +91,6 @@ const struct {
         false, false, false, true},
     {"custom data layer",
         false, true, false, false}
-};
-
-const struct {
-    const char* name;
-    CheckboxStyle style;
-    bool checked, disabled;
-} UpdatePressedHoveredDisabledData[]{
-    {"checkbox", CheckboxStyle::Checkbox, false, false},
-    {"checkbox, checked", CheckboxStyle::Checkbox, true, false},
-    {"checkbox, checked, disabled", CheckboxStyle::Checkbox, true, true},
-    {"radio button", CheckboxStyle::RadioButton, false, false},
-    {"radio button, checked", CheckboxStyle::RadioButton, true, false},
-    {"radio button, checked, disabled", CheckboxStyle::RadioButton, true, true},
 };
 
 CheckboxTest::CheckboxTest() {
@@ -149,12 +135,6 @@ CheckboxTest::CheckboxTest() {
         &CheckboxTest::editToggle,
         &CheckboxTest::editToggleEvent
     }, Containers::arraySize(EditData),
-       &WidgetTester::setup,
-       &WidgetTester::teardown);
-
-    addInstancedTests<CheckboxTest>({
-        &CheckboxTest::updatePressedHoveredDisabled
-    }, Containers::arraySize(UpdatePressedHoveredDisabledData),
        &WidgetTester::setup,
        &WidgetTester::teardown);
 }
@@ -700,58 +680,6 @@ void CheckboxTest::editToggleEvent() {
     CORRADE_COMPARE(checkbox.isChecked(), data.singleChoice || data.immutable ? true : false);
     if(!data.builtinStorage)
         CORRADE_COMPARE(storage.value(), data.singleChoice || data.immutable ? 1 : 0);
-}
-
-void CheckboxTest::updatePressedHoveredDisabled() {
-    auto&& data = UpdatePressedHoveredDisabledData[testCaseInstanceId()];
-    setTestCaseDescription(data.name);
-
-    /* Verifies that the onUpdate() callback correctly detects the checkbox /
-       radio button style distinction regardless of hover / pressed / disabled
-       state */
-
-    /* Immutable storage so actual presses and releases don't affect the value,
-       leading to certain variants not being checked by accident */
-    Int value = data.checked ? 1 : 0;
-    EnumStorage<Int> storage{ui, NonOwned, static_cast<const Int&>(value), StorageFlag::ReferenceCounted};
-    CORRADE_VERIFY(!storage.isMutable());
-
-    Checkbox checkbox{Anchor{root, {}, {32, 16}}, storage.value<1>(), {}, data.style};
-    if(data.disabled)
-        checkbox.setDisabled(true);
-
-    /* Default state. There's no way to verify that the actually picked icon
-       glyph is correct, only checking that it doesn't assert or something */
-    ui.update();
-
-    if(!data.disabled) {
-        /* Hovered state */
-        {
-            PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent({16, 8}, move));
-        }
-        storage.setDirty();
-        ui.update();
-
-        /* Pressed + hovered state */
-        {
-            PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
-            CORRADE_VERIFY(ui.pointerPressEvent({16, 8}, press));
-        }
-        storage.setDirty();
-        ui.update();
-
-        /* Pressed state (i.e, moving out) */
-        {
-            PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent({64, 8}, move));
-        }
-        storage.setDirty();
-        ui.update();
-
-        /** @todo expand with a focused state once it's focusable and has a
-            focused style */
-    }
 }
 
 }}}}
