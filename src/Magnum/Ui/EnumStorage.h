@@ -83,9 +83,9 @@ template<class T> struct EnumStorageTraits<T, typename std::enable_if<std::is_en
 @brief Enum value storage
 @m_since_latest_{extras}
 
-Owns or references a single enum value or their list, allowing it to either
-access and update the enum value directly, or toggle individual choices in the
-enum.
+Owns or references a single enum value or their list, allowing storage queries
+to either access and update the enum value directly, or toggle individual
+choices in the enum.
 
 The template can be used for any @cpp enum @ce, @cpp enum class @ce as well as
 builtin integer types, and a @relativeref{Corrade,Containers::EnumSet}. It's
