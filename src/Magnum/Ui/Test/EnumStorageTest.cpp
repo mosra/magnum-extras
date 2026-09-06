@@ -625,6 +625,42 @@ template<class T> void EnumStorageTest::constructNoInit() {
     CORRADE_COMPARE(second.mutableData().data(), second.data().data());
     CORRADE_COMPARE(second.mutableData().size(), second.data().size());
     CORRADE_COMPARE(second.mutableData().stride(), second.data().stride());
+
+    /* 1-byte types fit in-place, in which case we can fill the storage, remove
+       it and then recycle the slot to check that the value is indeed left over
+       from before. Larger types are allocated and anything can happen there --
+       the exact memory reused, stomped over by something else in the meantime
+       or a different memory being allocated next time. */
+    if(sizeof(T) == 1) {
+        UnsignedByte value = 123;
+        for(T& i: first.mutableData())
+            i = T(value++);
+        for(T& i: second.mutableData())
+            i = T(value++);
+
+        (data.implicitLayer ? ui.dataLayer() : layer).removeStorage(first);
+        (data.implicitLayer ? ui.dataLayer() : layer).removeStorage(second);
+
+        EnumStorage<T> first2 = data.implicitLayer ?
+            EnumStorage<T>{ui, NoInit, size} :
+            EnumStorage<T>{layer, NoInit, size};
+        EnumStorage<T> second2 = data.implicitLayer ?
+            EnumStorage<T>{ui, NoInit} :
+            EnumStorage<T>{layer, NoInit};
+        CORRADE_COMPARE(storageHandleId(first2.handle()), storageHandleId(first.handle()));
+        CORRADE_COMPARE(storageHandleId(second2.handle()), storageHandleId(second.handle()));
+        CORRADE_VERIFY(!first2.isAllocated());
+        CORRADE_VERIFY(!second2.isAllocated());
+        CORRADE_COMPARE_AS(first2.data(), Containers::arrayView({
+            T(123), T(124), T(125), T(126), T(127), T(128), T(129), T(130),
+            T(131), T(132), T(133), T(134), T(135), T(136), T(137), T(138),
+            T(139), T(140), T(141), T(142), T(143), T(144), T(145), T(146),
+            T(147), T(148), T(149), T(150), T(151)
+        }).prefix(size), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(second2.data(), Containers::arrayView({
+            T(123 + size),
+        }), TestSuite::Compare::Container);
+    }
 }
 
 template<class T> void EnumStorageTest::constructDirectInit() {

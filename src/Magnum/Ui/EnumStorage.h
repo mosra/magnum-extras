@@ -143,7 +143,7 @@ template<class T> class EnumStorage: public AbstractStorage {
          *      @ref EnumStorage(Owner&, DirectInitT, T, StorageFlags),
          *      @ref EnumStorage(Owner&, NonOwnedT, T&, StorageFlags)
          */
-        template<class Owner> explicit EnumStorage(Owner& owner, NoInitT, StorageFlags flags = {}): EnumStorage{owner, ValueInit, 1, flags} {}
+        template<class Owner> explicit EnumStorage(Owner& owner, NoInitT, StorageFlags flags = {}): EnumStorage{owner, NoInit, 1, flags} {}
 
         /**
          * @brief Construct a 1D storage without initializing its contents
