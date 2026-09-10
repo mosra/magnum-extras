@@ -287,70 +287,70 @@ const struct {
     {"increment",
         1134, {}, {}, {},
         StorageOperation::Increment, {},
-        StorageUpdateState{}, true, 1135},
+        StorageUpdateState::Success, true, 1135},
     {"decrement",
         1134, {}, {}, {},
         StorageOperation::Decrement, {},
-        StorageUpdateState{}, true, 1133},
+        StorageUpdateState::Success, true, 1133},
     {"increment exactly at range end",
         3000, {{-2000, 3000}}, {}, {},
         StorageOperation::Increment, {},
-        StorageUpdateState{}, false, 3000},
+        StorageUpdateState::Success, false, 3000},
     {"decrement exactly at range begin",
         -2000, {{-2000, 3000}}, {}, {},
         StorageOperation::Decrement, {},
-        StorageUpdateState{}, false, -2000},
+        StorageUpdateState::Success, false, -2000},
     {"increment, custom step",
         1134, {}, 20, {},
         StorageOperation::Increment, {},
-        StorageUpdateState{}, true, 1154},
+        StorageUpdateState::Success, true, 1154},
     {"decrement, custom step",
         1134, {}, 20, {},
         StorageOperation::Decrement, {},
-        StorageUpdateState{}, true, 1114},
+        StorageUpdateState::Success, true, 1114},
     {"increment, custom step, near range end",
         2996, {{-2000, 3000}}, 20, {},
         StorageOperation::Increment, {},
-        StorageUpdateState{}, true, 3000},
+        StorageUpdateState::Success, true, 3000},
     {"decrement, custom step, near range begin",
         -1996, {{-2000, 3000}}, 20, {},
         StorageOperation::Decrement, {},
-        StorageUpdateState{}, true, -2000},
+        StorageUpdateState::Success, true, -2000},
     {"increment, custom negative step",
         1134, {}, -20, {},
         StorageOperation::Increment, {},
-        StorageUpdateState{}, true, 1114},
+        StorageUpdateState::Success, true, 1114},
     {"decrement, custom negative step",
         1134, {}, -20, {},
         StorageOperation::Decrement, {},
-        StorageUpdateState{}, true, 1154},
+        StorageUpdateState::Success, true, 1154},
     /* With just a min() this would underflow the range */
     {"increment, custom negative step, near range begin",
         -1996, {{-2000, 3000}}, -20, {},
         StorageOperation::Increment, {},
-        StorageUpdateState{}, true, -2000},
+        StorageUpdateState::Success, true, -2000},
     /* With just a max() this would overflow the range */
     {"decrement, custom negative step, near range end",
         2996, {{-2000, 3000}}, -20, {},
         StorageOperation::Decrement, {},
-        StorageUpdateState{}, true, 3000},
+        StorageUpdateState::Success, true, 3000},
 
     {"min",
         1134, {}, {}, {},
         StorageOperation::Min, {},
-        StorageUpdateState{}, true, -32768},
+        StorageUpdateState::Success, true, -32768},
     {"max",
         1134, {}, {}, {},
         StorageOperation::Max, {},
-        StorageUpdateState{}, true, 32767},
+        StorageUpdateState::Success, true, 32767},
     {"min, custom range",
         1134, {{-2000, 3000}}, {}, {},
         StorageOperation::Min, {},
-        StorageUpdateState{}, true, -2000},
+        StorageUpdateState::Success, true, -2000},
     {"max, custom range",
         1134, {{-2000, 3000}}, {}, {},
         StorageOperation::Max, {},
-        StorageUpdateState{}, true, 3000},
+        StorageUpdateState::Success, true, 3000},
 };
 
 NumericStorageTest::NumericStorageTest() {
@@ -2224,15 +2224,15 @@ void NumericStorageTest::rangeStepDefault() {
     } else {
         CORRADE_INTERNAL_ASSERT(!data.set);
         if(data.operation == StorageOperation::Reset)
-            query.reset();
+            CORRADE_COMPARE(query.reset(), data.expectedState);
         else if(data.operation == StorageOperation::Increment)
-            query.increment();
+            CORRADE_COMPARE(query.increment(), data.expectedState);
         else if(data.operation == StorageOperation::Decrement)
-            query.decrement();
+            CORRADE_COMPARE(query.decrement(), data.expectedState);
         else if(data.operation == StorageOperation::Min)
-            query.setToMin();
+            CORRADE_COMPARE(query.setToMin(), data.expectedState);
         else if(data.operation == StorageOperation::Max)
-            query.setToMax();
+            CORRADE_COMPARE(query.setToMax(), data.expectedState);
         else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }
     CORRADE_COMPARE(query, data.expected);
