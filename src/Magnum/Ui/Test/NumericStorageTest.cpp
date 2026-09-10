@@ -1470,8 +1470,8 @@ void NumericStorageTest::constructHandleRecycle() {
     CORRADE_COMPARE(first.range(), (Containers::Pair<UnsignedShort, UnsignedShort>{13457, 58776}));
     CORRADE_COMPARE(first.step(), 5556);
     CORRADE_COMPARE(first.defaultValue(), 9987);
-    /* The query should be immutable also */
-    CORRADE_VERIFY(!first[0].isMutable());
+    /* The storage should be immutable also */
+    CORRADE_VERIFY(!first.isMutable());
 
     /* Remove and create a new storage in the same slot. All properties should
        be reset back to defaults. */
@@ -1483,7 +1483,7 @@ void NumericStorageTest::constructHandleRecycle() {
     CORRADE_COMPARE(second.step(), 1);
     CORRADE_COMPARE(second.defaultValue(), 0);
     /* The internal immutable flag should also be reset */
-    CORRADE_VERIFY(second.value().isMutable());
+    CORRADE_VERIFY(second.isMutable());
 }
 
 void NumericStorageTest::access3D() {
