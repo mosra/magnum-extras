@@ -81,7 +81,7 @@ struct NumericStorageTest: TestSuite::Tester {
     /* Verifies behavior of setRange(), setStep(), setDefault() and their
        effect on value updates including clamping and other edge cases, at an
        arbitrary index */
-    void rangeStepDefault();
+    void updateRangeStepDefaultValue();
     template<class T> void rangeStepTypeOverflowSigned();
     template<class T> void rangeStepTypeOverflowUnsigned();
     void rangeStepTypeOverflowFloat();
@@ -173,7 +173,7 @@ const struct {
     StorageUpdateState expectedState;
     bool expectedDirty;
     Int expected;
-} RangeStepDefaultData[]{
+} UpdateRangeStepDefaultValueData[]{
     {"set",
         1134, {}, {}, {},
         StorageOperation::Set, 31655,
@@ -495,8 +495,8 @@ NumericStorageTest::NumericStorageTest() {
     addInstancedTests({&NumericStorageTest::update},
         Containers::arraySize(UpdateData));
 
-    addInstancedTests({&NumericStorageTest::rangeStepDefault},
-        Containers::arraySize(RangeStepDefaultData));
+    addInstancedTests({&NumericStorageTest::updateRangeStepDefaultValue},
+        Containers::arraySize(UpdateRangeStepDefaultValueData));
 
     addTests({&NumericStorageTest::rangeStepTypeOverflowSigned<Int>,
               &NumericStorageTest::rangeStepTypeOverflowSigned<Long>,
@@ -2002,7 +2002,8 @@ void NumericStorageTest::update() {
 
     /* This verifies that all update operations properly touch the stored or
        referenced value along with setting dirty bits. Behavior with a custom
-       range, step, clamping etc. is tested in rangeStepDefault() below. */
+       range, step, clamping etc. and cases when dirty bit is *not* set is
+       tested in updateRangeStepDefaultValue() below. */
 
     AbstractUserInterface ui{{100, 100}};
     DataLayer& layer = ui.setLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
@@ -2130,15 +2131,15 @@ void NumericStorageTest::update() {
     CORRADE_COMPARE(state.called, 7);
 }
 
-void NumericStorageTest::rangeStepDefault() {
-    auto&& data = RangeStepDefaultData[testCaseInstanceId()];
+void NumericStorageTest::updateRangeStepDefaultValue() {
+    auto&& data = UpdateRangeStepDefaultValueData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Compared to update(), which verified that the right value was updated
        depending on whether the storage is owned or not, this verifies that all
        operations correctly affect given memory location with various clamping
-       behavior, assuming the implementation isn't differing in the non-owned
-       variant. */
+       behavior and set (or not set) the dirty bit, assuming the implementation
+       isn't differing in the non-owned variant. */
 
     AbstractUserInterface ui{{100, 100}};
     DataLayer& layer = ui.setLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));

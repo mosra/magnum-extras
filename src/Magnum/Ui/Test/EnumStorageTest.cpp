@@ -75,7 +75,7 @@ struct EnumStorageTest: TestSuite::Tester {
 
     /* Verifies behavior of setEnumSet(), setDefault() and their effect on
        value updates at an arbitrary index */
-    void enumSetDefault();
+    void updateEnumSetDefaultValue();
 };
 
 const struct {
@@ -201,7 +201,7 @@ const struct {
     StorageUpdateState expectedState;
     bool expectedDirty;
     EnumSet expected;
-} EnumSetDefaultData[]{
+} UpdateEnumSetDefaultValueData[]{
     {"set",
         Enum::Three, {}, false, {},
         StorageOperation::Set, {Enum::Five}, {},
@@ -433,8 +433,8 @@ EnumStorageTest::EnumStorageTest() {
                        &EnumStorageTest::updateSingleValue},
         Containers::arraySize(UpdateData));
 
-    addInstancedTests({&EnumStorageTest::enumSetDefault},
-        Containers::arraySize(EnumSetDefaultData));
+    addInstancedTests({&EnumStorageTest::updateEnumSetDefaultValue},
+        Containers::arraySize(UpdateEnumSetDefaultValueData));
 }
 
 template<class> struct StorageTraits;
@@ -1649,8 +1649,8 @@ void EnumStorageTest::updateSingleValue() {
     setTestCaseDescription(data.name);
 
     /* Like update() but with operations on a single value query. Behavior with
-       enum set storage, custom default etc. is tested in enumSetDefault()
-       below. */
+       enum set storage, custom default etc. and cases when dirty bit is *not*
+       set is tested in updateEnumSetDefaultValue() below. */
 
     AbstractUserInterface ui{{100, 100}};
     DataLayer& layer = ui.setLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
@@ -1802,17 +1802,17 @@ void EnumStorageTest::updateSingleValue() {
     CORRADE_COMPARE(state.called, 5);
 }
 
-void EnumStorageTest::enumSetDefault() {
-    auto&& data = EnumSetDefaultData[testCaseInstanceId()];
+void EnumStorageTest::updateEnumSetDefaultValue() {
+    auto&& data = UpdateEnumSetDefaultValueData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Compared to update() / updateSingleValue(), which verified that the
        right value was updated depending on whether the storage is owned or
        not, and that both whole enum and single value queries were updated,
        this verifies that all operations correctly affect given memory location
-       with various custom behavior, assuming the implementation isn't
-       differing in the non-owned variant and with callbacks attached to single
-       value queries. */
+       with various custom behavior and set (or not set) the dirty bit,
+       assuming the implementation isn't differing in the non-owned variant and
+       with callbacks attached to single value queries. */
 
     AbstractUserInterface ui{{100, 100}};
     DataLayer& layer = ui.setLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
