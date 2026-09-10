@@ -537,7 +537,9 @@ template<class T> struct EnumStorage<T>::Data {
 };
 
 template<class T> struct EnumStorage<T>::DataNonOwned: Data {
-    explicit DataNonOwned(T defaultValue, const void* pointer, std::ptrdiff_t stride, bool immutable): Data{defaultValue, true, immutable}, pointer{pointer}, stride{stride} {}
+    /* The default for non-owned data is always a default-constructed T. The
+       immutable flag gets subsequently reset in the mutable constructor. */
+    explicit DataNonOwned(const void* pointer, std::ptrdiff_t stride): Data{T{}, /*nonOwned*/ true, /*immutable*/ true}, pointer{pointer}, stride{stride} {}
 
     const void* pointer;
     std::ptrdiff_t stride;
@@ -588,11 +590,11 @@ template<class T> template<class Owner
     /* Construct the Data struct in-place to initialize its members. On 64-bit
        platforms the size should always fit in-place, on 32-bit only up to
        four bytes. */
-    new(createInPlace<DataNonOwned>()) DataNonOwned{T{}, values.data(), values.stride(), true};
+    new(createInPlace<DataNonOwned>()) DataNonOwned{values.data(), values.stride()};
 }
 #ifdef CORRADE_TARGET_32BIT
 template<class T> template<class Owner, class U, typename std::enable_if<(sizeof(U) >= 8), int>::type> EnumStorage<T>::EnumStorage(Owner& owner, NonOwnedT, const Containers::StridedArrayView1D<const T>& values, const StorageFlags flags): AbstractStorage{owner, values.size(), flags} {
-    createAllocated(new DataNonOwned{T{}, values.data(), values.stride(), true}, 1, [](void* data, std::size_t) {
+    createAllocated(new DataNonOwned{values.data(), values.stride()}, 1, [](void* data, std::size_t) {
         delete static_cast<DataNonOwned*>(data);
     });
 }

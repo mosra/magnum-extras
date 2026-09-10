@@ -120,7 +120,7 @@ template<> struct Traits<Half>: CastingTraits<Half, Float> {
 };
 
 template<class T> struct Data {
-    explicit Data(const T& defaultValue): defaultValue{defaultValue} {}
+    explicit Data(const T& defaultValue, Flags flags = {}): flags{flags}, defaultValue{defaultValue} {}
 
     Flags flags;
     /* 0/1/3/7 or 4/1/3/7 bytes free for a 1/2/4/8-byte type */
@@ -166,7 +166,8 @@ template<class T> struct Data {
 };
 
 template<class T> struct DataNonOwned: Data<T> {
-    explicit DataNonOwned(const T& defaultValue): Data<T>{defaultValue} {}
+    /* The default for non-owned data is always a default-constructed T */
+    explicit DataNonOwned(Flags flags, const void* pointer): Data<T>{T{}, flags}, pointer{pointer} {}
 
     const void* pointer;
     /* The stride is stored only for the actual data dimensions (so 0, 1, 2 or
@@ -270,15 +271,14 @@ template<class T> void NumericStorage<T>::createNonOwnedInternal(const void* con
         });
 
     /* Construct the Data struct in-place to initialize its members */
-    DataNonOwned<T>* data = new(storage) DataNonOwned<T>{T{}};
-    data->flags |= Flag::NonOwned;
+    Flags flags = Flag::NonOwned;
     if(dimensions >= 2)
-        data->flags |= Flag::NonOwned2D;
+        flags |= Flag::NonOwned2D;
     if(dimensions == 1 || dimensions == 3)
-        data->flags |= Flag::NonOwned1D;
+        flags |= Flag::NonOwned1D;
     if(immutable)
-        data->flags |= Flag::NonOwnedImmutable;
-    data->pointer = pointer;
+        flags |= Flag::NonOwnedImmutable;
+    DataNonOwned<T>* data = new(storage) DataNonOwned<T>{flags, pointer};
 
     /* Stride is only expected to be nullptr with a single-item storage */
     CORRADE_INTERNAL_ASSERT(!dimensions || stride);
