@@ -698,17 +698,17 @@ template<class T> void EnumStorageTest::constructDirectInit() {
 
     /* The data should have the expected shape and be a contiguous sequence of
        zeros */
-    Containers::StridedArrayView1D<const T> viewFirst1 = first.data();
-    CORRADE_COMPARE(viewFirst1.size(), size);
-    CORRADE_COMPARE(viewFirst1.stride(), sizeof(T));
-    CORRADE_VERIFY(viewFirst1.isContiguous());
-    CORRADE_COMPARE_AS(viewFirst1.asContiguous(),
+    Containers::StridedArrayView1D<const T> view = first.data();
+    CORRADE_COMPARE(view.size(), size);
+    CORRADE_COMPARE(view.stride(), sizeof(T));
+    CORRADE_VERIFY(view.isContiguous());
+    CORRADE_COMPARE_AS(view.asContiguous(),
         Containers::stridedArrayView({T::Value}).template broadcasted<0>(size),
         TestSuite::Compare::Container);
     /* Mutable data should be the same */
-    CORRADE_COMPARE(first.mutableData().data(), viewFirst1.data());
-    CORRADE_COMPARE(first.mutableData().size(), viewFirst1.size());
-    CORRADE_COMPARE(first.mutableData().stride(), viewFirst1.stride());
+    CORRADE_COMPARE(first.mutableData().data(), view.data());
+    CORRADE_COMPARE(first.mutableData().size(), view.size());
+    CORRADE_COMPARE(first.mutableData().stride(), view.stride());
 
     EnumStorage<T> second = data.implicitLayer ?
         EnumStorage<T>{ui, DirectInit, T::Value, StorageFlags{0x28}} :
@@ -968,9 +968,8 @@ void EnumStorageTest::constructHandleRecycle() {
         .setEnumSet(true);
     CORRADE_VERIFY(!first.isAllocated());
     CORRADE_COMPARE(first.defaultValue(), 0x4000);
+    CORRADE_VERIFY(!first.isMutable());
     CORRADE_VERIFY(first.isEnumSet());
-    /* The query should be immutable also */
-    CORRADE_VERIFY(!first[0].isMutable());
 
     /* Remove and create a new storage in the same slot. All properties should
        be reset back to defaults. */
@@ -981,7 +980,7 @@ void EnumStorageTest::constructHandleRecycle() {
     CORRADE_COMPARE(second.defaultValue(), 0);
     CORRADE_VERIFY(!second.isEnumSet());
     /* The internal immutable flag should also be reset */
-    CORRADE_VERIFY(second.value().isMutable());
+    CORRADE_VERIFY(second.isMutable());
 }
 
 void EnumStorageTest::access1D() {
