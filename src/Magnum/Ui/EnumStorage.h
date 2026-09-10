@@ -589,7 +589,7 @@ template<class T> template<class Owner
 > EnumStorage<T>::EnumStorage(Owner& owner, NonOwnedT, const Containers::StridedArrayView1D<const T>& values, const StorageFlags flags): AbstractStorage{owner, values.size(), flags} {
     /* Construct the Data struct in-place to initialize its members. On 64-bit
        platforms the size should always fit in-place, on 32-bit only up to
-       four bytes. */
+       four bytes, which is guarded by the SFINAE above. */
     new(createInPlace<DataNonOwned>()) DataNonOwned{values.data(), values.stride()};
 }
 #ifdef CORRADE_TARGET_32BIT

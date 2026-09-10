@@ -1590,8 +1590,6 @@ void EnumStorageTest::update() {
 
     storage.setDefaultValue(37);
 
-    /* Attach an update to min and max as well to verify it's being passed
-       correctly on updates */
     struct {
         Int called = 0;
         UnsignedByte expected;

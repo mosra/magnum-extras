@@ -1004,8 +1004,8 @@ template<class T> void NumericStorageTest::constructDirectInit() {
        constructValueInit() already, no need to do that again here, verify only
        the raw data views. Thorough indexing tests are in access1D() etc. */
 
-    /* The data should have the expected same shape and be a contiguous
-       sequence repeating the value supplied in the constructor */
+    /* The data should have the expected shape and be a contiguous sequence
+       repeating the value supplied in the constructor */
     Containers::StridedArrayView3D<const T> view = first.data();
     CORRADE_COMPARE(view.size(), first.size());
     CORRADE_COMPARE(view.stride(), (Containers::Stride3D{sizeFirstY*1*sizeof(T), 1*sizeof(T), sizeof(T)}));
