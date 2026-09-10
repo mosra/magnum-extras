@@ -1892,9 +1892,9 @@ void EnumStorageTest::enumSetDefault() {
         } else {
             CORRADE_INTERNAL_ASSERT(!data.setEnumSetValue);
             if(data.operation == StorageOperation::Reset)
-                bitQuery->reset();
+                CORRADE_COMPARE(bitQuery->reset(), data.expectedState);
             else if(data.operation == StorageOperation::Toggle)
-                bitQuery->toggle();
+                CORRADE_COMPARE(bitQuery->toggle(), data.expectedState);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
     } else {
@@ -1904,7 +1904,7 @@ void EnumStorageTest::enumSetDefault() {
         } else {
             CORRADE_INTERNAL_ASSERT(!data.set);
             if(data.operation == StorageOperation::Reset)
-                query.reset();
+                CORRADE_COMPARE(query.reset(), data.expectedState);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
     }
