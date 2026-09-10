@@ -31,8 +31,8 @@
 #include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/BitStorage.h"
 #include "Magnum/Ui/DataLayer.h"
-#include "Magnum/Ui/EnumStorage.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Icon.h"
@@ -64,9 +64,7 @@ Debug& operator<<(Debug& debug, const CheckboxStyle value) {
 }
 
 Checkbox::Checkbox(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const CheckboxStyle style): Widget{anchor}, _style{style} {
-    EnumStorage<Int> storage{ui(), StorageFlag::ReferenceCounted};
-    storage.setEnumSet(true);
-    createInternal(storage.value<1>(), text, textProperties);
+    createInternal(BitStorage{ui(), StorageFlag::ReferenceCounted}, text, textProperties);
 }
 
 Checkbox::Checkbox(const Anchor anchor, const Containers::StringView text, const CheckboxStyle style): Checkbox{anchor, text, {}, style} {}
