@@ -93,9 +93,7 @@ template<class T> class Storage: public AbstractStorage {
          */
         StorageQuery<T> value() const {
             return {*this, {}, [](const Storage<T>& storage, StorageOperation) {
-                /* The StorageQuery requires lambdas so can't just pass the
-                   query() static function by pointer */
-                return query(storage, {});
+                return storage.query({});
             }};
         }
 
@@ -128,9 +126,7 @@ template<class T> class Storage: public AbstractStorage {
          */
         StorageQuery<T> operator[](std::size_t index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const std::size_t index, StorageOperation) {
-                /* The StorageQuery requires lambdas so can't just pass the
-                   query() static function by pointer */
-                return query(storage, {0, 0, index});
+                return storage.query({0, 0, index});
             }};
         }
 
@@ -147,9 +143,7 @@ template<class T> class Storage: public AbstractStorage {
          */
         StorageQuery<T> operator[](const Containers::Size2D& index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const Containers::Size2D& index, StorageOperation) {
-                /* The StorageQuery requires lambdas so can't just pass the
-                   query() static function by pointer */
-                return query(storage, {0, index[0], index[1]});
+                return storage.query({0, index[0], index[1]});
             }};
         }
 
@@ -163,9 +157,7 @@ template<class T> class Storage: public AbstractStorage {
          */
         StorageQuery<T> operator[](const Containers::Size3D& index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const Containers::Size3D& index, StorageOperation) {
-                /* The StorageQuery requires lambdas so can't just pass the
-                   query() static function by pointer */
-                return query(storage, index);
+                return storage.query(index);
             }};
         }
 
@@ -180,9 +172,7 @@ template<class T> class Storage: public AbstractStorage {
          */
         template<class U> StorageQuery<U> value() const {
             return {*this, {}, [](const Storage<T>& storage, StorageOperation) {
-                /* The StorageQuery requires lambdas so can't just pass the
-                   query() static function by pointer */
-                return U(query(storage, {}));
+                return U(storage.query({}));
             }};
         }
 
@@ -199,9 +189,7 @@ template<class T> class Storage: public AbstractStorage {
          */
         template<class U> StorageQuery<U> value(std::size_t index) const {
             return {*this, index, {}, [](const Storage<T>& storage, std::size_t index, StorageOperation) {
-                /* The StorageQuery requires lambdas so can't just pass the
-                   query() static function by pointer */
-                return U(query(storage, {0, 0, index}));
+                return U(storage.query({0, 0, index}));
             }};
         }
 
@@ -218,9 +206,7 @@ template<class T> class Storage: public AbstractStorage {
          */
         template<class U> StorageQuery<U> value(const Containers::Size2D& index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const Containers::Size2D& index, StorageOperation) {
-                /* The StorageQuery requires lambdas so can't just pass the
-                   query() static function by pointer */
-                return U(query(storage, {0, index[0], index[1]}));
+                return U(storage.query({0, index[0], index[1]}));
             }};
         }
 
@@ -234,9 +220,7 @@ template<class T> class Storage: public AbstractStorage {
          */
         template<class U> StorageQuery<U> value(const Containers::Size3D& index) const {
             return {*this, index, {}, [](const Storage<T>& storage, const Containers::Size3D& index, StorageOperation) {
-                /* The StorageQuery requires lambdas so can't just pass the
-                   query() static function by pointer */
-                return U(query(storage, index));
+                return U(storage.query(index));
             }};
         }
 
@@ -259,10 +243,9 @@ template<class T> class Storage: public AbstractStorage {
             Containers::Stride3D stride;
         };
 
-        /* Common internals shared by operator[]() and value<U>() */
-        static T query(const Storage<T>& storage, const Containers::Size3D& index) {
-            /* Almost a Rust-level code with the **.::<>() */
-            const Data& data = *storage.AbstractStorage::data<Data>();
+        /* Common internals shared by value(), operator[]() and value<U>() */
+        T query(const Containers::Size3D& index) const {
+            const Data& data = *AbstractStorage::data<Data>();
             const char* pointer = static_cast<const char*>(data.pointer);
             for(UnsignedInt i = 0; i != 3; ++i)
                 /* Casting to std::ptrdiff_t to avoid cursed issues like in

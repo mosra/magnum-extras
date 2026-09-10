@@ -350,9 +350,8 @@ template<class T> const NumericStorage<T>& NumericStorage<T>::setDefaultValue(co
     return *this;
 }
 
-template<class T> typename NumericStorage<T>::Type NumericStorage<T>::query(const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation) {
-    /* Almost a Rust-level code with the **.::<>() */
-    Data<T>& data = *storage.AbstractStorage::data<Data<T>>();
+template<class T> typename NumericStorage<T>::Type NumericStorage<T>::query(const Containers::Size3D& index, const StorageOperation operation) const {
+    Data<T>& data = *AbstractStorage::data<Data<T>>();
     /* Explicit casting because Half isn't implicitly convertible to Float */
     if(operation == StorageOperation::Min)
         return static_cast<typename NumericStorage<T>::Type>(data.min);
@@ -361,8 +360,8 @@ template<class T> typename NumericStorage<T>::Type NumericStorage<T>::query(cons
     CORRADE_INTERNAL_ASSERT(operation == StorageOperation{});
 
     if(data.flags >= Flag::NonOwned)
-        return static_cast<typename NumericStorage<T>::Type>(static_cast<DataNonOwned<T>&>(data).data(storage.size(), index));
-    return static_cast<typename NumericStorage<T>::Type>(data.data(storage.size(), index));
+        return static_cast<typename NumericStorage<T>::Type>(static_cast<const DataNonOwned<T>&>(data).data(size(), index));
+    return static_cast<typename NumericStorage<T>::Type>(data.data(size(), index));
 }
 
 namespace {
@@ -437,15 +436,14 @@ template<class T> T updaterImplementation(const T min, const T max, const T step
 
 }
 
-template<class T> StorageUpdateState NumericStorage<T>::updater(const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation, const Type* const value) {
-    /* Almost a Rust-level code with the **.::<>() */
-    Data<T>& data = *storage.AbstractStorage::data<Data<T>>();
+template<class T> StorageUpdateState NumericStorage<T>::updater(const Containers::Size3D& index, const StorageOperation operation, const Type* const value) const {
+    Data<T>& data = *AbstractStorage::data<Data<T>>();
     StorageUpdateState state;
 
     /* Get a reference to the current value */
     T& currentValueReference = data.flags >= Flag::NonOwned ?
-        const_cast<T&>(static_cast<DataNonOwned<T>&>(data).data(storage.size(), index)) :
-        data.data(storage.size(), index);
+        const_cast<T&>(static_cast<DataNonOwned<T>&>(data).data(size(), index)) :
+        data.data(size(), index);
 
     /* Call the update implementation with all data cast to the corresponding
        arithmetic type */
@@ -464,7 +462,7 @@ template<class T> StorageUpdateState NumericStorage<T>::updater(const NumericSto
        changed */
     if(valueToUpdate != currentValue) {
         currentValueReference = T(valueToUpdate);
-        storage.setDirty();
+        setDirty();
     }
 
     return state;
@@ -525,8 +523,8 @@ template MAGNUM_UI_EXPORT type NumericStorage<type>::step() const;          \
 template MAGNUM_UI_EXPORT const NumericStorage<type>& NumericStorage<type>::setStep(type) const; \
 template MAGNUM_UI_EXPORT type NumericStorage<type>::defaultValue() const;          \
 template MAGNUM_UI_EXPORT const NumericStorage<type>& NumericStorage<type>::setDefaultValue(type) const; \
-template MAGNUM_UI_EXPORT typename NumericStorage<type>::Type NumericStorage<type>::query(const NumericStorage<type>&, const Containers::Size3D&, StorageOperation); \
-template MAGNUM_UI_EXPORT StorageUpdateState NumericStorage<type>::updater(const NumericStorage<type>&, const Containers::Size3D&, StorageOperation, const Type*); \
+template MAGNUM_UI_EXPORT typename NumericStorage<type>::Type NumericStorage<type>::query(const Containers::Size3D&, StorageOperation) const; \
+template MAGNUM_UI_EXPORT StorageUpdateState NumericStorage<type>::updater(const Containers::Size3D&, StorageOperation, const Type*) const; \
 template MAGNUM_UI_EXPORT StorageOperations NumericStorage<type>::operations() const; \
 template MAGNUM_UI_EXPORT Containers::StridedArrayView3D<const type> NumericStorage<type>::data() const; \
 template MAGNUM_UI_EXPORT Containers::StridedArrayView3D<type> NumericStorage<type>::mutableData() const;

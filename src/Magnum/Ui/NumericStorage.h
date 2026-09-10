@@ -630,10 +630,6 @@ template<class T> class NumericStorage: public AbstractStorage {
         Containers::StridedArrayView3D<T> mutableData() const;
 
     private:
-        /* Common internals used by operator[]() */
-        static Type query(const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation);
-        static StorageUpdateState updater(const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation, const Type* value);
-
         /* All create() functions are called from the constructors. If a
            UserInterface is passed they delegate to the (templated)
            AbstractStorage(UserInterface&) constructor which performs various
@@ -662,16 +658,17 @@ template<class T> class NumericStorage: public AbstractStorage {
 
         /* Called from operator[]() to decide on mutability */
         StorageOperations operations() const;
+        /* Common internals used by value() and operator[]() */
+        Type query(const Containers::Size3D& index, StorageOperation operation) const;
+        StorageUpdateState updater(const Containers::Size3D& index, StorageOperation operation, const Type* value) const;
 };
 
 template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::value() const {
-    /* The StorageQuery requires lambdas so can't just pass the query() /
-       updater() static functions by pointer */
     const auto query = [](const NumericStorage<T>& storage, const StorageOperation operation) {
-        return NumericStorage<T>::query(storage, {}, operation);
+        return storage.query({}, operation);
     };
     const auto updater = [](const NumericStorage<T>& storage, const StorageOperation operation, const Type* value) {
-        return NumericStorage<T>::updater(storage, {}, operation, value);
+        return storage.updater({}, operation, value);
     };
     /* If the storage is immutable, the query has no updater */
     const StorageOperations operations = this->operations();
@@ -681,13 +678,11 @@ template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<
 }
 
 template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::operator[](const std::size_t index) const {
-    /* The StorageQuery requires lambdas so can't just pass the query() /
-       updater() static functions by pointer */
     const auto query = [](const NumericStorage<T>& storage, const std::size_t index, const StorageOperation operation) {
-        return NumericStorage<T>::query(storage, {0, 0, index}, operation);
+        return storage.query({0, 0, index}, operation);
     };
     const auto updater = [](const NumericStorage<T>& storage, const std::size_t index, const StorageOperation operation, const Type* value) {
-        return NumericStorage<T>::updater(storage, {0, 0, index}, operation, value);
+        return storage.updater({0, 0, index}, operation, value);
     };
     /* If the storage is immutable, the query has no updater */
     const StorageOperations operations = this->operations();
@@ -697,13 +692,11 @@ template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<
 }
 
 template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::operator[](const Containers::Size2D& index) const {
-    /* The StorageQuery requires lambdas so can't just pass the query() /
-       updater() static functions by pointer */
     const auto query = [](const NumericStorage<T>& storage, const Containers::Size2D& index, const StorageOperation operation) {
-        return NumericStorage<T>::query(storage, {0, index[0], index[1]}, operation);
+        return storage.query({0, index[0], index[1]}, operation);
     };
     const auto updater = [](const NumericStorage<T>& storage, const Containers::Size2D& index, const StorageOperation operation, const Type* value) {
-        return NumericStorage<T>::updater(storage, {0, index[0], index[1]}, operation, value);
+        return storage.updater({0, index[0], index[1]}, operation, value);
     };
     /* If the storage is immutable, the query has no updater */
     const StorageOperations operations = this->operations();
@@ -713,13 +706,11 @@ template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<
 }
 
 template<class T> StorageQuery<typename NumericStorage<T>::Type> NumericStorage<T>::operator[](const Containers::Size3D& index) const {
-    /* The StorageQuery requires lambdas so can't just pass the query() /
-       updater() static functions by pointer */
     const auto query = [](const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation) {
-        return NumericStorage<T>::query(storage, index, operation);
+        return storage.query(index, operation);
     };
     const auto updater = [](const NumericStorage<T>& storage, const Containers::Size3D& index, const StorageOperation operation, const Type* value) {
-        return NumericStorage<T>::updater(storage, index, operation, value);
+        return storage.updater(index, operation, value);
     };
     /* If the storage is immutable, the query has no updater */
     const StorageOperations operations = this->operations();

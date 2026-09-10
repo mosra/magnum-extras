@@ -488,12 +488,6 @@ template<class T> class EnumStorage: public AbstractStorage {
         struct Data;
         struct DataNonOwned;
 
-        /* Common internals used by operator[]() and value() */
-        static T query(const EnumStorage<T>& storage, std::size_t index, const StorageOperation operation);
-        template<ValueType expected> static bool query(const EnumStorage<T>& storage, std::size_t index, const StorageOperation operation);
-        static StorageUpdateState updater(const EnumStorage<T>& storage, std::size_t index, const StorageOperation operation, const T* value);
-        template<ValueType expected> static StorageUpdateState updater(const EnumStorage<T>& storage, std::size_t index, const StorageOperation operation, const bool* value);
-
         /* Returns a view that ValueInit and DirectInit constructors use to
            fill the contents, thus cannot be inlined inside the NoInit
            constructor */
@@ -508,6 +502,11 @@ template<class T> class EnumStorage: public AbstractStorage {
             return AbstractStorage::data<Data>()->nonOwnedImmutable ?
                 StorageOperations{} : StorageOperation::Set|StorageOperation::Reset|StorageOperation::Toggle;
         }
+        /* Common internals used by operator[]() and value() */
+        T query(std::size_t index, StorageOperation operation) const;
+        template<ValueType expected> bool query(std::size_t index, StorageOperation operation) const;
+        StorageUpdateState updater(std::size_t index, StorageOperation operation, const T* value) const;
+        template<ValueType expected> StorageUpdateState updater(std::size_t index, StorageOperation operation, const bool* value) const;
 };
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -599,9 +598,8 @@ template<class T> template<class Owner, class U, typename std::enable_if<(sizeof
 }
 #endif
 
-template<class T> T EnumStorage<T>::query(const EnumStorage<T>& storage, const std::size_t index, const StorageOperation operation) {
-    /* Almost a Rust-level code with the *.::<>() */
-    Data& data = *storage.AbstractStorage::data<Data>();
+template<class T> T EnumStorage<T>::query(const std::size_t index, const StorageOperation operation) const {
+    Data& data = *AbstractStorage::data<Data>();
     CORRADE_INTERNAL_DEBUG_ASSERT(operation == StorageOperation{});
     #ifdef CORRADE_NO_DEBUG_ASSERT
     static_cast<void>(operation);
@@ -612,9 +610,8 @@ template<class T> T EnumStorage<T>::query(const EnumStorage<T>& storage, const s
     return data.data(index);
 }
 
-template<class T> template<typename EnumStorage<T>::ValueType expected> bool EnumStorage<T>::query(const EnumStorage<T>& storage, std::size_t index, const StorageOperation operation) {
-    /* Almost a Rust-level code with the *.::<>() */
-    Data& data = *storage.AbstractStorage::data<Data>();
+template<class T> template<typename EnumStorage<T>::ValueType expected> bool EnumStorage<T>::query(const std::size_t index, const StorageOperation operation) const {
+    Data& data = *AbstractStorage::data<Data>();
     CORRADE_INTERNAL_DEBUG_ASSERT(operation == StorageOperation{});
     #ifdef CORRADE_NO_DEBUG_ASSERT
     static_cast<void>(operation);
@@ -630,9 +627,8 @@ template<class T> template<typename EnumStorage<T>::ValueType expected> bool Enu
         value == expected;
 }
 
-template<class T> StorageUpdateState EnumStorage<T>::updater(const EnumStorage<T>& storage, const std::size_t index, const StorageOperation operation, const T* const value) {
-    /* Almost a Rust-level code with the *.::<>() */
-    Data& data = *storage.AbstractStorage::data<Data>();
+template<class T> StorageUpdateState EnumStorage<T>::updater(const std::size_t index, const StorageOperation operation, const T* const value) const {
+    Data& data = *AbstractStorage::data<Data>();
 
     /* Perform desired operation */
     StorageUpdateState state;
@@ -652,15 +648,14 @@ template<class T> StorageUpdateState EnumStorage<T>::updater(const EnumStorage<T
         data.data(index);
     if(valueToUpdate != currentValue) {
         currentValue = valueToUpdate;
-        storage.setDirty();
+        setDirty();
     }
 
     return state;
 }
 
-template<class T> template<typename EnumStorage<T>::ValueType expected> StorageUpdateState EnumStorage<T>::updater(const EnumStorage<T>& storage, const std::size_t index, const StorageOperation operation, const bool* const value) {
-    /* Almost a Rust-level code with the *.::<>() */
-    Data& data = *storage.AbstractStorage::data<Data>();
+template<class T> template<typename EnumStorage<T>::ValueType expected> StorageUpdateState EnumStorage<T>::updater(const std::size_t index, const StorageOperation operation, const bool* const value) const {
+    Data& data = *AbstractStorage::data<Data>();
 
     T& currentValue = data.nonOwned ?
         const_cast<T&>(static_cast<DataNonOwned&>(data).data(index)) :
@@ -730,20 +725,18 @@ template<class T> template<typename EnumStorage<T>::ValueType expected> StorageU
        changed */
     if(T(valueToUpdate) != currentValue) {
         currentValue = T(valueToUpdate);
-        storage.setDirty();
+        setDirty();
     }
 
     return state;
 }
 
 template<class T> StorageQuery<T> EnumStorage<T>::value() const {
-    /* The StorageQuery requires lambdas so can't just pass the query() /
-       updater() static functions by pointer */
     const auto query = [](const EnumStorage<T>& storage, const StorageOperation operation) {
-        return EnumStorage<T>::query(storage, 0, operation);
+        return storage.query(0, operation);
     };
     const auto updater = [](const EnumStorage<T>& storage, const StorageOperation operation, const Type* value) {
-        return EnumStorage<T>::updater(storage, 0, operation, value);
+        return storage.updater(0, operation, value);
     };
     /* If the storage is immutable, the query has no updater */
     const StorageOperations operations = this->operations();
@@ -753,13 +746,11 @@ template<class T> StorageQuery<T> EnumStorage<T>::value() const {
 }
 
 template<class T> StorageQuery<T> EnumStorage<T>::operator[](const std::size_t index) const {
-    /* The StorageQuery requires lambdas so can't just pass the query() /
-       updater() static functions by pointer */
     const auto query = [](const EnumStorage<T>& storage, const std::size_t index, const StorageOperation operation) {
-        return EnumStorage<T>::query(storage, index, operation);
+        return storage.query(index, operation);
     };
     const auto updater = [](const EnumStorage<T>& storage, const std::size_t index, const StorageOperation operation, const Type* value) {
-        return EnumStorage<T>::updater(storage, index, operation, value);
+        return storage.updater(index, operation, value);
     };
     /* If the storage is immutable, the query has no updater */
     const StorageOperations operations = this->operations();
@@ -769,13 +760,11 @@ template<class T> StorageQuery<T> EnumStorage<T>::operator[](const std::size_t i
 }
 
 template<class T> template<typename EnumStorage<T>::ValueType expected> StorageQuery<bool> EnumStorage<T>::value() const {
-    /* The StorageQuery requires lambdas so can't just pass the query() /
-       updater() static functions by pointer */
     const auto query = [](const EnumStorage<T>& storage, const StorageOperation operation) {
-        return EnumStorage<T>::query<expected>(storage, 0, operation);
+        return storage.template query<expected>(0, operation);
     };
     const auto updater = [](const EnumStorage<T>& storage, const StorageOperation operation, const bool* value) {
-        return EnumStorage<T>::updater<expected>(storage, 0, operation, value);
+        return storage.template updater<expected>(0, operation, value);
     };
     /* If the storage is immutable, the query has no updater */
     const StorageOperations operations = bitOperations();
@@ -785,13 +774,11 @@ template<class T> template<typename EnumStorage<T>::ValueType expected> StorageQ
 }
 
 template<class T> template<typename EnumStorage<T>::ValueType expected> StorageQuery<bool> EnumStorage<T>::value(const std::size_t index) const {
-    /* The StorageQuery requires lambdas so can't just pass the query() /
-       updater() static functions by pointer */
     const auto query = [](const EnumStorage<T>& storage, const std::size_t index, const StorageOperation operation) {
-        return EnumStorage<T>::query<expected>(storage, index, operation);
+        return storage.template query<expected>(index, operation);
     };
     const auto updater = [](const EnumStorage<T>& storage, const std::size_t index, const StorageOperation operation, const bool* value) {
-        return EnumStorage<T>::updater<expected>(storage, index, operation, value);
+        return storage.template updater<expected>(index, operation, value);
     };
     /* If the storage is immutable, the query has no updater */
     const StorageOperations operations = bitOperations();
