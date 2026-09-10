@@ -89,8 +89,8 @@ choices in the enum.
 
 The template can be used for any @cpp enum @ce, @cpp enum class @ce as well as
 builtin integer types, and a @relativeref{Corrade,Containers::EnumSet}. It's
-not allowed to use this storage with a @cpp bool @ce type as the semantics
-would be unclear.
+not allowed to use this storage with a @cpp bool @ce type, use a
+@ref BitStorage in that case instead.
 */
 template<class T> class EnumStorage: public AbstractStorage {
     public:
