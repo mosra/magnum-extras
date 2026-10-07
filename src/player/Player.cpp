@@ -394,8 +394,7 @@ PrimitiveClipRatio.)")
         const Vector2 dpiScaling = this->dpiScaling({});
         Configuration conf;
         conf.setTitle("Magnum Player")
-            .setWindowFlags(Configuration::WindowFlag::Resizable)
-            .setSize(conf.size());
+            .setWindowFlags(Configuration::WindowFlag::Resizable);
         GLConfiguration glConf;
         glConf.setSampleCount(args.value("msaa").empty() ? dpiScaling.max() < 2.0f ? 8 : 2 : args.value<Int>("msaa"));
         #ifdef MAGNUM_TARGET_WEBGL
