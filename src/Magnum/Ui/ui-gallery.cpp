@@ -171,7 +171,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
        parsing fails, etc. */
     create(Configuration{}
         .setTitle("Magnum::Ui Gallery"_s)
-        .setWindowFlags(Configuration::WindowFlag::Resizable));
+        .addWindowFlags(WindowFlag::Resizable));
 
     _ui.create(*this, Ui::DarkTheme{features});
 
