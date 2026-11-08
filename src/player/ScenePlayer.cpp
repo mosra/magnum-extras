@@ -62,7 +62,9 @@
 #include <Magnum/Math/FunctionsBatch.h>
 #include <Magnum/Math/Swizzle.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/MeshTools/Duplicate.h>
 #include <Magnum/MeshTools/GenerateIndices.h>
+#include <Magnum/MeshTools/GenerateNormals.h>
 #include <Magnum/MeshTools/Transform.h>
 #include <Magnum/Primitives/Axis.h>
 #include <Magnum/Primitives/Crosshair.h>
@@ -1021,42 +1023,40 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         if(!meshName)
             meshName = Utility::format("#{}", i);
 
-        /* Disable warnings on custom attributes, as we printed them with
-           actual string names below. Generate normals for triangle meshes
-           (and don't do anything for line/point meshes, there it makes no
-           sense). */
-        MeshTools::CompileFlags flags = MeshTools::CompileFlag::NoWarnOnCustomAttributes;
+        /* Generate normals for triangle meshes (and don't do anything for
+           line/point meshes, there it makes no sense). */
         if((meshData->primitive() == MeshPrimitive::Triangles ||
             meshData->primitive() == MeshPrimitive::TriangleStrip ||
             meshData->primitive() == MeshPrimitive::TriangleFan) &&
            !meshData->attributeCount(Trade::MeshAttribute::Normal) &&
+           /** @todo hmm, maybe we could just reject no-position meshes right
+               from the start to simplify this check? */
             meshData->hasAttribute(Trade::MeshAttribute::Position) &&
-            meshData->attributeFormat(Trade::MeshAttribute::Position) == VertexFormat::Vector3) {
-            /* If the mesh is a triangle strip/fan, convert to indexed
-               triangles first. If the strip/fan is indexed, we can attempt to
-               generate smooth normals. If it's not, generate flat ones as
-               otherwise the smoothing would be only along the strip and not at
-               the seams, looking weird. */
+           !isVertexFormatImplementationSpecific(meshData->attributeFormat(Trade::MeshAttribute::Position)) &&
+           vertexFormatComponentCount(meshData->attributeFormat(Trade::MeshAttribute::Position)) == 3)
+        {
+            /* If the mesh is indexed, we can generate smooth normals. If the
+               mesh is a triangle strip/fan, convert to triangles first. Such
+               operation will cause it to become indexed but we don't want to
+               generate smooth normals in that case -- the smoothing would be
+               only along the strip and not at the seams, looking weird. Thus
+               discard the index buffer afterwards if the mesh wasn't indexed
+               in the first place. */
             if(meshData->primitive() == MeshPrimitive::TriangleStrip ||
                meshData->primitive() == MeshPrimitive::TriangleFan) {
-                if(meshData->isIndexed()) {
-                    Debug{} << "Mesh" << meshName << "doesn't have normals, generating smooth ones using information from the index buffer for a" << meshData->primitive();
-                    flags |= MeshTools::CompileFlag::GenerateSmoothNormals;
-                } else {
-                    Debug{} << "Mesh" << meshName << "doesn't have normals, generating flat ones for a" << meshData->primitive();
-                    flags |= MeshTools::CompileFlag::GenerateFlatNormals;
-                }
-
+                const bool isIndexed = meshData->isIndexed();
+                Debug{} << "Converting" << meshData->primitive() << "mesh" << meshName << "to" << (isIndexed ? "indexed" : "non-indexed") << "triangles for normal generation";
                 meshData = MeshTools::generateIndices(*Utility::move(meshData));
+                if(!isIndexed)
+                    meshData = MeshTools::duplicate(*Utility::move(meshData));
+            }
 
-            /* Otherwise prefer smooth normals, if we have an index buffer
-               telling us neighboring faces */
-            } else if(meshData->isIndexed()) {
+            if(meshData->isIndexed()) {
                 Debug{} << "Mesh" << meshName << "doesn't have normals, generating smooth ones using information from the index buffer";
-                flags |= MeshTools::CompileFlag::GenerateSmoothNormals;
+                meshData = MeshTools::generateSmoothNormals(*Utility::move(meshData));
             } else {
                 Debug{} << "Mesh" << meshName << "doesn't have normals, generating flat ones";
-                flags |= MeshTools::CompileFlag::GenerateFlatNormals;
+                meshData = MeshTools::generateFlatNormals(*Utility::move(meshData));
             }
         }
 
@@ -1101,7 +1101,9 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         } else _data->meshes[i].objectIdCount = 0;
         _data->meshes[i].perVertexJointCount = perVertexJointCount.first();
         _data->meshes[i].secondaryPerVertexJointCount = perVertexJointCount.second();
-        _data->meshes[i].mesh = MeshTools::compile(*meshData, flags);
+        /* Disable warnings on custom attributes, as we printed them with
+           actual string names above */
+        _data->meshes[i].mesh = MeshTools::compile(*meshData, MeshTools::CompileFlag::NoWarnOnCustomAttributes);
         _data->meshes[i].name = Utility::move(meshName);
     }
 
