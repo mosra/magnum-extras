@@ -32,7 +32,7 @@
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 #ifndef MAGNUM_UI_BUILD_STATIC
-    #if defined(MagnumUi_EXPORTS) || defined(MagnumUiObjects_EXPORTS)
+    #ifdef MagnumUi_EXPORTS
         #define MAGNUM_UI_EXPORT CORRADE_VISIBILITY_EXPORT
     #else
         #define MAGNUM_UI_EXPORT CORRADE_VISIBILITY_IMPORT

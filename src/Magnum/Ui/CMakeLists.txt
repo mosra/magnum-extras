@@ -200,7 +200,7 @@ target_include_directories(MagnumUiObjects PUBLIC
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_BINARY_DIR}/src)
 if(NOT MAGNUM_UI_BUILD_STATIC)
-    target_compile_definitions(MagnumUiObjects PRIVATE "MagnumUiObjects_EXPORTS")
+    target_compile_definitions(MagnumUiObjects PRIVATE "MagnumUi_EXPORTS")
 endif()
 if(NOT MAGNUM_UI_BUILD_STATIC OR MAGNUM_BUILD_STATIC_PIC)
     set_target_properties(MagnumUiObjects PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -339,9 +339,11 @@ if(MAGNUM_BUILD_TESTS)
     target_include_directories(MagnumUiTestLib PUBLIC
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_BINARY_DIR}/src)
+    target_compile_definitions(MagnumUiTestLib PRIVATE "CORRADE_GRACEFUL_ASSERT")
     set_target_properties(MagnumUiTestLib PROPERTIES DEBUG_POSTFIX "-d")
-    target_compile_definitions(MagnumUiTestLib PRIVATE
-        "CORRADE_GRACEFUL_ASSERT" "MagnumUi_EXPORTS")
+    if(NOT MAGNUM_BUILD_STATIC)
+        set_target_properties(MagnumUiTestLib PROPERTIES DEFINE_SYMBOL "MagnumUi_EXPORTS")
+    endif()
     if(MAGNUM_BUILD_STATIC_PIC)
         set_target_properties(MagnumUiTestLib PROPERTIES POSITION_INDEPENDENT_CODE ON)
     endif()
