@@ -1282,7 +1282,7 @@ template<std::size_t size, class E> class EnumNames {
             for(Containers::StringView& i: _names) {
                 /* Assume the actual enum name is after the last colon in the
                    string, which should be the case for GCC, Clang and MSVC */
-                Containers::StringView found = i.findLastOr(':', i.end());
+                Containers::StringView found = i.findLast(':');
                 /* There should be the expected enum name right before */
                 CORRADE_ASSERT(i.prefix(found.end()).hasSuffix(expectedEnumPrefix),
                     i.prefix(found.end()) << "doesn't end with" << expectedEnumPrefix, );
