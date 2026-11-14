@@ -15,7 +15,7 @@ if "%COMPILER%" == "msvc-clang" if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual St
 if "%COMPILER%" == "msvc-clang" if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2019" set COMPILER_EXTRA=-DCMAKE_CXX_COMPILER="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/bin/clang-cl.exe" -DCMAKE_LINKER="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/bin/lld-link.exe" -DCMAKE_CXX_FLAGS="-m64 /EHsc"
 
 rem Build Corrade
-git clone --depth 1 https://github.com/mosra/corrade.git || exit /b
+git clone --depth 1 --branch next https://github.com/mosra/corrade.git || exit /b
 cd corrade || exit /b
 mkdir build && cd build || exit /b
 cmake .. ^
@@ -30,7 +30,7 @@ cmake --build . --target install || exit /b
 cd .. && cd ..
 
 rem Build Magnum. AnyImageImporter used by UiStyleTest.
-git clone --depth 1 https://github.com/mosra/magnum.git || exit /b
+git clone --depth 1 --branch next https://github.com/mosra/magnum.git || exit /b
 cd magnum || exit /b
 mkdir build && cd build || exit /b
 cmake .. ^
@@ -60,7 +60,7 @@ cmake --build . --target install || exit /b
 cd .. && cd ..
 
 rem Build Magnum Plugins. Used by UiStyleTest.
-git clone --depth 1 https://github.com/mosra/magnum-plugins.git || exit /b
+git clone --depth 1 --branch next https://github.com/mosra/magnum-plugins.git || exit /b
 cd magnum-plugins || exit /b
 mkdir build && cd build || exit /b
 cmake .. ^

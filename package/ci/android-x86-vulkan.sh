@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ev
 
-git clone --depth 1 https://github.com/mosra/corrade.git
+git clone --depth 1 --branch next https://github.com/mosra/corrade.git
 cd corrade
 
 # Build native corrade-rc
@@ -34,7 +34,7 @@ ninja install
 cd ../..
 
 # Crosscompile Magnum
-git clone --depth 1 https://github.com/mosra/magnum.git
+git clone --depth 1 --branch next https://github.com/mosra/magnum.git
 cd magnum
 mkdir build-android-x86 && cd build-android-x86
 cmake .. \
@@ -81,7 +81,7 @@ cd ../..
 
 # Crosscompile Magnum Plugins. Used by GL tests which aren't relevant here, but
 # also by UiStyleTest, so build them always.
-git clone --depth 1 https://github.com/mosra/magnum-plugins.git
+git clone --depth 1 --branch next https://github.com/mosra/magnum-plugins.git
 cd magnum-plugins
 mkdir build-android-x86 && cd build-android-x86
 cmake .. \

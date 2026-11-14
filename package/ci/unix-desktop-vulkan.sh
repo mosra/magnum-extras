@@ -2,7 +2,7 @@
 set -ev
 
 # Corrade
-git clone --depth 1 https://github.com/mosra/corrade.git
+git clone --depth 1 --branch next https://github.com/mosra/corrade.git
 cd corrade
 mkdir build && cd build
 cmake .. \
@@ -16,7 +16,7 @@ ninja install
 cd ../..
 
 # Magnum
-git clone --depth 1 https://github.com/mosra/magnum.git
+git clone --depth 1 --branch next https://github.com/mosra/magnum.git
 cd magnum
 mkdir build && cd build
 cmake .. \
@@ -61,7 +61,7 @@ cd ../..
 
 # Magnum Plugins. Used by GL tests which aren't relevant here, but also by
 # UiStyleTest, so build them always.
-git clone --depth 1 https://github.com/mosra/magnum-plugins.git
+git clone --depth 1 --branch next https://github.com/mosra/magnum-plugins.git
 cd magnum-plugins
 mkdir build && cd build
 cmake .. \

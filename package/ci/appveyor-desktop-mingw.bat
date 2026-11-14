@@ -3,7 +3,7 @@ set PATH=%PATH:C:\Program Files\Git\usr\bin;=%
 set PATH=C:\mingw-w64\x86_64-7.2.0-posix-seh-rt_v5-rev1\mingw64\bin;%APPVEYOR_BUILD_FOLDER%\deps\bin;%PATH%
 
 rem Build Corrade
-git clone --depth 1 https://github.com/mosra/corrade.git || exit /b
+git clone --depth 1 --branch next https://github.com/mosra/corrade.git || exit /b
 cd corrade || exit /b
 mkdir build && cd build || exit /b
 cmake .. ^
@@ -18,7 +18,7 @@ cmake --build . --target install || exit /b
 cd .. && cd ..
 
 rem Build Magnum. AnyImageImporter used by UiStyleTest.
-git clone --depth 1 https://github.com/mosra/magnum.git || exit /b
+git clone --depth 1 --branch next https://github.com/mosra/magnum.git || exit /b
 cd magnum || exit /b
 mkdir build && cd build || exit /b
 cmake .. ^
@@ -47,7 +47,7 @@ cmake --build . --target install || exit /b
 cd .. && cd ..
 
 rem Build Magnum Plugins. Used by UiStyleTest.
-git clone --depth 1 https://github.com/mosra/magnum-plugins.git || exit /b
+git clone --depth 1 --branch next https://github.com/mosra/magnum-plugins.git || exit /b
 cd magnum-plugins || exit /b
 mkdir build && cd build || exit /b
 cmake .. ^
